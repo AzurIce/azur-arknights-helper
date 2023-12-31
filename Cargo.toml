@@ -1,10 +1,2 @@
-[package]
-name = "azur-arknights-helper"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-forensic-adb = "0.6.2"
-tokio = { version = "1.35.1", features = ["full"]}
+[workspace]
+members = ["cli", "azur-arknights-helper/src-tauri"]

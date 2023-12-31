@@ -68,10 +68,26 @@
         "type": "github"
       }
     },
+    "nur": {
+      "locked": {
+        "lastModified": 1703941120,
+        "narHash": "sha256-hBLQ1Ssk1TD1QKUFRTBbd0EoDs4yRZZZ/5nfjKccWL8=",
+        "owner": "nix-community",
+        "repo": "NUR",
+        "rev": "ffba221d7183cf64704411fc640d213e00413198",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "NUR",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
+        "nur": "nur",
         "rust-overlay": "rust-overlay"
       }
     },
