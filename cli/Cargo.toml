@@ -6,5 +6,5 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-forensic-adb = "0.6.2"
 tokio = { version = "1.35.1", features = ["full"]}
+image = "0.24.7"

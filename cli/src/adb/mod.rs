@@ -1,6 +1,6 @@
-use std::{collections::BTreeMap, error::Error, fmt::Display};
+use std::{collections::BTreeMap, error::Error, fmt::Display, path::PathBuf, process::Command, io::Cursor};
 
-use self::host::AdbHost;
+use self::host::Host;
 
 #[allow(unused)]
 pub mod host;
@@ -10,7 +10,11 @@ pub enum MyError {
     Adb(String),
     ParseError(String),
     DeviceNotFound(String),
-    HostConnectError
+    HostConnectError,
+    ExecuteCommandFailed(String),
+    EncodeMessageError(String),
+    ReadResponseError(String),
+    ImageDecodeError(String),
 }
 
 impl Display for MyError {
@@ -52,18 +56,19 @@ impl TryFrom<&str> for DeviceInfo {
                 info,
             })
         } else {
-            Err(MyError::ParseError("failed to parse device info".to_string()))
+            Err(MyError::ParseError(
+                "failed to parse device info".to_string(),
+            ))
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {
     use super::*;
 
     #[test]
-    fn test_connect() -> Result<(), MyError>{
+    fn test_connect() -> Result<(), MyError> {
         let device = connect("127.0.0.1:16384")?;
         Ok(())
     }
@@ -88,12 +93,61 @@ pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
 }
 
 pub struct Device {
-    host: AdbHost,
+    /// The Adb host which is using to access this device
+    host: Host,
+
+    /// Adb device serial number
     serial: String,
 }
 
 impl Device {
-    pub fn new(host: AdbHost, serial: String) -> Self {
+    pub fn new(host: Host, serial: String) -> Self {
         Self { host, serial }
+    }
+
+    // pub fn get_screen_size(&self) -> Result<(u32, u32), MyError> {
+    //     let screen = self.screencap()?;
+    //     Ok((screen.width(), screen.height()))
+    // }
+
+    pub fn screencap(&self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, MyError> {
+        let bytes = self.execute_command_by_process("exec-out screencap -p").expect("failed to screencap");
+        
+        use image::io::Reader as ImageReader;
+        let mut reader = ImageReader::new(Cursor::new(bytes));
+        reader.set_format(image::ImageFormat::Png);
+        let image = reader.decode().map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?.into_rgb8();
+        Ok(image)
+    }
+
+    pub fn execute_command_by_process(&self, command: &str) -> Result<Vec<u8>, MyError> {
+        let mut args = vec!["-s", self.serial.as_str()];
+        args.extend(command.split_whitespace().collect::<Vec<&str>>());
+
+        let res = Command::new("adb")
+            .args(args)
+            .output()
+            .map_err(|err| MyError::ExecuteCommandFailed(format!("{:?}", err)))?
+            .stdout;
+        Ok(res)
+    }
+
+    pub fn execute_command_by_socket(
+        &mut self,
+        command: &str,
+        has_output: bool,
+        has_length: bool,
+    ) -> Result<String, MyError> {
+        let switch_command = format!("host:transport:{}", self.serial);
+        self.host
+            .execute_command(&switch_command, false, false)
+            .map_err(|err| MyError::Adb(err.to_string()))?;
+
+        let response = self
+            .host
+            .execute_command(command, has_output, has_length)
+            .map_err(|err| MyError::ExecuteCommandFailed(format!("{:?}", err)))?;
+
+        Ok(response.replace("\r\n", "\n"))
     }
 }

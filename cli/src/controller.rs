@@ -1,45 +1,92 @@
-use std::{net::{TcpStream, ToSocketAddrs}, error::Error, time::Duration};
+use std::{
+    error::Error,
+    fs,
+    io::Cursor,
+    net::{TcpStream, ToSocketAddrs},
+    time::Duration,
+};
 
-use forensic_adb::{Host, AndroidStorageInput, Device};
-use tokio::task::block_in_place;
+use image::ImageBuffer;
+
+use crate::adb::{connect, Device, MyError};
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_controller() {
+        let mut controller =
+            Controller::connect("127.0.0.1:16384").expect("failed to connect to device");
+        controller.screencap();
+    }
+}
 
 pub struct Controller {
     pub inner: Device,
+    width: u32,
+    height: u32,
 }
 
-impl Default for Controller {
-    fn default() -> Self {
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let device = rt.block_on(async {
-            let host = Host::default();
+impl Controller {
+    fn connect<S: AsRef<str>>(device_serial: S) -> Result<Self, MyError> {
+        let device = connect(device_serial)?;
+        let controller = Self {
+            inner: device,
+            width: 0,
+            height: 0,
+        };
+        let screen = controller.screencap()?;
 
-            let devices = host.devices::<Vec<_>>().await.expect("failed to get devices");
-            println!("Found devices: {:?}", devices);
-
-            let device = host
-                .device_or_default(Option::<&String>::None, AndroidStorageInput::default())
-                .await.expect("failed to select device");
-            println!("Selected device: {:?}", device);
-            device
-        });
-        Self { inner: device }
+        let controller = Self {
+            width: screen.width(),
+            height: screen.width(),
+            ..controller
+        };
+        Ok(controller)
     }
 }
 
 impl Controller {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn click(&self, p: (u32, u32)) -> Result<(), MyError> {
+        self.inner
+            .execute_command_by_process(format!("shell input tap {} {}", p.0, p.1).as_str())?;
+        Ok(())
     }
 
-    pub fn click(&self) {
-
+    pub fn swipe(
+        &self,
+        start: (u32, u32),
+        end: (u32, u32),
+        duration: Duration,
+    ) -> Result<(), MyError> {
+        self.inner.execute_command_by_process(
+            format!(
+                "shell input swipe {} {} {} {} {}",
+                start.0,
+                start.1,
+                end.0,
+                end.1,
+                duration.as_millis()
+            )
+            .as_str(),
+        )?;
+        Ok(())
     }
 
-    pub fn swipe(&self) {
-
+    pub fn screencap(&self) -> Result<image::RgbImage, MyError> {
+        self.inner.screencap()
     }
 
-    pub fn screencap(&self) {
-        // self.inner.exc
+    pub fn back_to_home(&self) -> Result<(), MyError> {
+        self.inner
+            .execute_command_by_process("shell input keyevent HOME")?;
+        Ok(())
+    }
+
+    pub fn press_esc(&self) -> Result<(), MyError> {
+        self.inner
+            .execute_command_by_process("shell input keyevent 111")?;
+        Ok(())
     }
 }

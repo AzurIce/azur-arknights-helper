@@ -13,7 +13,7 @@ mod command;
 const ADB_SERVER_HOST: &str = "127.0.0.1:5037";
 const MAX_RESPONSE_LEN: usize = 1024;
 
-pub struct AdbHost(TcpStream);
+pub struct Host(TcpStream);
 
 #[cfg(test)]
 mod test {
@@ -32,11 +32,11 @@ mod test {
 
 // to get a host connection
 // if cannot connect to the host, it will return a ['MyError::HostConnectError']
-pub fn connect_defualt() -> Result<AdbHost, MyError> {
+pub fn connect_defualt() -> Result<Host, MyError> {
     connect(ADB_SERVER_HOST)
 }
 
-pub fn connect<A: ToSocketAddrs>(host: A) -> Result<AdbHost, MyError> {
+pub fn connect<A: ToSocketAddrs>(host: A) -> Result<Host, MyError> {
     let stream = TcpStream::connect(host).map_err(|err| MyError::HostConnectError)?;
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
@@ -44,7 +44,7 @@ pub fn connect<A: ToSocketAddrs>(host: A) -> Result<AdbHost, MyError> {
     stream
         .set_write_timeout(Some(Duration::from_secs(2)))
         .map_err(|err| MyError::HostConnectError)?;
-    Ok(AdbHost(stream))
+    Ok(Host(stream))
 }
 
 // utils for messaging with host
@@ -57,14 +57,14 @@ fn read_length<T: Read>(source: &mut T) -> Result<usize, Box<dyn Error>> {
     Ok(usize::from_str_radix(response, 16)?)
 }
 
-fn encode_message<S: AsRef<str>>(payload: S) -> Result<String, Box<dyn Error>> {
+fn encode_message<S: AsRef<str>>(payload: S) -> Result<String, MyError> {
     let payload = payload.as_ref();
 
-    let len = u16::try_from(payload.len()).map(|len| format!("{:0>4X}", len))?;
+    let len = u16::try_from(payload.len()).map(|len| format!("{:0>4X}", len)).map_err(|err| MyError::EncodeMessageError(err.to_string()))?;
     Ok(format!("{len}{payload}"))
 }
 
-impl AdbHost {
+impl Host {
     // get devices
     pub fn devices(&mut self) -> Result<Vec<DeviceInfo>, MyError> {
         let response = self.execute_command("host:devices-l", true, true).map_err(|err| MyError::Adb(err.to_string()))?;
@@ -85,7 +85,7 @@ impl AdbHost {
         has_length: bool,
     ) -> Result<String, Box<dyn Error>> {
         self.0.write_all(encode_message(command)?.as_bytes())?;
-        let bytes = self.read_response(has_output, has_length)?;
+        let bytes = self.read_response(has_output, has_length).map_err(|err| MyError::ReadResponseError(format!("{:?}", err)))?;
         let response = std::str::from_utf8(&bytes)?;
         Ok(response.to_owned())
     }
@@ -112,6 +112,7 @@ impl AdbHost {
         let mut response = Vec::new();
 
         if has_output {
+            println!("reading output");
             self.0.read_to_end(&mut response)?;
 
             if response.starts_with(command::OKAY) {
