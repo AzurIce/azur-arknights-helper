@@ -1,0 +1,10 @@
+pub const DATA: &[u8; 4] = b"DATA";
+pub const DENT: &[u8; 4] = b"DENT";
+pub const DONE: &[u8; 4] = b"DONE";
+pub const FAIL: &[u8; 4] = b"FAIL";
+pub const LIST: &[u8; 4] = b"LIST";
+pub const OKAY: &[u8; 4] = b"OKAY";
+pub const QUIT: &[u8; 4] = b"QUIT";
+pub const RECV: &[u8; 4] = b"RECV";
+pub const SEND: &[u8; 4] = b"SEND";
+pub const STAT: &[u8; 4] = b"STAT";
