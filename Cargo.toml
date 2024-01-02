@@ -11,4 +11,7 @@ image = "0.24.7"
 imageproc = "0.23.0"
 template-matching = { version = "0.2.0", features = ["image"] }
 rand = "0.8"
-tesseract = "0.15.0"
+# leptess = "0.14.0"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8.8"
+serde_json = "1.0.110"

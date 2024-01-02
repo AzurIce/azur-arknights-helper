@@ -1,10 +1,12 @@
 use std::rc::Rc;
 
-use crate::{controller::{Controller, self}, vision::matcher::MatchType};
+use crate::controller::{Controller, self};
 
 mod page;
-use super::{MatchTask, Task, MultipleMatchTask};
+use self::page::Page;
 
-pub struct NavigateTask {
+use super::{MatchTask, Exec, AndTask};
 
-}
+// pub struct NavigateTask {
+//     target: Box<dyn Page>
+// }

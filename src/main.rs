@@ -1,3 +1,6 @@
+#![feature(associated_type_defaults)]
+#![feature(path_file_prefix)]
+
 use std::{path::Path, process::Command};
 
 use tokio::fs::File;
@@ -10,6 +13,8 @@ mod controller;
 mod vision;
 #[allow(unused)]
 mod task;
+
+mod config;
 
 use controller::Controller;
 

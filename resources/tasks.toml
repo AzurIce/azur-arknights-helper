@@ -1,0 +1,45 @@
+press_esc = "ActionPressEsc"
+press_home = "ActionPressHome"
+
+[toggle_top_navigator.ActionClickMatch]
+type = "Template"
+template = "ButtonToggleTopNavigator.png"
+
+[multiple]
+Multi = [
+    "ActionPressEsc",
+    "ActionPressHome",
+    { ActionClick = [
+    0,
+    0,
+] },
+    { ActionSwipe = [
+    [
+    0,
+    0,
+],
+    [
+    200,
+    0,
+],
+] },
+    "task_name",
+]
+
+[click_origin]
+ActionClick = [
+    0,
+    0,
+]
+
+[swipe_right]
+ActionSwipe = [
+    [
+    0,
+    0,
+],
+    [
+    200,
+    0,
+],
+]

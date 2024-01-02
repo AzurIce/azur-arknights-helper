@@ -18,45 +18,31 @@ mod test {
 
         let image = crop_imm(&image, 1833, 1071, 484, 359).to_image();
 
-        let template = image::open("./template/EnterInfrastMistCity.png")
+        let template = image::open("./resource/template//EnterInfrastMistCity.png")
             .expect("failed to read template")
             .to_luma32f();
 
-        let res = Matcher::TemplateMatcher { image, template }.result();
+        let res = Matcher::Template { image, template }.result();
         println!("{:?}", res)
     }
 }
 
-pub enum MatchType {
-    TemplateMatch(ImageBuffer<Luma<f32>, Vec<f32>>), // template_filename
-    OcrMatch(String),                                // target_text
-}
-
 /// 匹配器，目前只实现了模板匹配
 pub enum Matcher {
-    TemplateMatcher {
+    Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
     },
-    OcrMatcher {
-        text: String,
-    },
+    Ocr(String),
 }
 
 const THRESHOLD: f32 = 100.0;
 
 impl Matcher {
-    pub fn new(image: ImageBuffer<Luma<f32>, Vec<f32>>, match_type: MatchType) -> Self {
-        match match_type {
-            MatchType::TemplateMatch(template) => Self::TemplateMatcher { image, template },
-            MatchType::OcrMatch(text) => Self::OcrMatcher { text },
-        }
-    }
-
     /// 执行匹配并获取结果
     pub fn result(&self) -> Option<Rect> {
         match self {
-            Self::TemplateMatcher { image, template } => {
+            Self::Template { image, template } => {
                 let method = MatchTemplateMethod::SumOfSquaredDifferences;
                 println!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
@@ -85,9 +71,7 @@ impl Matcher {
                 })
             }
             // TODO: implement OcrMatcher
-            OcrMatcher(text) => {
-                None
-            }
+            Self::Ocr(text) => None,
         }
     }
 }

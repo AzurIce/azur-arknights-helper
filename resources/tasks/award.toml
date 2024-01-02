@@ -1,0 +1,8 @@
+Multi = [
+    { NavigateIn = "mission" },
+    "press_collect_all_award",
+    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    "press_collect_all_award",
+    { ActionClick = [100, 100]},
+    { NavigateOut = "mission" },
+]
