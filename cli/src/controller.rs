@@ -6,7 +6,7 @@ use std::{
     time::Duration,
 };
 
-use image::ImageBuffer;
+use image::{ImageBuffer, math::Rect};
 
 use crate::adb::{connect, Device, MyError};
 
@@ -29,7 +29,7 @@ pub struct Controller {
 }
 
 impl Controller {
-    fn connect<S: AsRef<str>>(device_serial: S) -> Result<Self, MyError> {
+    pub fn connect<S: AsRef<str>>(device_serial: S) -> Result<Self, MyError> {
         let device = connect(device_serial)?;
         let controller = Self {
             inner: device,
@@ -48,6 +48,12 @@ impl Controller {
 }
 
 impl Controller {
+    pub fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
+        let x = rand::random::<u32>() % rect.width + rect.x;
+        let y = rand::random::<u32>() % rect.width + rect.y;
+        self.click((x, y))
+    }
+
     pub fn click(&self, p: (u32, u32)) -> Result<(), MyError> {
         self.inner
             .execute_command_by_process(format!("shell input tap {} {}", p.0, p.1).as_str())?;
@@ -74,7 +80,7 @@ impl Controller {
         Ok(())
     }
 
-    pub fn screencap(&self) -> Result<image::RgbImage, MyError> {
+    pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
         self.inner.screencap()
     }
 

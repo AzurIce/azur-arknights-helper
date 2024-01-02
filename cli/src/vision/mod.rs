@@ -1,1 +1,1 @@
-mod matcher;
+pub mod matcher;
