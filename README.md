@@ -1,3 +1,7 @@
+# AAH~（AzurArknightsHelper）
+
+<s>本来想拿 MaaCore 在 Rust 里搓点有意思的东西，但是 cpp 的构建过程实在是太烦人了，所以决定纯 Rust 重写。</s>
+
 ## 如何使用
 
 咕咕咕，现在 main 还是空的（），正在狠狠搭框子。
