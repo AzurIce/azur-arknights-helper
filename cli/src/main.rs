@@ -6,6 +6,10 @@ use tokio::fs::File;
 mod adb;
 #[allow(unused)]
 mod controller;
+#[allow(unused)]
+mod vision;
+#[allow(unused)]
+mod task;
 
 use controller::Controller;
 
