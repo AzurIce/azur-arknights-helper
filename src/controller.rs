@@ -51,12 +51,12 @@ impl Controller {
     pub fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
         let x = rand::random::<u32>() % rect.width + rect.x;
         let y = rand::random::<u32>() % rect.width + rect.y;
-        self.click((x, y))
+        self.click(x, y)
     }
 
-    pub fn click(&self, p: (u32, u32)) -> Result<(), MyError> {
+    pub fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
         self.inner
-            .execute_command_by_process(format!("shell input tap {} {}", p.0, p.1).as_str())?;
+            .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
         Ok(())
     }
 
@@ -84,7 +84,7 @@ impl Controller {
         self.inner.screencap()
     }
 
-    pub fn back_to_home(&self) -> Result<(), MyError> {
+    pub fn press_home(&self) -> Result<(), MyError> {
         self.inner
             .execute_command_by_process("shell input keyevent HOME")?;
         Ok(())

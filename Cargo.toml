@@ -1,2 +1,14 @@
-[workspace]
-members = ["cli", "azur-arknights-helper/src-tauri"]
+[package]
+name = "azur-arknights-helper-cli"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tokio = { version = "1.35.1", features = ["full"]}
+image = "0.24.7"
+imageproc = "0.23.0"
+template-matching = { version = "0.2.0", features = ["image"] }
+rand = "0.8"
+tesseract = "0.15.0"

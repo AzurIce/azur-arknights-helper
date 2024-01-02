@@ -1,5 +1,0 @@
-{
-    "rust-analyzer.linkedProjects": [
-        "./azur-arknights-helper/src-tauri/Cargo.toml"
-    ]
-}
