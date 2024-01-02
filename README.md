@@ -1,23 +1,67 @@
+## 如何使用
+
+咕咕咕，现在 main 还是空的（），正在狠狠搭框子。
+
 ## Task 配置
 
-AAH 提供了一系列内置的任务，并且提供了组合任务的方法，可以通过修改 `resources/tasks.toml` 来实现自定义 ActionTask 的添加。
+AAH 提供了一系列内置的任务，并且提供了组合任务的方法，可以通过修改 `resources/tasks.toml` 或添加额外的 `resources/tasks/<task_name>.toml` 来实现自定义任务的添加（其实内置的任务也有很多是通过 `toml` 声明的，所以可以参考参考）。
 
-AAH 所提供的任务主要分为两类，他们都有自己的自定义方式：
+以下是一个例子：
 
-- ActionTask：执行某些动作的任务
-- <s>MatchTask：用于进行图像匹配的任务</s>
+```toml
+# resources/tasks.toml
+[award]
+Multi = [
+    { NavigateIn = "mission" },
+    "press_collect_all_award",
+    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    "press_collect_all_award",
+    { ActionClick = [100, 100]},
+    { NavigateOut = "mission" },
+]
+```
+
+也可以选择在 `resources/tasks/` 下创建一个 `award.toml`：
+
+```toml
+# resources/tasks/award.toml
+Multi = [
+    { NavigateIn = "mission" },
+    "press_collect_all_award",
+    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    "press_collect_all_award",
+    { ActionClick = [100, 100]},
+    { NavigateOut = "mission" },
+]
+```
+
+### 一、高级 Task 列表
+
+高级 Task，是一系列内置的具有较为完整功能的任务。
+
+#### award
+
+```toml
+"award"
+```
+
+从主页开始，领取所有奖励，再返回主页
+
+### 二、工具 Task 列表
+
+工具 Task，是一系列较为常用的子 Task。
+
+- 一些 `ActionClickMatch` 的 alias，暂略：
+  - back
+  - click_collect_all_award
 
 
 
-### 一、高级 ActionTask 列表
+### 三、内置 Task 列表
 
-#### 
+内置 Task，就是通过非 `toml` 实现的 Task。
 
-### 二、ActionTask 自定义
-
-#### 1. 可用的原子 ActionTask
-
-##### PressEsc
+##### ActionPressEsc
 
 ```toml
 "PressEsc"
@@ -25,7 +69,7 @@ AAH 所提供的任务主要分为两类，他们都有自己的自定义方式�
 
 点击 Esc 按键
 
-##### PressHome
+##### ActionPressHome
 
 ```toml
 "PressHome"
@@ -33,7 +77,7 @@ AAH 所提供的任务主要分为两类，他们都有自己的自定义方式�
 
 点击 Home 按键
 
-##### Click
+##### ActionClick
 
 ```toml
 {
@@ -41,9 +85,9 @@ AAH 所提供的任务主要分为两类，他们都有自己的自定义方式�
 }
 ```
 
-> 点击 `<x>`，`<y>` 坐标
+> 点击 `<x>`，`<y>` 坐标（整数）
 
-##### Swipe
+##### ActionSwipe
 
 ```toml
 {
@@ -51,9 +95,9 @@ AAH 所提供的任务主要分为两类，他们都有自己的自定义方式�
 }
 ```
 
-> 从 `<x1>` `<y1>` 坐标滑动到 `<x2>` `<y2>` 坐标
+> 从 `<x1>` `<y1>` 坐标滑动到 `<x2>` `<y2>` 坐标（整数）
 
-##### ClickMatch
+##### ActionClickMatch
 
 ###### > Template
 
@@ -79,7 +123,7 @@ AAH 所提供的任务主要分为两类，他们都有自己的自定义方式�
 
 #### 2. Multi 组合
 
-使用 Multi 可以将多个 ActionTask 组合起来顺序执行。
+使用 Multi 可以将多个 ActionTask 组合起来顺序执行（如果某一任务失败会继续执行后续任务）。
 
 ```toml
 Multi = [
@@ -93,12 +137,6 @@ Multi = [
     "task_name", # 可以通过任务名称来引用自定义的任务
 ]
 ```
-
-> 例：
->
-> ```toml
-> []
-> ```
 
 ## 参考
 
