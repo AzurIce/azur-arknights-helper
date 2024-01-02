@@ -3,7 +3,7 @@ use std::{
     fmt::Display,
     io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
-    time::Duration,
+    time::Duration, process::Command, env::args,
 };
 
 use super::{Device, DeviceInfo, MyError};
@@ -20,7 +20,7 @@ mod test {
     use super::*;
     #[test]
     fn test_host() -> Result<(), MyError> {
-        let mut host = connect_defualt()?;
+        let mut host = connect_default()?;
 
         for device_info in host.devices()? {
             println!("{:?}", device_info)
@@ -32,18 +32,21 @@ mod test {
 
 // to get a host connection
 // if cannot connect to the host, it will return a ['MyError::HostConnectError']
-pub fn connect_defualt() -> Result<Host, MyError> {
+pub fn connect_default() -> Result<Host, MyError> {
     connect(ADB_SERVER_HOST)
 }
 
 pub fn connect<A: ToSocketAddrs>(host: A) -> Result<Host, MyError> {
-    let stream = TcpStream::connect(host).map_err(|err| MyError::HostConnectError)?;
+    // TODO: if the daemon is not started first start the daemon
+    // TODO: or else just use process, don't use socket
+    // TODO: or, separate them?
+    let stream = TcpStream::connect(host).map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
-        .map_err(|err| MyError::HostConnectError)?;
+        .map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
     stream
         .set_write_timeout(Some(Duration::from_secs(2)))
-        .map_err(|err| MyError::HostConnectError)?;
+        .map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
     Ok(Host(stream))
 }
 

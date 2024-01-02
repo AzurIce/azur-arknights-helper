@@ -1,4 +1,8 @@
-use std::{collections::BTreeMap, error::Error, fmt::Display, path::PathBuf, process::Command, io::Cursor};
+use std::{
+    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, path::PathBuf, process::Command,
+};
+
+use image::{codecs::png::PngDecoder, DynamicImage};
 
 use self::host::Host;
 
@@ -10,7 +14,7 @@ pub enum MyError {
     Adb(String),
     ParseError(String),
     DeviceNotFound(String),
-    HostConnectError,
+    HostConnectError(String),
     ExecuteCommandFailed(String),
     EncodeMessageError(String),
     ReadResponseError(String),
@@ -77,8 +81,15 @@ mod test {
 // connect to a device using serial,
 // if connect failed, it will return a ['MyError::DeviceNotFound']
 pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
-    let mut host = host::connect_defualt()?;
-    let serial = serial.as_ref().to_string();
+    let serial = serial.as_ref();
+
+    let adb_connect = Command::new("adb").args(["connect", serial]).output().map_err(|err|MyError::DeviceNotFound(format!("{:?}", err)))?;
+    // TODO: check stdout of it to find whether the connect is success or not
+    // TODO: or, actually the following code can already check?
+
+    let mut host = host::connect_default()?;
+
+    let serial = serial.to_string();
     let serials = host
         .devices()?
         .iter()
@@ -110,13 +121,19 @@ impl Device {
     //     Ok((screen.width(), screen.height()))
     // }
 
-    pub fn screencap(&self) -> Result<image::ImageBuffer<image::Rgb<u8>, Vec<u8>>, MyError> {
-        let bytes = self.execute_command_by_process("exec-out screencap -p").expect("failed to screencap");
-        
-        use image::io::Reader as ImageReader;
-        let mut reader = ImageReader::new(Cursor::new(bytes));
-        reader.set_format(image::ImageFormat::Png);
-        let image = reader.decode().map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?.into_rgb8();
+    pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
+        let bytes = self
+            .execute_command_by_process("exec-out screencap -p")
+            .expect("failed to screencap");
+
+        let decoder = PngDecoder::new(Cursor::new(bytes))
+            .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;
+        // use image::io::Reader as ImageReader;
+        // let mut reader = ImageReader::new(Cursor::new(bytes));
+        // reader.set_format(image::ImageFormat::Png);
+        // let image = reader.decode().map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?.into_rgb8();
+        let image = DynamicImage::from_decoder(decoder)
+            .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;
         Ok(image)
     }
 
