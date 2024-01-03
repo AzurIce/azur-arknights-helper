@@ -4,7 +4,7 @@ Multi = [
     "confirm",
     { ActionClickMatch = { type = "Template", template = "award_2.png" } },
     "press_collect_all_award",
-    "confirm",
+    # "confirm", 匹配率不是很好
     { ActionClick = [100, 100]},
     { NavigateOut = "mission" },
 ]
