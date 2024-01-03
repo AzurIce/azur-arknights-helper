@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::task::MatchTask;
 
-use super::task::{Task, TaskRef};
+use super::task::{BuiltinTask, TaskRef};
 
 #[cfg(test)]
 mod test {
@@ -74,7 +74,7 @@ impl Default for NavigateConfig {
         map.insert(
             "base".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(Task::ActionClickMatch(MatchTask::Template(
+                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(MatchTask::Template(
                     "EnterInfrastMistCity.png".to_string(),
                 ))),
                 exit_task: TaskRef::ByName("back".to_string()),
@@ -84,7 +84,7 @@ impl Default for NavigateConfig {
         map.insert(
             "mission".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(Task::ActionClickMatch(MatchTask::Template(
+                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(MatchTask::Template(
                     "EnterMissionMistCity.png".to_string(),
                 ))),
                 exit_task: TaskRef::ByName("back".to_string()),

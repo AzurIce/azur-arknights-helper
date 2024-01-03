@@ -51,7 +51,7 @@ mod test {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct TaskConfig(pub HashMap<String, Task>);
+pub struct TaskConfig(pub HashMap<String, BuiltinTask>);
 impl TaskConfig {
     pub fn load() -> Result<Self, Box<dyn Error>> {
         let task_config = fs::read_to_string("./resources/tasks.toml")?;
@@ -64,7 +64,7 @@ impl TaskConfig {
                     continue;
                 }
                 if let Ok(task) = fs::read_to_string(entry.path()) {
-                    if let Ok(task) = toml::from_str::<Task>(&task) {
+                    if let Ok(task) = toml::from_str::<BuiltinTask>(&task) {
                         task_config.0.insert(
                             entry.path().file_prefix().and_then(|s| s.to_str()).unwrap().to_string(),
                             task,
@@ -86,11 +86,11 @@ impl Default for TaskConfig {
         // let click = Task::Click(0, 0);
         // let swipe = Task::Swipe((0, 0), (200, 0));
 
-        let press_esc = Task::ActionPressEsc;
-        let press_home = Task::ActionPressHome;
-        let click = Task::ActionClick(0, 0);
-        let swipe = Task::ActionSwipe((0, 0), (200, 0));
-        let click_match = Task::ActionClickMatch(MatchTask::Template(
+        let press_esc = BuiltinTask::ActionPressEsc;
+        let press_home = BuiltinTask::ActionPressHome;
+        let click = BuiltinTask::ActionClick(0, 0);
+        let swipe = BuiltinTask::ActionSwipe((0, 0), (200, 0));
+        let click_match = BuiltinTask::ActionClickMatch(MatchTask::Template(
             "ButtonToggleTopNavigator.png".to_string(),
         ));
 
@@ -101,7 +101,7 @@ impl Default for TaskConfig {
         map.insert("toggle_top_navigator".to_string(), click_match.clone());
         map.insert(
             "multiple".to_string(),
-            Task::Multi(vec![
+            BuiltinTask::Multi(vec![
                 TaskRef::ByInternal(press_esc),
                 TaskRef::ByInternal(press_home),
                 TaskRef::ByInternal(click),
@@ -115,7 +115,7 @@ impl Default for TaskConfig {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Task {
+pub enum BuiltinTask {
     Multi(Vec<TaskRef>),
     // Action
     ActionPressEsc,
@@ -131,6 +131,6 @@ pub enum Task {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum TaskRef {
-    ByInternal(Task),
+    ByInternal(BuiltinTask),
     ByName(String),
 }

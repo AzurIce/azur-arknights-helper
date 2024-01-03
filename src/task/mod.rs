@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     config::{
         navigate::NavigateConfig,
-        task::{self, Task, TaskConfig, TaskRef},
+        task::{self, BuiltinTask, TaskConfig, TaskRef},
     },
     controller::{self, Controller},
     vision::matcher::Matcher,
@@ -71,11 +71,11 @@ impl TryInto<Box<dyn Exec>> for TaskRef {
     }
 }
 
-impl TryInto<Box<dyn Exec>> for Task {
+impl TryInto<Box<dyn Exec>> for BuiltinTask {
     type Error = String;
     fn try_into(self) -> Result<Box<dyn Exec>, String> {
         let task: Box<dyn Exec> = match self {
-            Task::Multi(tasks) => {
+            BuiltinTask::Multi(tasks) => {
                 let mut res = vec![];
 
                 for task in tasks {
@@ -84,18 +84,18 @@ impl TryInto<Box<dyn Exec>> for Task {
 
                 Box::new(MultiTask::new(res))
             }
-            Task::ActionPressEsc => Box::new(ActionTask::PressEsc),
-            Task::ActionPressHome => Box::new(ActionTask::PressHome),
-            Task::ActionClick(x, y) => Box::new(ActionTask::Click(x, y)),
-            Task::ActionClickMatch(match_task) => Box::new(ActionTask::ClickMatch(match_task)),
-            Task::ActionSwipe(p1, p2) => Box::new(ActionTask::Swipe(p1, p2)),
-            Task::NavigateIn(name) => {
+            BuiltinTask::ActionPressEsc => Box::new(ActionTask::PressEsc),
+            BuiltinTask::ActionPressHome => Box::new(ActionTask::PressHome),
+            BuiltinTask::ActionClick(x, y) => Box::new(ActionTask::Click(x, y)),
+            BuiltinTask::ActionClickMatch(match_task) => Box::new(ActionTask::ClickMatch(match_task)),
+            BuiltinTask::ActionSwipe(p1, p2) => Box::new(ActionTask::Swipe(p1, p2)),
+            BuiltinTask::NavigateIn(name) => {
                 let navigate_config = NavigateConfig::load().map_err(|err| format!("{:?}", err))?;
                 let navigate = navigate_config.0.get(&name).ok_or("failed to get navigate by name".to_string())?;
                 let task: Box<dyn Exec> = navigate.enter_task.clone().try_into()?;
                 task
             },
-            Task::NavigateOut(name) => {
+            BuiltinTask::NavigateOut(name) => {
                 let navigate_config = NavigateConfig::load().map_err(|err| format!("{:?}", err))?;
                 let navigate = navigate_config.0.get(&name).ok_or("failed to get navigate by name".to_string())?;
                 let task: Box<dyn Exec> = navigate.exit_task.clone().try_into()?;
@@ -181,7 +181,7 @@ impl Exec for MultiTask {
     // TODO: add faild option for generic task
     fn run(&self, controller: &Controller) -> Result<(), String> {
         for task in &self.tasks {
-            println!("[Multitask]: execiting {:?}", task);
+            println!("[Multitask]: executing {:?}", task);
             match task.run(controller) {
                 Ok(_) => (),
                 Err(err) => println!("[Multitask]: error, {:?}", err)
