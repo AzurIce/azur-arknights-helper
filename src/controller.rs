@@ -68,7 +68,7 @@ impl Controller {
 
     pub fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
         let x = rand::random::<u32>() % rect.width + rect.x;
-        let y = rand::random::<u32>() % rect.width + rect.y;
+        let y = rand::random::<u32>() % rect.height + rect.y;
         self.click(x, y)
     }
 
