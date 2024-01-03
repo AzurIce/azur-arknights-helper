@@ -10,7 +10,7 @@
 
 AAH 提供了一系列内置的任务，并且提供了组合任务的方法，可以通过修改 `resources/tasks.toml` 或添加额外的 `resources/tasks/<task_name>.toml` 来实现自定义任务的添加（其实内置的任务也有很多是通过 `toml` 声明的，所以可以参考参考）。
 
-以下是一个例子：
+以下是一个自定义的 `award` 任务例子：
 
 ```toml
 # resources/tasks.toml
@@ -125,6 +125,20 @@ Multi = [
 }
 ```
 
+#### NavigateIn / NavigateOut
+
+从主页进入到某一页面/从某一页面退出到主页
+
+```toml
+{ NavigateIn = "page_name" }
+```
+
+```toml
+{ NavigateOut = "page_name" }
+```
+
+其中 `page_name` 以及具体导航方式由 `navigates.toml` 配置，详情见 四、Navigate 定义
+
 #### 2. Multi 组合
 
 使用 Multi 可以将多个 ActionTask 组合起来顺序执行（如果某一任务失败会继续执行后续任务）。
@@ -141,6 +155,24 @@ Multi = [
     "task_name", # 可以通过任务名称来引用自定义的任务
 ]
 ```
+
+## 四、Navigate 定义
+
+NavigateTask 中所使用的 page_name 及对应的详细导航方式均由 `resources/navigates.toml` 或 `resources/navigates/<page_name>.toml` 定义。
+
+下面是一个任务界面的 NavigateTask 的配置案例：
+
+```toml
+# resources/navigates.toml
+[mission]
+enter_task = {
+	ActionClickMatch = { type = "Template", template = "EnterMissionMistCity.png"}
+}
+exit_task = "back"
+```
+
+- `enter_task` 表示从主页进入的方法，也就是 NavigateIn 执行的任务。
+- `exit_task` 表示退出到主页的方法，也就是 NavigateOut 执行的任务。
 
 ## 参考
 
