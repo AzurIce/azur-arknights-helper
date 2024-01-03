@@ -1,6 +1,6 @@
-use std::time::Instant;
+use std::{ops::Deref, time::Instant};
 
-use image::{imageops::crop_imm, math::Rect, GrayImage, ImageBuffer, Luma};
+use image::{imageops::crop_imm, math::Rect, GrayImage, ImageBuffer, Luma, Pixel};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
 use template_matching::{find_extremes, match_template, Image, MatchTemplateMethod};
 
@@ -43,6 +43,7 @@ impl Matcher {
     pub fn result(&self) -> Option<Rect> {
         match self {
             Self::Template { image, template } => {
+                let down_scaled_template = template;
                 let method = MatchTemplateMethod::SumOfSquaredDifferences;
                 println!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 

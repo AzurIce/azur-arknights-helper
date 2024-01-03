@@ -1,0 +1,84 @@
+use std::path::Path;
+
+use image::math::Rect;
+use serde::{Serialize, Deserialize};
+
+use crate::{controller::Controller, vision::matcher::Matcher};
+
+use super::{Exec, ExecResult};
+
+
+/// 动作任务
+
+// 若任何 Match 失败则失败
+// 成功返回所有匹配 Rect
+#[derive(Debug)]
+pub struct AndTask {
+    tasks: Vec<Box<dyn Exec>>,
+}
+
+impl AndTask {
+    pub fn new(tasks: Vec<Box<dyn Exec>>) -> Self {
+        Self { tasks }
+    }
+}
+
+impl Exec for AndTask {
+    fn run(&self, controller: &Controller) -> Result<(), String> {
+        self.tasks.iter().map(|task| task.run(controller)).collect()
+    }
+}
+
+// 若任何 Match 失败则失败
+// 成功返回所有匹配 Rect
+#[derive(Debug)]
+pub struct OrTask {
+    tasks: Vec<Box<dyn Exec>>,
+}
+
+impl OrTask {
+    pub fn new(tasks: Vec<Box<dyn Exec>>) -> Self {
+        Self { tasks }
+    }
+}
+
+impl Exec for OrTask {
+    fn run(&self, controller: &Controller) -> Result<(), String> {
+        for task in &self.tasks {
+            if task.run(controller).is_ok() {
+                return Ok(());
+            }
+        }
+        Err("match failed".to_string())
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "type", content = "template")]
+pub enum MatchTask {
+    Template(String), // template_filename
+    Ocr(String),      // text
+}
+// TODO: add optional roi field
+
+impl ExecResult for MatchTask {
+    type Type = Rect;
+    fn result(&self, controller: &Controller) -> Result<Self::Type, String> {
+        let image = controller.screencap().map_err(|err| format!("{:?}", err))?;
+        let image = image.to_luma32f();
+
+        let matcher = match self {
+            Self::Template(template_filename) => {
+                let template =
+                    image::open(Path::new("./resources/templates/").join(template_filename))
+                        .map_err(|err| format!("{:?}", err))?
+                        .to_luma32f();
+                Matcher::Template { image, template }
+            }
+            Self::Ocr(text) => Matcher::Ocr(text.to_string()),
+        };
+
+        let res = matcher.result().ok_or("match failed".to_string())?;
+        Ok(res)
+    }
+}

@@ -8,7 +8,7 @@ use std::{
 
 use image::{ImageBuffer, math::Rect};
 
-use crate::{adb::{connect, Device, MyError}, config::task::TaskConfig, task::Exec};
+use crate::{adb::{connect, Device, MyError}, config::task::TaskConfig, task::{Exec, Task}};
 
 #[cfg(test)]
 mod test {
@@ -60,9 +60,8 @@ impl Controller {
         let name = name.as_ref().to_string();
         let task_config = TaskConfig::load()?;
         let task = task_config.0.get(&name).ok_or("failed to get task")?.clone();
-        let task: Box<dyn Exec> = task.try_into()?;
         println!("executing {:?}", task);
-        task.as_ref().run(self)?;
+        task.run(self)?;
         Ok(())
     }
 

@@ -1,10 +1,12 @@
-Multi = [
-    { NavigateIn = "mission" },
+[Multi]
+fail_fast = false
+tasks = [
+    { Navigate = { NavigateIn = "mission" } },
     "press_collect_all_award",
     "confirm",
-    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
     "press_collect_all_award",
     # "confirm", 匹配率不是很好
-    { ActionClick = [100, 100]},
-    { NavigateOut = "mission" },
+    { ActionClick = { x = 100, y = 100 } },
+    { Navigate = { NavigateOut = "mission" } },
 ]

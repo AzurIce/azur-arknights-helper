@@ -1,45 +1,42 @@
-press_esc = "ActionPressEsc"
-press_home = "ActionPressHome"
+[press_home.ActionPressHome]
 
-[toggle_top_navigator.ActionClickMatch]
+[toggle_top_navigator.ActionClickMatch.match_task]
 type = "Template"
 template = "ButtonToggleTopNavigator.png"
 
-[multiple]
-Multi = [
-    "ActionPressEsc",
-    "ActionPressHome",
-    { ActionClick = [
+[press_esc.ActionPressEsc]
+
+[navigate_in.Navigate]
+NavigateIn = "name"
+
+[multiple.Multi]
+tasks = [
+    { ActionPressEsc = {} },
+    { Navigate = { NavigateIn = "name" } },
+    { ActionPressHome = {} },
+    { ActionClick = { x = 0, y = 0 } },
+    { ActionSwipe = { p1 = [
     0,
     0,
-] },
-    { ActionSwipe = [
-    [
-    0,
-    0,
-],
-    [
+], p2 = [
     200,
     0,
-],
-] },
+], duration = 1.0 } },
     "task_name",
 ]
+fail_fast = false
 
-[click_origin]
-ActionClick = [
+[click_origin.ActionClick]
+x = 0
+y = 0
+
+[swipe_right.ActionSwipe]
+p1 = [
     0,
     0,
 ]
-
-[swipe_right]
-ActionSwipe = [
-    [
-    0,
-    0,
-],
-    [
+p2 = [
     200,
     0,
-],
 ]
+duration = 1.0

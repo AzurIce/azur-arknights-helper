@@ -2,9 +2,12 @@ use std::{collections::HashMap, error::Error, fs, path::PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::task::MatchTask;
+use crate::task::{
+    builtins::{ActionClickMatch, TaskRef},
+    match_task::MatchTask,
+};
 
-use super::task::{BuiltinTask, TaskRef};
+use super::task::BuiltinTask;
 
 #[cfg(test)]
 mod test {
@@ -31,7 +34,7 @@ mod test {
         file.write_fmt(format_args!("{}", config_str))?;
         Ok(())
     }
-    
+
     #[test]
     fn test_load_navigate_config() -> Result<(), Box<dyn Error>> {
         let config = NavigateConfig::load()?;
@@ -56,7 +59,12 @@ impl NavigateConfig {
                 if let Ok(navigate) = fs::read_to_string(entry.path()) {
                     if let Ok(navigate) = toml::from_str::<Navigate>(&navigate) {
                         config.0.insert(
-                            entry.path().file_prefix().and_then(|s| s.to_str()).unwrap().to_string(),
+                            entry
+                                .path()
+                                .file_prefix()
+                                .and_then(|s| s.to_str())
+                                .unwrap()
+                                .to_string(),
                             navigate,
                         );
                     }
@@ -64,6 +72,15 @@ impl NavigateConfig {
             }
         }
         Ok(config)
+    }
+    pub fn get_navigate<S: AsRef<str>>(&self, name: S) -> Result<Navigate, String> {
+        self.0
+            .get(name.as_ref())
+            .ok_or(format!(
+                "failed to retrive navigate by name {:?}",
+                name.as_ref()
+            ))
+            .map(|navigate| navigate.clone())
     }
 }
 
@@ -74,9 +91,12 @@ impl Default for NavigateConfig {
         map.insert(
             "base".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(MatchTask::Template(
-                    "EnterInfrastMistCity.png".to_string(),
-                ))),
+                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(
+                    ActionClickMatch::new(
+                        MatchTask::Template("EnterInfrastMistCity.png".to_string()),
+                        None,
+                    ),
+                )),
                 exit_task: TaskRef::ByName("back".to_string()),
             },
         );
@@ -84,9 +104,12 @@ impl Default for NavigateConfig {
         map.insert(
             "mission".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(MatchTask::Template(
-                    "EnterMissionMistCity.png".to_string(),
-                ))),
+                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(
+                    ActionClickMatch::new(
+                        MatchTask::Template("EnterMissionMistCity.png".to_string()),
+                        None,
+                    ),
+                )),
                 exit_task: TaskRef::ByName("back".to_string()),
             },
         );
@@ -95,7 +118,7 @@ impl Default for NavigateConfig {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Navigate {
     pub enter_task: TaskRef,
     pub exit_task: TaskRef,
