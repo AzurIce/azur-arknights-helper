@@ -15,8 +15,7 @@ struct Cli {
     task: Option<String>,
 }
 
-#[tokio::main]
-async fn main() {
+fn main() {
     let cli = Cli::parse();
 
     if let Some(task) = cli.task {
