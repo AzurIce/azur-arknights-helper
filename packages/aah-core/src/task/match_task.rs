@@ -64,6 +64,7 @@ pub enum MatchTask {
 impl ExecResult for MatchTask {
     type Type = Rect;
     fn result(&self, controller: &Controller) -> Result<Self::Type, String> {
+        println!("[MatchTask]: matching {:?}", self);
         let image = controller.screencap().map_err(|err| format!("{:?}", err))?;
         let image = image.to_luma32f();
 

@@ -1,38 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::task::{BuiltinTask, TaskConfig},
-    controller::Controller,
+    config::task::BuiltinTask,
     task::{wrapper::GenericTaskWrapper, Task},
+    AAH,
 };
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum TaskRef {
-    ByInternal(BuiltinTask),
-    ByName(String),
-}
-
-impl Task for TaskRef {
-    type Err = String;
-    fn run(&self, controller: &crate::controller::Controller) -> Result<Self::Res, Self::Err> {
-        let task = match self {
-            TaskRef::ByInternal(task) => task.clone(),
-            TaskRef::ByName(name) => {
-                let task_config = TaskConfig::load().map_err(|err| format!("{:?}", err))?;
-
-                task_config.get_task(name)?
-            }
-        };
-        task.run(controller)
-            .map(|_| ())
-            .map_err(|_| format!("[Taskref]: failed to execute {:?}", task))
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Multi {
-    tasks: Vec<TaskRef>,
+    tasks: Vec<BuiltinTask>,
     #[serde(default = "default_fail_fast")]
     fail_fast: bool,
     wrapper: Option<GenericTaskWrapper>,
@@ -43,7 +19,7 @@ fn default_fail_fast() -> bool {
 }
 
 impl Multi {
-    pub fn new(tasks: Vec<TaskRef>, fail_fast: bool, wrapper: Option<GenericTaskWrapper>) -> Self {
+    pub fn new(tasks: Vec<BuiltinTask>, fail_fast: bool, wrapper: Option<GenericTaskWrapper>) -> Self {
         Self {
             tasks,
             fail_fast,
@@ -54,10 +30,10 @@ impl Multi {
 
 impl Task for Multi {
     type Err = String;
-    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let mut res = Ok(());
         for task in &self.tasks {
-            res = task.run(controller).map(|_| ());
+            res = task.run(aah).map(|_| ());
             if res.is_err() && self.fail_fast {
                 break;
             }

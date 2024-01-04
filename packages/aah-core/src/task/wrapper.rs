@@ -21,8 +21,6 @@ pub struct GenericTaskWrapper {
     pub retry: usize,
     #[serde(default)]
     pub repeat: usize,
-    #[serde(default)]
-    pub allow_fail: bool,
 }
 
 impl Default for GenericTaskWrapper {
@@ -31,7 +29,6 @@ impl Default for GenericTaskWrapper {
             delay: 0.0,
             retry: 0,
             repeat: 1,
-            allow_fail: false,
         }
     }
 }
@@ -45,7 +42,7 @@ impl TaskWrapper for GenericTaskWrapper {
             for _ in 0..self.retry {
                 // Success fast for retry
                 if res.is_ok() {
-                    return res;
+                    break;
                 }
                 res = run();
             }
@@ -53,10 +50,14 @@ impl TaskWrapper for GenericTaskWrapper {
         };
 
         let mut res = exec();
-        for _ in 0..self.repeat - 1 {
-            // Fail fast for repeat
-            res?;
-            res = exec()
+        if self.repeat != 0 {
+            for _ in 0..self.repeat - 1 {
+                // Fail fast for repeat
+                if res.is_err() {
+                    break;
+                }
+                res = exec()
+            }
         }
         res
     }

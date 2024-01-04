@@ -1,9 +1,9 @@
-use std::{collections::HashMap, error::Error, fs, path::PathBuf};
+use std::{collections::HashMap, error::Error, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
 use crate::task::{
-    builtins::{ActionClickMatch, TaskRef},
+    builtins::{ActionClickMatch, ByName},
     match_task::MatchTask,
 };
 
@@ -11,20 +11,16 @@ use super::task::BuiltinTask;
 
 #[cfg(test)]
 mod test {
-    use std::{
-        error::Error,
-        fs::OpenOptions,
-        io::Write,
-    };
+    use std::{error::Error, fs::OpenOptions, io::Write};
 
     use super::*;
 
     #[test]
-    fn test_navigate_config() -> Result<(), Box<dyn Error>> {
+    fn write_default_navigate_config() -> Result<(), Box<dyn Error>> {
         let navigate_config = NavigateConfig::default();
         let config_str = toml::to_string_pretty(&navigate_config)?;
 
-        let config_file = "./resources/navigates.toml";
+        let config_file = "../../resources/navigates.toml";
         let mut open_options = OpenOptions::new();
         open_options.write(true).create(true);
 
@@ -35,7 +31,7 @@ mod test {
 
     #[test]
     fn test_load_navigate_config() -> Result<(), Box<dyn Error>> {
-        let config = NavigateConfig::load()?;
+        let config = NavigateConfig::load("../../resources")?;
         println!("{:?}", config);
         Ok(())
     }
@@ -44,11 +40,13 @@ mod test {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);
 impl NavigateConfig {
-    pub fn load() -> Result<NavigateConfig, Box<dyn Error>> {
-        let config = fs::read_to_string("./resources/navigates.toml")?;
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, Box<dyn Error>> {
+        let path = path.as_ref();
+        let config = path.join("navigates.toml");
+        let config = fs::read_to_string(config)?;
         let mut config = toml::from_str::<NavigateConfig>(&config)?;
 
-        if let Ok(read_dir) = fs::read_dir(PathBuf::from("./resources/navigates/")) {
+        if let Ok(read_dir) = fs::read_dir(path.join("navigates")) {
             for entry in read_dir {
                 let entry = entry.unwrap();
                 if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
@@ -89,26 +87,22 @@ impl Default for NavigateConfig {
         map.insert(
             "base".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(
-                    ActionClickMatch::new(
-                        MatchTask::Template("EnterInfrastMistCity.png".to_string()),
-                        None,
-                    ),
+                enter_task: BuiltinTask::ActionClickMatch(ActionClickMatch::new(
+                    MatchTask::Template("EnterInfrastMistCity.png".to_string()),
+                    None,
                 )),
-                exit_task: TaskRef::ByName("back".to_string()),
+                exit_task: BuiltinTask::ByName(ByName::new("back", None)),
             },
         );
 
         map.insert(
             "mission".to_string(),
             Navigate {
-                enter_task: TaskRef::ByInternal(BuiltinTask::ActionClickMatch(
-                    ActionClickMatch::new(
-                        MatchTask::Template("EnterMissionMistCity.png".to_string()),
-                        None,
-                    ),
+                enter_task: BuiltinTask::ActionClickMatch(ActionClickMatch::new(
+                    MatchTask::Template("EnterMissionMistCity.png".to_string()),
+                    None,
                 )),
-                exit_task: TaskRef::ByName("back".to_string()),
+                exit_task: BuiltinTask::ByName(ByName::new("back", None)),
             },
         );
 
@@ -118,6 +112,6 @@ impl Default for NavigateConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Navigate {
-    pub enter_task: TaskRef,
-    pub exit_task: TaskRef,
+    pub enter_task: BuiltinTask,
+    pub exit_task: BuiltinTask,
 }

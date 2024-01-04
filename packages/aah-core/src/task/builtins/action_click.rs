@@ -1,11 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    controller::Controller,
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
         Task,
-    },
+    }, AAH,
 };
 
 #[cfg(test)]
@@ -50,9 +49,9 @@ impl ActionClick {
 
 impl Task for ActionClick {
     type Err = String;
-    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
-            controller
+            aah.controller
                 .click(self.x, self.y)
                 .map_err(|err| format!("controller error: {:?}", err))
         };

@@ -1,7 +1,7 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use aah_core::controller::Controller;
+use aah_core::AAH;
 use clap::Parser;
 
 #[derive(Parser)]
@@ -20,7 +20,7 @@ fn main() {
 
     if let Some(task) = cli.task {
         let serial = cli.serial_number.unwrap_or("127.0.0.1:16384".to_string());
-        let controller = Controller::connect(serial).expect("failed to connect to the device");
-        controller.exec_task(task).expect("failed to execute task");
+        let aah = AAH::connect(serial).expect("failed to connect to the device");
+        aah.run_task(task).expect("failed to execute task");
     }
 }

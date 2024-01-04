@@ -15,13 +15,17 @@ AAH 提供了一系列内置的任务，并且提供了组合任务的方法，�
 ```toml
 # resources/tasks.toml
 [award]
-Multi = [
-    { NavigateIn = "mission" },
+[award.Multi]
+fail_fast = false
+tasks = [
+    { Navigate = { NavigateIn = "mission" } },
     "press_collect_all_award",
-    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    "confirm",
+    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
     "press_collect_all_award",
-    { ActionClick = [100, 100]},
-    { NavigateOut = "mission" },
+    # "confirm", 匹配率不是很好
+    { ActionClick = { x = 100, y = 100 } },
+    { Navigate = { NavigateOut = "mission" } },
 ]
 ```
 
@@ -29,19 +33,27 @@ Multi = [
 
 ```toml
 # resources/tasks/award.toml
-Multi = [
-    { NavigateIn = "mission" },
+[Multi]
+fail_fast = false
+tasks = [
+    { Navigate = { NavigateIn = "mission" } },
     "press_collect_all_award",
-    { ActionClickMatch = { type = "Template", template = "award_2.png" } },
+    "confirm",
+    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
     "press_collect_all_award",
-    { ActionClick = [100, 100]},
-    { NavigateOut = "mission" },
+    # "confirm", 匹配率不是很好
+    { ActionClick = { x = 100, y = 100 } },
+    { Navigate = { NavigateOut = "mission" } },
 ]
 ```
 
 ### 一、高级 Task 列表
 
 高级 Task，是一系列内置的具有较为完整功能的任务。
+
+#### start_up
+
+开始唤醒，到达主页
 
 #### award
 
@@ -65,10 +77,34 @@ Multi = [
 
 内置 Task，就是通过非 `toml` 实现的 Task。
 
+例如一个比较基础的 ActionClick：
+
+```toml
+{ ActionClick = { x = <x>, y = <y> } }
+```
+
+此外为任务添加 TaskWrapper，用于对任务进行通用的配置，不同的 Task 支持不同的 TaskWrapper（详情见具体 Task 及 TaskWrapper 描述）。
+
+例如大部分任务都支持的 GenericTaskWrapper：
+
+```toml
+{
+	ActionClick = { x = <x>, y = <y>, wrapper = {
+		delay = 0.5
+		retry = 3
+		repeat = 2
+	} }
+}
+```
+
+#### 1. 基础 ActionTask
+
+均支持 `GenericTaskWrapper`。
+
 ##### ActionPressEsc
 
 ```toml
-"PressEsc"
+{ ActionPressEsc = {} }
 ```
 
 点击 Esc 按键
@@ -76,7 +112,7 @@ Multi = [
 ##### ActionPressHome
 
 ```toml
-"PressHome"
+{ ActionPressHome = {} }
 ```
 
 点击 Home 按键
@@ -85,7 +121,7 @@ Multi = [
 
 ```toml
 {
-	Click = [<x>, <y>]
+	ActionClick = { x = <x>, y = <y> }
 }
 ```
 
@@ -95,11 +131,11 @@ Multi = [
 
 ```toml
 {
-	Swipe = [[<x1>, <y1>], [<x2>, <y2>]]
+	ActionSwipe = { p1 = [<x1>, <y1>], p2 = [<x2>, <y2>], duration = 1.0 }
 }
 ```
 
-> 从 `<x1>` `<y1>` 坐标滑动到 `<x2>` `<y2>` 坐标（整数）
+> 从 `<x1>` `<y1>` 坐标滑动到 `<x2>` `<y2>` 坐标（整数）持续时间 `duration` 秒
 
 ##### ActionClickMatch
 
@@ -108,8 +144,10 @@ Multi = [
 ```toml
 {
 	ClickMatch = {
-		type = "Template"
-		template = "image.png" # 位于 resource/template/ 下的文件
+		match_task = {
+            type = "Template"
+            template = "image.png" # 位于 resource/template/ 下的文件
+		}
 	}
 }
 ```
@@ -119,13 +157,15 @@ Multi = [
 ```toml
 {
 	ClickMatch = {
-		type = "Ocr"
-		template = "启动!" # 查找的目标串
+		match_task = {
+            type = "Ocr"
+            template = "启动!" # 查找的目标串
+		}
 	}
 }
 ```
 
-#### NavigateIn / NavigateOut
+#### 2. NavigateIn / NavigateOut
 
 从主页进入到某一页面/从某一页面退出到主页
 
@@ -139,20 +179,28 @@ Multi = [
 
 其中 `page_name` 以及具体导航方式由 `navigates.toml` 配置，详情见 四、Navigate 定义
 
-#### 2. Multi 组合
+#### 3. Multi 组合
 
-使用 Multi 可以将多个 ActionTask 组合起来顺序执行（如果某一任务失败会继续执行后续任务）。
+使用 Multi 可以将多个 Task 组合起来顺序执行。
+
+fail_fast 用于配置遇到错误时是否直接退出
 
 ```toml
-Multi = [
-    "ActionPressEsc",
-    "ActionPressHome",
-    { ActionClick = [ 0, 0 ] },
-    { ActionSwipe = [
-        [ 0, 0 ],
-        [ 200, 0 ],
-	] },
-    "task_name", # 可以通过任务名称来引用自定义的任务
+[Multi]
+fail_fast = true,
+tasks = [
+    { ActionPressEsc = {} },
+    { NavigateIn = "name" },
+    { ActionPressHome = {} },
+    { ActionClick = { x = 0, y = 0, wrapper = { delay = 0.0, retry = 0, repeat = 1 } } },
+    { ActionSwipe = { p1 = [
+    0,
+    0,
+], p2 = [
+    200,
+    0,
+], duration = 1.0 } },
+    "task_name",
 ]
 ```
 
@@ -166,7 +214,9 @@ NavigateTask 中所使用的 page_name 及对应的详细导航方式均由 `res
 # resources/navigates.toml
 [mission]
 enter_task = {
-	ActionClickMatch = { type = "Template", template = "EnterMissionMistCity.png"}
+	ActionClickMatch = {
+		match_task = { type = "Template", template = "EnterMissionMistCity.png" }
+	}
 }
 exit_task = "back"
 ```

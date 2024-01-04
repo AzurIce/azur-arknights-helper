@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    controller::Controller,
     task::{
         match_task::MatchTask,
         wrapper::{GenericTaskWrapper, TaskWrapper},
         ExecResult, Task,
     },
+    AAH,
 };
 
 #[cfg(test)]
@@ -59,10 +59,10 @@ impl ActionClickMatch {
 
 impl Task for ActionClickMatch {
     type Err = String;
-    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
-            controller
-                .click_in_rect(self.match_task.result(controller)?)
+            aah.controller
+                .click_in_rect(self.match_task.result(&aah.controller)?)
                 .map_err(|err| format!("controller error: {:?}", err))
         };
 

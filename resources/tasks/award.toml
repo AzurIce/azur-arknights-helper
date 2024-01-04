@@ -1,12 +1,13 @@
 [Multi]
 fail_fast = false
 tasks = [
-    { Navigate = { NavigateIn = "mission" } },
-    "press_collect_all_award",
-    "confirm",
+    { NavigateIn = "mission" },
+    { ByName = { name = "press_collect_all_award", wrapper = { delay = 0.2, retry = 1 } } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } }, # 匹配率不是很好？
+    # { ActionClick = { x = 100, y = 100 } },
     { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
-    "press_collect_all_award",
-    # "confirm", 匹配率不是很好
-    { ActionClick = { x = 100, y = 100 } },
-    { Navigate = { NavigateOut = "mission" } },
+    { ByName = { name = "press_collect_all_award" } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
+    # { ActionClick = { x = 100, y = 100 } },
+    { NavigateOut = "mission" },
 ]

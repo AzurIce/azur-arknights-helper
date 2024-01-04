@@ -1,4 +1,4 @@
-use crate::controller::Controller;
+use crate::{controller::Controller, AAH};
 
 pub mod builtins;
 pub mod match_task;
@@ -7,7 +7,7 @@ pub mod wrapper;
 pub trait Task {
     type Res = ();
     type Err = ();
-    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err>;
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err>;
 }
 
 /// 任务 Trait

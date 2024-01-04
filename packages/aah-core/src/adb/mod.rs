@@ -11,6 +11,7 @@ pub mod host;
 
 #[derive(Debug)]
 pub enum MyError {
+    S(String),
     Adb(String),
     ParseError(String),
     DeviceNotFound(String),

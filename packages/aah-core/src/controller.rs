@@ -18,14 +18,6 @@ mod test {
             Controller::connect("127.0.0.1:16384").expect("failed to connect to device");
         controller.screencap().expect("failed to cap the screen");
     }
-
-    #[test]
-    fn test_exec_task() -> Result<(), Box<dyn Error>> {
-        let controller =
-            Controller::connect("127.0.0.1:16384").expect("failed to connect to device");
-        controller.exec_task("award")?;
-        Ok(())
-    }
 }
 
 pub struct Controller {
@@ -54,19 +46,6 @@ impl Controller {
 }
 
 impl Controller {
-    pub fn exec_task<S: AsRef<str>>(&self, name: S) -> Result<(), Box<dyn Error>> {
-        let name = name.as_ref().to_string();
-        let task_config = TaskConfig::load()?;
-        let task = task_config
-            .0
-            .get(&name)
-            .ok_or("failed to get task")?
-            .clone();
-        println!("executing {:?}", task);
-        task.run(self)?;
-        Ok(())
-    }
-
     pub fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
         let x = rand::random::<u32>() % rect.width + rect.x;
         let y = rand::random::<u32>() % rect.height + rect.y;
@@ -74,7 +53,10 @@ impl Controller {
     }
 
     pub fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
-        println!("clicking {}, {}", x, y);
+        if x > self.width || y > self.height {
+            return Err(MyError::S("coord out of screen".to_string()))
+        }
+        println!("[Controller]: clicking ({}, {})", x, y);
         self.inner
             .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
         Ok(())

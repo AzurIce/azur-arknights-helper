@@ -1,27 +1,22 @@
 use serde::{Deserialize, Serialize};
 
-use std::{
-    collections::HashMap,
-    error::Error,
-    fs,
-    path::PathBuf,
-};
+use std::path::Path;
+use std::{collections::HashMap, error::Error, fs};
 
+use crate::config::task;
+use crate::task::wrapper::GenericTaskWrapper;
 use crate::task::{match_task::MatchTask, Task};
+use crate::AAH;
 
 #[cfg(test)]
 mod test {
-    use std::{
-        error::Error,
-        fs::OpenOptions,
-        io::Write,
-    };
+    use std::{error::Error, fs::OpenOptions, io::Write};
 
     use super::*;
 
     #[test]
     fn test_load_config() {
-        let config = TaskConfig::load().unwrap();
+        let config = TaskConfig::load("../../resources").unwrap();
         println!("{:#?}", config)
     }
 
@@ -30,7 +25,7 @@ mod test {
         let mut open_options = OpenOptions::new();
         open_options.write(true).create(true);
         let config = TaskConfig::default();
-        let config_file = "./resources/tasks.toml";
+        let config_file = "../../resources/tasks.toml";
 
         {
             println!("{:?}", config);
@@ -57,7 +52,7 @@ mod test {
 
     #[test]
     fn test_load_task_config() -> Result<(), Box<dyn Error>> {
-        let task = TaskConfig::load()?;
+        let task = TaskConfig::load("../../resources")?;
         println!("{:?}", task);
         Ok(())
     }
@@ -66,11 +61,14 @@ mod test {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TaskConfig(pub HashMap<String, BuiltinTask>);
 impl TaskConfig {
-    pub fn load() -> Result<Self, Box<dyn Error>> {
-        let task_config = fs::read_to_string("./resources/tasks.toml")?;
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+        let path = path.as_ref();
+        let task_config = path.join("tasks.toml");
+        println!("{:?}", task_config);
+        let task_config = fs::read_to_string(task_config)?;
         let mut task_config = toml::from_str::<TaskConfig>(&task_config)?;
 
-        if let Ok(read_dir) = fs::read_dir(PathBuf::from("./resources/tasks/")) {
+        if let Ok(read_dir) = fs::read_dir(path.join("tasks")) {
             for entry in read_dir {
                 let entry = entry.unwrap();
                 if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
@@ -93,6 +91,7 @@ impl TaskConfig {
         }
         Ok(task_config)
     }
+
     pub fn get_task<S: AsRef<str>>(&self, name: S) -> Result<BuiltinTask, String> {
         return self
             .0
@@ -113,7 +112,8 @@ impl Default for TaskConfig {
 
         let press_esc = BuiltinTask::ActionPressEsc(ActionPressEsc::new(None));
         let press_home = BuiltinTask::ActionPressHome(ActionPressHome::new(None));
-        let click = BuiltinTask::ActionClick(ActionClick::new(0, 0, None));
+        let click =
+            BuiltinTask::ActionClick(ActionClick::new(0, 0, Some(GenericTaskWrapper::default())));
         let swipe = BuiltinTask::ActionSwipe(ActionSwipe::new((0, 0), (200, 0), 1.0, None));
         let click_match = BuiltinTask::ActionClickMatch(ActionClickMatch::new(
             MatchTask::Template("ButtonToggleTopNavigator.png".to_string()),
@@ -121,6 +121,7 @@ impl Default for TaskConfig {
         ));
         let navigate_in = BuiltinTask::NavigateIn("name".to_string());
         let navigate_out = BuiltinTask::NavigateIn("name".to_string());
+        let by_name = BuiltinTask::ByName(ByName::new("press_esc", Some(GenericTaskWrapper::default())));
 
         map.insert("press_esc".to_string(), press_esc.clone());
         map.insert("press_home".to_string(), press_home.clone());
@@ -129,16 +130,17 @@ impl Default for TaskConfig {
         map.insert("toggle_top_navigator".to_string(), click_match.clone());
         map.insert("navigate_in".to_string(), navigate_in.clone());
         map.insert("navigate_out".to_string(), navigate_out.clone());
+        map.insert("by_name".to_string(), by_name.clone());
         map.insert(
             "multiple".to_string(),
             BuiltinTask::Multi(Multi::new(
                 vec![
-                    TaskRef::ByInternal(press_esc),
-                    TaskRef::ByInternal(navigate_in),
-                    TaskRef::ByInternal(press_home),
-                    TaskRef::ByInternal(click),
-                    TaskRef::ByInternal(swipe),
-                    TaskRef::ByName("task_name".to_string()),
+                    press_esc,
+                    navigate_in,
+                    press_home,
+                    click,
+                    swipe,
+                    by_name,
                 ],
                 false,
                 None,
@@ -152,6 +154,7 @@ impl Default for TaskConfig {
 use crate::task::builtins::*;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BuiltinTask {
+    ByName(ByName),
     Multi(Multi),
     // Action
     ActionPressEsc(ActionPressEsc),
@@ -166,20 +169,17 @@ pub enum BuiltinTask {
 
 impl Task for BuiltinTask {
     type Err = String;
-    fn run(&self, controller: &crate::controller::Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         match self {
-            BuiltinTask::Multi(task) => task.run(controller),
-            BuiltinTask::ActionPressEsc(task) => task.run(controller),
-            BuiltinTask::ActionPressHome(task) => task.run(controller),
-            BuiltinTask::ActionClick(task) => task.run(controller),
-            BuiltinTask::ActionSwipe(task) => task.run(controller),
-            BuiltinTask::ActionClickMatch(task) => task.run(controller),
-            BuiltinTask::NavigateIn(navigate) => {
-                Navigate::NavigateIn(navigate.clone()).run(controller)
-            }
-            BuiltinTask::NavigateOut(navigate) => {
-                Navigate::NavigateOut(navigate.clone()).run(controller)
-            }
+            BuiltinTask::ByName(task) => task.run(aah),
+            BuiltinTask::Multi(task) => task.run(aah),
+            BuiltinTask::ActionPressEsc(task) => task.run(aah),
+            BuiltinTask::ActionPressHome(task) => task.run(aah),
+            BuiltinTask::ActionClick(task) => task.run(aah),
+            BuiltinTask::ActionSwipe(task) => task.run(aah),
+            BuiltinTask::ActionClickMatch(task) => task.run(aah),
+            BuiltinTask::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah),
+            BuiltinTask::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah),
         }
     }
 }

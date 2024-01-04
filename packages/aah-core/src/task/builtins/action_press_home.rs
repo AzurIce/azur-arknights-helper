@@ -1,11 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    controller::Controller,
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
         Task,
     },
+    AAH,
 };
 
 #[cfg(test)]
@@ -48,9 +48,9 @@ impl ActionPressHome {
 
 impl Task for ActionPressHome {
     type Err = String;
-    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
-            controller
+            aah.controller
                 .press_home()
                 .map_err(|err| format!("controller error: {:?}", err))
         };
