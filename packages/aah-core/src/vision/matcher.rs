@@ -1,8 +1,8 @@
-use std::{ops::Deref, time::Instant};
+use std::time::Instant;
 
-use image::{imageops::crop_imm, math::Rect, GrayImage, ImageBuffer, Luma, Pixel};
+use image::{math::Rect, ImageBuffer, Luma};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
-use template_matching::{find_extremes, match_template, Image, MatchTemplateMethod};
+use template_matching::{find_extremes, match_template, MatchTemplateMethod};
 
 #[cfg(test)]
 mod test {

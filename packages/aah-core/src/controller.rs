@@ -1,14 +1,12 @@
-use std::{
-    error::Error,
-    fs,
-    io::Cursor,
-    net::{TcpStream, ToSocketAddrs},
-    time::Duration,
+use std::{error::Error, time::Duration};
+
+use image::math::Rect;
+
+use crate::{
+    adb::{connect, Device, MyError},
+    config::task::TaskConfig,
+    task::Task,
 };
-
-use image::{ImageBuffer, math::Rect};
-
-use crate::{adb::{connect, Device, MyError}, config::task::TaskConfig, task::{Exec, Task}};
 
 #[cfg(test)]
 mod test {
@@ -16,9 +14,9 @@ mod test {
 
     #[test]
     fn test_controller() {
-        let mut controller =
+        let controller =
             Controller::connect("127.0.0.1:16384").expect("failed to connect to device");
-        controller.screencap();
+        controller.screencap().expect("failed to cap the screen");
     }
 
     #[test]
@@ -59,7 +57,11 @@ impl Controller {
     pub fn exec_task<S: AsRef<str>>(&self, name: S) -> Result<(), Box<dyn Error>> {
         let name = name.as_ref().to_string();
         let task_config = TaskConfig::load()?;
-        let task = task_config.0.get(&name).ok_or("failed to get task")?.clone();
+        let task = task_config
+            .0
+            .get(&name)
+            .ok_or("failed to get task")?
+            .clone();
         println!("executing {:?}", task);
         task.run(self)?;
         Ok(())

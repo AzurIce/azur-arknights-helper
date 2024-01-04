@@ -3,18 +3,17 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     error::Error,
-    fmt::format,
-    fs::{self, File},
+    fs,
     path::PathBuf,
 };
 
-use crate::task::{self, Exec, Task, match_task::MatchTask};
+use crate::task::{match_task::MatchTask, Task};
 
 #[cfg(test)]
 mod test {
     use std::{
         error::Error,
-        fs::{self, File, OpenOptions},
+        fs::OpenOptions,
         io::Write,
     };
 
@@ -78,7 +77,7 @@ impl TaskConfig {
                     continue;
                 }
                 if let Ok(task) = fs::read_to_string(entry.path()) {
-                    let task = toml::from_str::<BuiltinTask>(&task).expect(format!("failed to parse task {}", entry.path().to_str().unwrap()).as_str());
+                    let task = toml::from_str::<BuiltinTask>(&task)?;
 
                     task_config.0.insert(
                         entry
@@ -120,7 +119,8 @@ impl Default for TaskConfig {
             MatchTask::Template("ButtonToggleTopNavigator.png".to_string()),
             None,
         ));
-        let navigate_in = BuiltinTask::Navigate(Navigate::NavigateIn("name".to_string()));
+        let navigate_in = BuiltinTask::NavigateIn("name".to_string());
+        let navigate_out = BuiltinTask::NavigateIn("name".to_string());
 
         map.insert("press_esc".to_string(), press_esc.clone());
         map.insert("press_home".to_string(), press_home.clone());
@@ -128,6 +128,7 @@ impl Default for TaskConfig {
         map.insert("swipe_right".to_string(), swipe.clone());
         map.insert("toggle_top_navigator".to_string(), click_match.clone());
         map.insert("navigate_in".to_string(), navigate_in.clone());
+        map.insert("navigate_out".to_string(), navigate_out.clone());
         map.insert(
             "multiple".to_string(),
             BuiltinTask::Multi(Multi::new(
@@ -159,7 +160,8 @@ pub enum BuiltinTask {
     ActionSwipe(ActionSwipe),
     ActionClickMatch(ActionClickMatch),
     // Navigate
-    Navigate(Navigate),
+    NavigateIn(String),
+    NavigateOut(String),
 }
 
 impl Task for BuiltinTask {
@@ -172,7 +174,12 @@ impl Task for BuiltinTask {
             BuiltinTask::ActionClick(task) => task.run(controller),
             BuiltinTask::ActionSwipe(task) => task.run(controller),
             BuiltinTask::ActionClickMatch(task) => task.run(controller),
-            BuiltinTask::Navigate(task) => task.run(controller)
+            BuiltinTask::NavigateIn(navigate) => {
+                Navigate::NavigateIn(navigate.clone()).run(controller)
+            }
+            BuiltinTask::NavigateOut(navigate) => {
+                Navigate::NavigateOut(navigate.clone()).run(controller)
+            }
         }
     }
 }

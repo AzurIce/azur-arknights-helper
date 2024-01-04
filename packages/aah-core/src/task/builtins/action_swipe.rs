@@ -6,7 +6,7 @@ use crate::{
     controller::Controller,
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        ExecResult, Task,
+        Task,
     },
 };
 
@@ -51,8 +51,18 @@ fn default_duration() -> f32 {
 }
 
 impl ActionSwipe {
-    pub fn new(p1: (u32, u32), p2: (u32, u32), duration: f32, wrapper: Option<GenericTaskWrapper>) -> Self {
-        Self { p1, p2, duration, wrapper }
+    pub fn new(
+        p1: (u32, u32),
+        p2: (u32, u32),
+        duration: f32,
+        wrapper: Option<GenericTaskWrapper>,
+    ) -> Self {
+        Self {
+            p1,
+            p2,
+            duration,
+            wrapper,
+        }
     }
 }
 

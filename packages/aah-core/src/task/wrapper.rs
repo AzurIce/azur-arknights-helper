@@ -42,10 +42,10 @@ impl TaskWrapper for GenericTaskWrapper {
 
         let exec = || {
             let mut res = run();
-            for i in 0..self.retry {
+            for _ in 0..self.retry {
                 // Success fast for retry
                 if res.is_ok() {
-                    return res
+                    return res;
                 }
                 res = run();
             }
@@ -53,11 +53,9 @@ impl TaskWrapper for GenericTaskWrapper {
         };
 
         let mut res = exec();
-        for i in 0..self.repeat - 1 {
+        for _ in 0..self.repeat - 1 {
             // Fail fast for repeat
-            if res.is_err() {
-                return res;
-            }
+            res?;
             res = exec()
         }
         res

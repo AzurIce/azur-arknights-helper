@@ -1,14 +1,9 @@
-use std::time::Duration;
-
 use serde::{Deserialize, Serialize};
 
 use crate::{
     config::task::{BuiltinTask, TaskConfig},
     controller::Controller,
-    task::{
-        wrapper::{GenericTaskWrapper, TaskWrapper},
-        ExecResult, Task,
-    },
+    task::{wrapper::GenericTaskWrapper, Task},
 };
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -24,15 +19,14 @@ impl Task for TaskRef {
         let task = match self {
             TaskRef::ByInternal(task) => task.clone(),
             TaskRef::ByName(name) => {
-                let task_config = TaskConfig::load().map_err(|err|format!("{:?}", err))?;
+                let task_config = TaskConfig::load().map_err(|err| format!("{:?}", err))?;
 
-                let task = task_config.get_task(name)?;
-                task
+                task_config.get_task(name)?
             }
         };
         task.run(controller)
             .map(|_| ())
-            .map_err(|err| format!("failed to execute"))
+            .map_err(|_| format!("[Taskref]: failed to execute {:?}", task))
     }
 }
 

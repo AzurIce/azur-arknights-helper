@@ -13,11 +13,9 @@ use super::task::BuiltinTask;
 mod test {
     use std::{
         error::Error,
-        fs::{self, File, OpenOptions},
+        fs::OpenOptions,
         io::Write,
     };
-
-    use crate::config;
 
     use super::*;
 

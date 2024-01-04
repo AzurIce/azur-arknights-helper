@@ -1,12 +1,11 @@
 use std::path::Path;
 
 use image::math::Rect;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use crate::{controller::Controller, vision::matcher::Matcher};
 
 use super::{Exec, ExecResult};
-
 
 /// 动作任务
 
@@ -25,10 +24,11 @@ impl AndTask {
 
 impl Exec for AndTask {
     fn run(&self, controller: &Controller) -> Result<(), String> {
-        self.tasks.iter().map(|task| task.run(controller)).collect()
+        self.tasks.iter().try_for_each(|task| task.run(controller))
     }
 }
 
+// TODO: change the Exec Trait
 // 若任何 Match 失败则失败
 // 成功返回所有匹配 Rect
 #[derive(Debug)]

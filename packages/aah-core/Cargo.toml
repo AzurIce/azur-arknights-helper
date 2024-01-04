@@ -1,19 +1,11 @@
 [package]
-name = "azur-arknights-helper-cli"
+name = "aah-core"
 version = "0.1.0"
 edition = "2021"
-
-[workspace]
-members = ["packages/*"]
-
-[workspace.dependencies]
-aah-core = { path = "packages/aah-core" }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-aah-core.workspace = true
-tokio = { version = "1.35.1", features = ["full"] }
 image = "0.24.7"
 imageproc = "0.23.0"
 template-matching = { version = "0.2.0", features = ["image"] }
@@ -22,4 +14,3 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.8"
 serde_json = "1.0.110"
-clap = { version = "4.4.12", features = ["derive"] }

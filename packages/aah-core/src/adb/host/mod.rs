@@ -1,9 +1,11 @@
 use std::{
+    env::args,
     error::Error,
     fmt::Display,
     io::{Read, Write},
     net::{TcpStream, ToSocketAddrs},
-    time::Duration, process::Command, env::args,
+    process::Command,
+    time::Duration,
 };
 
 use super::{Device, DeviceInfo, MyError};
@@ -40,7 +42,8 @@ pub fn connect<A: ToSocketAddrs>(host: A) -> Result<Host, MyError> {
     // TODO: if the daemon is not started first start the daemon
     // TODO: or else just use process, don't use socket
     // TODO: or, separate them?
-    let stream = TcpStream::connect(host).map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
+    let stream =
+        TcpStream::connect(host).map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
     stream
         .set_read_timeout(Some(Duration::from_secs(2)))
         .map_err(|err| MyError::HostConnectError(format!("{:?}", err)))?;
@@ -63,14 +66,18 @@ fn read_length<T: Read>(source: &mut T) -> Result<usize, Box<dyn Error>> {
 fn encode_message<S: AsRef<str>>(payload: S) -> Result<String, MyError> {
     let payload = payload.as_ref();
 
-    let len = u16::try_from(payload.len()).map(|len| format!("{:0>4X}", len)).map_err(|err| MyError::EncodeMessageError(err.to_string()))?;
+    let len = u16::try_from(payload.len())
+        .map(|len| format!("{:0>4X}", len))
+        .map_err(|err| MyError::EncodeMessageError(err.to_string()))?;
     Ok(format!("{len}{payload}"))
 }
 
 impl Host {
     // get devices
     pub fn devices(&mut self) -> Result<Vec<DeviceInfo>, MyError> {
-        let response = self.execute_command("host:devices-l", true, true).map_err(|err| MyError::Adb(err.to_string()))?;
+        let response = self
+            .execute_command("host:devices-l", true, true)
+            .map_err(|err| MyError::Adb(err.to_string()))?;
 
         let device_info = response
             .lines()
@@ -88,7 +95,9 @@ impl Host {
         has_length: bool,
     ) -> Result<String, Box<dyn Error>> {
         self.0.write_all(encode_message(command)?.as_bytes())?;
-        let bytes = self.read_response(has_output, has_length).map_err(|err| MyError::ReadResponseError(format!("{:?}", err)))?;
+        let bytes = self
+            .read_response(has_output, has_length)
+            .map_err(|err| MyError::ReadResponseError(format!("{:?}", err)))?;
         let response = std::str::from_utf8(&bytes)?;
         Ok(response.to_owned())
     }

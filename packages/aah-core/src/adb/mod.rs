@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, path::PathBuf, process::Command,
+    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, process::Command,
 };
 
 use image::{codecs::png::PngDecoder, DynamicImage};
@@ -83,7 +83,10 @@ mod test {
 pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
     let serial = serial.as_ref();
 
-    let adb_connect = Command::new("adb").args(["connect", serial]).output().map_err(|err|MyError::DeviceNotFound(format!("{:?}", err)))?;
+    let adb_connect = Command::new("adb")
+        .args(["connect", serial])
+        .output()
+        .map_err(|err| MyError::DeviceNotFound(format!("{:?}", err)))?;
     // TODO: check stdout of it to find whether the connect is success or not
     // TODO: or, actually the following code can already check?
 

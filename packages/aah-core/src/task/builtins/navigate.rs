@@ -1,18 +1,6 @@
-use std::time::Duration;
-
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    config::{
-        navigate::NavigateConfig,
-        task::{BuiltinTask, TaskConfig},
-    },
-    controller::Controller,
-    task::{
-        wrapper::{GenericTaskWrapper, TaskWrapper},
-        ExecResult, Task,
-    },
-};
+use crate::{config::navigate::NavigateConfig, controller::Controller, task::Task};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Navigate {
@@ -22,7 +10,7 @@ pub enum Navigate {
 
 impl Task for Navigate {
     type Err = String;
-    fn run(&self, controller: &crate::controller::Controller) -> Result<Self::Res, Self::Err> {
+    fn run(&self, controller: &Controller) -> Result<Self::Res, Self::Err> {
         let name = match self {
             Navigate::NavigateIn(name) => name,
             Navigate::NavigateOut(name) => name,
@@ -32,8 +20,8 @@ impl Task for Navigate {
         let navigate = navigate_config.get_navigate(name)?;
 
         let task = match self {
-            Navigate::NavigateIn(task) => navigate.enter_task,
-            Navigate::NavigateOut(name) => navigate.exit_task,
+            Navigate::NavigateIn(_) => navigate.enter_task,
+            Navigate::NavigateOut(_) => navigate.exit_task,
         };
         task.run(controller).map(|_| ())
     }

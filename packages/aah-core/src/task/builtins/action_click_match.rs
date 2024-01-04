@@ -3,14 +3,15 @@ use serde::{Deserialize, Serialize};
 use crate::{
     controller::Controller,
     task::{
+        match_task::MatchTask,
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        ExecResult, Task, match_task::MatchTask,
+        ExecResult, Task,
     },
 };
 
 #[cfg(test)]
 mod test {
-    use crate::task::{wrapper::GenericTaskWrapper, match_task::MatchTask};
+    use crate::task::{match_task::MatchTask, wrapper::GenericTaskWrapper};
 
     use super::*;
 
@@ -18,7 +19,10 @@ mod test {
     fn test_serde() {
         // Without wrapper
         {
-            let task = ActionClickMatch::new(MatchTask::Template("EnterMissionMistCity.png".to_string()), None);
+            let task = ActionClickMatch::new(
+                MatchTask::Template("EnterMissionMistCity.png".to_string()),
+                None,
+            );
             let task = toml::to_string_pretty(&task).unwrap();
             println!("{:?}", task);
             let task = toml::from_str::<ActionClickMatch>(&task).unwrap();
@@ -26,7 +30,10 @@ mod test {
         }
         // With wrapper
         {
-            let task = ActionClickMatch::new(MatchTask::Template("EnterMissionMistCity.png".to_string()), Some(GenericTaskWrapper::default()));
+            let task = ActionClickMatch::new(
+                MatchTask::Template("EnterMissionMistCity.png".to_string()),
+                Some(GenericTaskWrapper::default()),
+            );
             let task = toml::to_string_pretty(&task).unwrap();
             println!("{:?}", task);
             let task = toml::from_str::<ActionClickMatch>(&task).unwrap();
