@@ -6,7 +6,9 @@ use template_matching::{find_extremes, match_template, MatchTemplateMethod};
 
 #[cfg(test)]
 mod test {
-    use image::imageops::crop_imm;
+    use std::path::Path;
+
+    use image::{imageops::crop_imm, math::Rect, ImageBuffer, Luma};
 
     use super::Matcher;
 
@@ -18,12 +20,32 @@ mod test {
 
         let image = crop_imm(&image, 1833, 1071, 484, 359).to_image();
 
-        let template = image::open("./resource/template//EnterInfrastMistCity.png")
+        let template = image::open("./resource/template/EnterInfrastMistCity.png")
             .expect("failed to read template")
             .to_luma32f();
 
         let res = Matcher::Template { image, template }.result();
         println!("{:?}", res)
+    }
+
+    #[test]
+    fn test_template() {
+        let res = test_template_matcher_with_image("_2.png", "Confirm.png");
+        println!("{:?}", res)
+    }
+
+    fn test_template_matcher_with_image(image: &str, template: &str) -> Option<Rect> {
+        let path = Path::new("../../resources/templates");
+        let image = path.join(image);
+        let image = image::open(image)
+            .expect("failed to read image")
+            .to_luma32f();
+
+        let template = path.join(template);
+        let template = image::open(template)
+            .expect("failed to read template")
+            .to_luma32f();
+        Matcher::Template { image, template }.result()
     }
 }
 
