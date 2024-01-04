@@ -2,10 +2,10 @@
 fail_fast = false
 tasks = [
     { NavigateIn = "mission" },
-    { ByName = { name = "press_collect_all_award", wrapper = { delay = 0.2, retry = 1 } } },
+    { ByName = { name = "press_collect_all_award", wrapper = { delay = 0.5, retry = 1 } } },
     { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
-    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" }, wrapper = { delay = 0.5, retry = 1 } } },
     { ByName = { name = "press_collect_all_award" } },
     { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
-    { NavigateOut = "mission" },
+    { NavigateOut = "mission", wrapper = { delay = 0.5, retry = 1 } },
 ]

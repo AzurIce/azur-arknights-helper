@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::task::{
-    wrapper::{self, GenericTaskWrapper, TaskWrapper},
+    wrapper::{GenericTaskWrapper, TaskWrapper},
     Task,
 };
 

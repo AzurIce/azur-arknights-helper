@@ -18,15 +18,18 @@ AAH 提供了一系列内置的任务，并且提供了组合任务的方法，�
 [award.Multi]
 fail_fast = false
 tasks = [
-    { Navigate = { NavigateIn = "mission" } },
-    "press_collect_all_award",
-    "confirm",
-    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
-    "press_collect_all_award",
-    # "confirm", 匹配率不是很好
-    { ActionClick = { x = 100, y = 100 } },
-    { Navigate = { NavigateOut = "mission" } },
+    { NavigateIn = "mission" },
+    { ByName = { name = "press_collect_all_award", wrapper = { delay = 0.5, retry = 1 } } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
+    { ActionClickMatch = {
+    	match_task = { type = "Template", template = "award_2.png" },
+    	wrapper = { delay = 0.5, retry = 1 } }
+    },
+    { ByName = { name = "press_collect_all_award" } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
+    { NavigateOut = "mission", wrapper = { delay = 0.5, retry = 1 } },
 ]
+
 ```
 
 也可以选择在 `resources/tasks/` 下创建一个 `award.toml`：
@@ -36,15 +39,18 @@ tasks = [
 [Multi]
 fail_fast = false
 tasks = [
-    { Navigate = { NavigateIn = "mission" } },
-    "press_collect_all_award",
-    "confirm",
-    { ActionClickMatch = { match_task = { type = "Template", template = "award_2.png" } } },
-    "press_collect_all_award",
-    # "confirm", 匹配率不是很好
-    { ActionClick = { x = 100, y = 100 } },
-    { Navigate = { NavigateOut = "mission" } },
+    { NavigateIn = "mission" },
+    { ByName = { name = "press_collect_all_award", wrapper = { delay = 0.5, retry = 1 } } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
+    { ActionClickMatch = {
+    	match_task = { type = "Template", template = "award_2.png" },
+    	wrapper = { delay = 0.5, retry = 1 } }
+    },
+    { ByName = { name = "press_collect_all_award" } },
+    { ByName = { name = "confirm", wrapper = { delay = 0.5, retry = 1 } } },
+    { NavigateOut = "mission", wrapper = { delay = 0.5, retry = 1 } },
 ]
+
 ```
 
 ### 一、高级 Task 列表
@@ -53,12 +59,16 @@ tasks = [
 
 #### start_up
 
+```toml
+{ ByName = { name = "award" } }
+```
+
 开始唤醒，到达主页
 
 #### award
 
 ```toml
-"award"
+{ ByName = { name = "award" } }
 ```
 
 从主页开始，领取所有奖励，再返回主页
@@ -70,8 +80,6 @@ tasks = [
 - 一些 `ActionClickMatch` 的 alias，暂略：
   - back
   - click_collect_all_award
-
-
 
 ### 三、内置 Task 列表
 
@@ -204,6 +212,16 @@ tasks = [
 ]
 ```
 
+#### 4. ByName
+
+通过任务名来引用任务
+
+支持 `GenericTaskWrapper`
+
+```toml
+{ ByName = { name = "page_name" } }
+```
+
 ## 四、Navigate 定义
 
 NavigateTask 中所使用的 page_name 及对应的详细导航方式均由 `resources/navigates.toml` 或 `resources/navigates/<page_name>.toml` 定义。
@@ -213,12 +231,10 @@ NavigateTask 中所使用的 page_name 及对应的详细导航方式均由 `res
 ```toml
 # resources/navigates.toml
 [mission]
-enter_task = {
-	ActionClickMatch = {
-		match_task = { type = "Template", template = "EnterMissionMistCity.png" }
-	}
-}
-exit_task = "back"
+enter_task = { ActionClickMatch = {
+	match_task = { type = "Template", template = "EnterMissionMistCity.png" }
+} }
+exit_task = { ByName = { name = "back" } }
 ```
 
 - `enter_task` 表示从主页进入的方法，也就是 NavigateIn 执行的任务。
