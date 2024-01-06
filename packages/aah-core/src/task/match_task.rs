@@ -75,9 +75,9 @@ impl ExecResult for MatchTask {
                         .map_err(|err| format!("{:?}", err))?
                         .to_luma32f();
 
-                let template = if image.height() != 2560 {
+                let template = if image.height() != 1440 {
                     // let scale_factor = 2560.0 / image.width() as f32;
-                    let scale_factor = 49.0 / 59.0;
+                    let scale_factor = image.height() as f32 / 1440.0;
 
                     let new_width = (template.width() as f32 * scale_factor) as u32;
                     let new_height = (template.height() as f32 * scale_factor) as u32;

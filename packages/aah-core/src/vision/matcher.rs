@@ -30,21 +30,95 @@ mod test {
 
     #[test]
     fn test_template() {
-        let res = test_template_matcher_with_image("_2.png", "Confirm.png");
+        let res = test_template_matcher_with_image_and_scale_factor("_2.png", "Confirm.png", 1.0);
         println!("{:?}", res)
     }
 
-    fn test_template_matcher_with_image(image: &str, template: &str) -> Option<Rect> {
-        let path = Path::new("../../resources/templates");
-        let image = path.join(image);
+    #[derive(Debug, Clone, Copy)]
+    enum Device {
+        MUMU,
+        P40Pro,
+    }
+
+    impl Device {
+        fn factor(&self) -> f32 {
+            match self {
+                Device::MUMU => 1.0,
+                Device::P40Pro => 0.83,
+            }
+        }
+        fn folder_name(&self) -> &str {
+            match self {
+                Device::MUMU => "MUMU-2560x1440",
+                Device::P40Pro => "P40 Pro-2640x1200",
+            }
+        }
+    }
+
+    #[test]
+    fn test_device_match() {
+        test_device(Device::MUMU);
+        test_device(Device::P40Pro);
+    }
+
+    fn test_device(device: Device) {
+        println!("#### testing device {:?} ####", device);
+        test_template_matcher_with_device_image(device, "start.png", "start.png");
+
+        test_template_matcher_with_device_image(device, "wakeup.png", "start_wakeup.png");
+
+        test_template_matcher_with_device_image(device, "main.png", "EnterInfrastMistCity.png");
+        test_template_matcher_with_device_image(device, "main.png", "EnterMissionMistCity.png");
+        test_template_matcher_with_device_image(device, "main.png", "EnterRecruitMistCity.png");
+        test_template_matcher_with_device_image(device, "main.png", "MailBoxIconWhite.png");
+
+        test_template_matcher_with_device_image(device, "mission.png", "CollectAllAward.png");
+        test_template_matcher_with_device_image(device, "mission.png", "Close.png");
+        test_template_matcher_with_device_image(device, "mission.png", "MissonTagMainTheme.png");
+        test_template_matcher_with_device_image(device, "mission.png", "ButtonToggleTopNavigator.png");
+        test_template_matcher_with_device_image(device, "mission.png", "award_2.png");
+    }
+
+    fn test_template_matcher_with_device_image(
+        device: Device,
+        image: &str,
+        template: &str,
+    ) -> Option<Rect> {
+        println!("testing {} on {}...", template, image);
+        let templates_path = Path::new("../../resources/templates");
+        let image_path = templates_path.join(device.folder_name());
+
+        let image = image_path.join(image);
+        let template = templates_path.join(template);
+        test_template_matcher_with_image_and_scale_factor(image, template, device.factor())
+    }
+
+    fn test_template_matcher_with_image_and_scale_factor<P: AsRef<Path>>(
+        image: P,
+        template: P,
+        factor: f32,
+    ) -> Option<Rect> {
+        let image = image.as_ref();
+        let template = template.as_ref();
+
         let image = image::open(image)
             .expect("failed to read image")
             .to_luma32f();
 
-        let template = path.join(template);
         let template = image::open(template)
             .expect("failed to read template")
             .to_luma32f();
+        let template = {
+            let new_width = (template.width() as f32 * factor) as u32;
+            let new_height = (template.height() as f32 * factor) as u32;
+
+            image::imageops::resize(
+                &template,
+                new_width,
+                new_height,
+                image::imageops::FilterType::Triangle,
+            )
+        };
         Matcher::Template { image, template }.result()
     }
 }
