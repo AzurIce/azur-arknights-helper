@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use image::math::Rect;
+use image::{math::Rect, GenericImageView};
 use serde::{Deserialize, Serialize};
 
 use crate::{controller::Controller, vision::matcher::Matcher};
@@ -74,6 +74,23 @@ impl ExecResult for MatchTask {
                     image::open(Path::new("./resources/templates/").join(template_filename))
                         .map_err(|err| format!("{:?}", err))?
                         .to_luma32f();
+
+                let template = if image.height() != 2560 {
+                    // let scale_factor = 2560.0 / image.width() as f32;
+                    let scale_factor = 49.0 / 59.0;
+
+                    let new_width = (template.width() as f32 * scale_factor) as u32;
+                    let new_height = (template.height() as f32 * scale_factor) as u32;
+
+                    image::imageops::resize(
+                        &template,
+                        new_width,
+                        new_height,
+                        image::imageops::FilterType::Triangle,
+                    )
+                } else {
+                    template
+                };
                 Matcher::Template { image, template }
             }
             Self::Ocr(text) => Matcher::Ocr(text.to_string()),

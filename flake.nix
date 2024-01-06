@@ -33,7 +33,7 @@
             llvmPackages_16.bintools
             # openssl
             pkg-config
-            rust-bin.beta.latest.default
+            rust-bin.nightly.latest.default
           ] ++ (with pkgs.darwin.apple_sdk.frameworks; pkgs.lib.optionals pkgs.stdenv.isDarwin [
             System
             IOKit
