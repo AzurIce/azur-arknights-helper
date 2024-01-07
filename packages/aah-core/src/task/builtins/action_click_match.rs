@@ -62,7 +62,7 @@ impl Task for ActionClickMatch {
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
             aah.controller
-                .click_in_rect(self.match_task.result(&aah.controller)?)
+                .click_in_rect(self.match_task.run(&aah)?)
                 .map_err(|err| format!("controller error: {:?}", err))
         };
 

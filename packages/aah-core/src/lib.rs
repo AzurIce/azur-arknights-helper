@@ -1,10 +1,12 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::error::Error;
+use std::{error::Error, fs};
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::Controller;
+use ocrs::{OcrEngine, OcrEngineParams};
+use rten::Model;
 
 use crate::task::Task;
 
@@ -29,10 +31,36 @@ mod tests {
     }
 }
 
+fn try_init_ocr_engine() -> Result<OcrEngine, Box<dyn Error>> {
+    println!("Initializing ocr engine...");
+    if fs::File::open("text-detection.rten").is_err() {
+        let client = reqwest::blocking::get("https://ocrs-models.s3-accelerate.amazonaws.com/text-detection.rten")?;
+        fs::write("text-detection.rten", client.bytes()?)?;
+    }
+    if fs::File::open("text-recognition.rten").is_err() {
+        let client = reqwest::blocking::get("https://ocrs-models.s3-accelerate.amazonaws.com/text-recognition.rten")?;
+        fs::write("text-recognition.rten", client.bytes()?)?;
+    }
+
+    let detection_model_data = fs::read("text-detection.rten")?;
+    let rec_model_data = fs::read("text-recognition.rten")?;
+
+    let detection_model = Model::load(&detection_model_data)?;
+    let recognition_model = Model::load(&rec_model_data)?;
+
+    let engine = OcrEngine::new(OcrEngineParams {
+        detection_model: Some(detection_model),
+        recognition_model: Some(recognition_model),
+        ..Default::default()
+    })?;
+    Ok(engine)
+}
+
 pub struct AAH {
     pub controller: Controller,
     pub task_config: TaskConfig,
     pub navigate_config: NavigateConfig,
+    pub ocr_engine: Option<OcrEngine>,
 }
 
 impl AAH {
@@ -44,13 +72,15 @@ impl AAH {
             controller,
             task_config,
             navigate_config,
+            ocr_engine: Some(try_init_ocr_engine()?),
         })
     }
 
     pub fn run_task<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
-        let task = self.task_config
+        let task = self
+            .task_config
             .0
             .get(&name)
             .ok_or("failed to get task")?

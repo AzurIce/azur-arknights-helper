@@ -3,11 +3,9 @@ use std::{collections::HashMap, error::Error, fs, path::Path};
 use serde::{Deserialize, Serialize};
 
 use crate::task::{
-    builtins::{ActionClickMatch, ByName},
+    builtins::{ActionClickMatch, ByName, BuiltinTask},
     match_task::MatchTask,
 };
-
-use super::task::BuiltinTask;
 
 #[cfg(test)]
 mod test {

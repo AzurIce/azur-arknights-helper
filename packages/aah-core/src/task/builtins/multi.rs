@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    config::task::BuiltinTask,
     task::{wrapper::GenericTaskWrapper, Task},
     AAH,
 };
+
+use super::BuiltinTask;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Multi {

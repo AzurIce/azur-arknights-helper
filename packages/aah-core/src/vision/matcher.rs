@@ -1,16 +1,56 @@
-use std::time::Instant;
+use std::{error::Error, time::Instant};
 
-use image::{math::Rect, ImageBuffer, Luma};
+use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
+use ocrs::OcrEngine;
+use rten_tensor::{NdTensorBase, NdTensorView};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
 use template_matching::{find_extremes, match_template, MatchTemplateMethod};
 
+pub fn convert_image_to_ten(
+    image: DynamicImage,
+) -> Result<NdTensorBase<f32, Vec<f32>, 3>, Box<dyn Error>> {
+    let image = image.into_rgb8();
+    let (width, height) = image.dimensions();
+    let layout = image.sample_layout();
+
+    let chw_tensor = NdTensorView::from_slice(
+        image.as_raw().as_slice(),
+        [height as usize, width as usize, 3],
+        Some([
+            layout.height_stride,
+            layout.width_stride,
+            layout.channel_stride,
+        ]),
+    )
+    .map_err(|err| format!("failed to convert image to tensorL {:?}", err))?
+    .permuted([2, 0, 1]) // HWC => CHW
+    .to_tensor() // Make tensor contiguous, which makes `map` faster
+    .map(|x| *x as f32 / 255.); // Rescale from [0, 255] to [0, 1]
+    Ok(chw_tensor)
+}
+
 #[cfg(test)]
 mod test {
-    use std::path::Path;
+    use std::{error::Error, path::Path};
 
-    use image::{imageops::crop_imm, math::Rect, ImageBuffer, Luma};
+    use image::{imageops::crop_imm, math::Rect, DynamicImage};
 
-    use super::Matcher;
+    use crate::try_init_ocr_engine;
+
+    use super::{convert_image_to_ten, Matcher};
+
+    fn get_image<P: AsRef<Path>>(path: P) -> Result<DynamicImage, String> {
+        image::open(path).map_err(|err| format!("failed to open image: {:?}", err))
+    }
+
+    fn get_device_image<P: AsRef<Path>>(
+        device: Device,
+        filename: P,
+    ) -> Result<DynamicImage, String> {
+        let templates_path = Path::new("../../resources/templates");
+        let image_path = templates_path.join(device.folder_name());
+        get_image(image_path.join(filename))
+    }
 
     #[test]
     fn test_template_matcher() {
@@ -32,6 +72,23 @@ mod test {
     fn test_template() {
         let res = test_template_matcher_with_image_and_scale_factor("_2.png", "Confirm.png", 1.0);
         println!("{:?}", res)
+    }
+
+    #[test]
+    fn test_ocr() -> Result<(), Box<dyn Error>> {
+        let engine = try_init_ocr_engine().expect("failed to init ocr engine");
+        let image = get_device_image(Device::MUMU, "wakeup.png")?;
+        let image = convert_image_to_ten(image)?;
+        let text = "开始唤醒".to_string();
+
+        let matcher = Matcher::Ocr {
+            image,
+            text,
+            engine: &engine,
+        };
+        let rect = matcher.result().unwrap();
+        println!("{:?}", rect);
+        Ok(())
     }
 
     #[derive(Debug, Clone, Copy)]
@@ -75,7 +132,11 @@ mod test {
         test_template_matcher_with_device_image(device, "mission.png", "CollectAllAward.png");
         test_template_matcher_with_device_image(device, "mission.png", "Close.png");
         test_template_matcher_with_device_image(device, "mission.png", "MissonTagMainTheme.png");
-        test_template_matcher_with_device_image(device, "mission.png", "ButtonToggleTopNavigator.png");
+        test_template_matcher_with_device_image(
+            device,
+            "mission.png",
+            "ButtonToggleTopNavigator.png",
+        );
         test_template_matcher_with_device_image(device, "mission.png", "award_2.png");
     }
 
@@ -124,22 +185,26 @@ mod test {
 }
 
 /// 匹配器，目前只实现了模板匹配
-pub enum Matcher {
+pub enum Matcher<'a> {
     Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
     },
-    Ocr(String),
+    Ocr {
+        image: NdTensorBase<f32, Vec<f32>, 3>,
+        text: String,
+        engine: &'a OcrEngine,
+    },
 }
 
 const THRESHOLD: f32 = 100.0;
 
-impl Matcher {
+impl<'a> Matcher<'a> {
     /// 执行匹配并获取结果
     pub fn result(&self) -> Option<Rect> {
         match self {
             Self::Template { image, template } => {
-                let down_scaled_template = template;
+                // let down_scaled_template = template;
                 let method = MatchTemplateMethod::SumOfSquaredDifferences;
                 println!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
@@ -168,7 +233,39 @@ impl Matcher {
                 })
             }
             // TODO: implement OcrMatcher
-            Self::Ocr(text) => None,
+            Self::Ocr {
+                image,
+                text,
+                engine,
+            } => {
+                let ocr = || -> Result<Rect, Box<dyn Error>> {
+                    let ocr_input = engine.prepare_input(image.view())?;
+
+                    // Phase 1: Detect text words
+                    let word_rects = engine.detect_words(&ocr_input)?;
+                    for rect in &word_rects {
+                        println!("{:?}", rect);
+                    }
+
+                    // Phase 2: Perform layout analysis
+                    let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
+
+                    // Phase 3: Recognize text
+                    let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
+
+                    for line in line_texts
+                        .iter()
+                        .flatten()
+                        // Filter likely spurious detections. With future model improvements
+                        // this should become unnecessary.
+                        .filter(|l| l.to_string().len() > 1)
+                    {
+                        println!("{}", line);
+                    }
+                    todo!()
+                };
+                ocr().ok()
+            }
         }
     }
 }

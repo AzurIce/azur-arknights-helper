@@ -5,8 +5,8 @@ use std::{collections::HashMap, error::Error, fs};
 
 
 use crate::task::wrapper::GenericTaskWrapper;
-use crate::task::{match_task::MatchTask, Task};
-use crate::AAH;
+use crate::task::{match_task::MatchTask};
+use crate::task::builtins::{BuiltinTask, test_tasks};
 
 #[cfg(test)]
 mod test {
@@ -104,82 +104,11 @@ impl TaskConfig {
 impl Default for TaskConfig {
     fn default() -> Self {
         let mut map = HashMap::new();
-
-        // let press_esc = Task::PressEsc;
-        // let press_home = Task::PressHome;
-        // let click = Task::Click(0, 0);
-        // let swipe = Task::Swipe((0, 0), (200, 0));
-
-        let press_esc = BuiltinTask::ActionPressEsc(ActionPressEsc::new(None));
-        let press_home = BuiltinTask::ActionPressHome(ActionPressHome::new(None));
-        let click =
-            BuiltinTask::ActionClick(ActionClick::new(0, 0, Some(GenericTaskWrapper::default())));
-        let swipe = BuiltinTask::ActionSwipe(ActionSwipe::new((0, 0), (200, 0), 1.0, None));
-        let click_match = BuiltinTask::ActionClickMatch(ActionClickMatch::new(
-            MatchTask::Template("ButtonToggleTopNavigator.png".to_string()),
-            None,
-        ));
-        let navigate_in = BuiltinTask::NavigateIn("name".to_string());
-        let navigate_out = BuiltinTask::NavigateIn("name".to_string());
-        let by_name = BuiltinTask::ByName(ByName::new("press_esc", Some(GenericTaskWrapper::default())));
-
-        map.insert("press_esc".to_string(), press_esc.clone());
-        map.insert("press_home".to_string(), press_home.clone());
-        map.insert("click_origin".to_string(), click.clone());
-        map.insert("swipe_right".to_string(), swipe.clone());
-        map.insert("toggle_top_navigator".to_string(), click_match.clone());
-        map.insert("navigate_in".to_string(), navigate_in.clone());
-        map.insert("navigate_out".to_string(), navigate_out.clone());
-        map.insert("by_name".to_string(), by_name.clone());
-        map.insert(
-            "multiple".to_string(),
-            BuiltinTask::Multi(Multi::new(
-                vec![
-                    press_esc,
-                    navigate_in,
-                    press_home,
-                    click,
-                    swipe,
-                    by_name,
-                ],
-                false,
-                None,
-            )),
-        );
-
+        let test_tasks = test_tasks();
+        for (name, task) in test_tasks {
+            map.insert(name.to_string(), task);
+        }
         Self(map)
     }
 }
 
-use crate::task::builtins::*;
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum BuiltinTask {
-    ByName(ByName),
-    Multi(Multi),
-    // Action
-    ActionPressEsc(ActionPressEsc),
-    ActionPressHome(ActionPressHome),
-    ActionClick(ActionClick),
-    ActionSwipe(ActionSwipe),
-    ActionClickMatch(ActionClickMatch),
-    // Navigate
-    NavigateIn(String),
-    NavigateOut(String),
-}
-
-impl Task for BuiltinTask {
-    type Err = String;
-    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
-        match self {
-            BuiltinTask::ByName(task) => task.run(aah),
-            BuiltinTask::Multi(task) => task.run(aah),
-            BuiltinTask::ActionPressEsc(task) => task.run(aah),
-            BuiltinTask::ActionPressHome(task) => task.run(aah),
-            BuiltinTask::ActionClick(task) => task.run(aah),
-            BuiltinTask::ActionSwipe(task) => task.run(aah),
-            BuiltinTask::ActionClickMatch(task) => task.run(aah),
-            BuiltinTask::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah),
-            BuiltinTask::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah),
-        }
-    }
-}
