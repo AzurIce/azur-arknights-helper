@@ -4,13 +4,23 @@
 
 ## 如何使用
 
-咕咕咕，现在 main 还是空的（），正在狠狠搭框子。
+```
+Usage: azur-arknights-helper-cli.exe [OPTIONS] [TASK]
+
+Arguments:
+  [TASK]  The task name want to execute
+
+Options:
+  -s, --serial-number <SERIAL_NUMBER>  The serial number of the target device
+  -h, --help                           Print help
+  -V, --version                        Print version
+```
 
 ## Task 配置
 
 AAH 提供了一系列内置的任务，并且提供了组合任务的方法，可以通过修改 `resources/tasks.toml` 或添加额外的 `resources/tasks/<task_name>.toml` 来实现自定义任务的添加（其实内置的任务也有很多是通过 `toml` 声明的，所以可以参考参考）。
 
-以下是一个自定义的 `award` 任务例子：
+以下是内置的的 `award` 任务例子：
 
 ```toml
 # resources/tasks.toml
@@ -53,6 +63,8 @@ tasks = [
 
 ```
 
+其中的各任务具体解释见下
+
 ### 一、高级 Task 列表
 
 高级 Task，是一系列内置的具有较为完整功能的任务。
@@ -91,7 +103,7 @@ tasks = [
 { ActionClick = { x = <x>, y = <y> } }
 ```
 
-此外为任务添加 TaskWrapper，用于对任务进行通用的配置，不同的 Task 支持不同的 TaskWrapper（详情见具体 Task 及 TaskWrapper 描述）。
+此外可以为任务添加 TaskWrapper，用于对任务进行通用的配置，不同的 Task 支持不同的 TaskWrapper（详情见具体 Task 及 TaskWrapper 描述）。
 
 例如大部分任务都支持的 GenericTaskWrapper：
 
@@ -151,7 +163,7 @@ tasks = [
 
 ```toml
 {
-	ClickMatch = {
+	ActionClickMatch = {
 		match_task = {
             type = "Template"
             template = "image.png" # 位于 resource/template/ 下的文件
@@ -185,7 +197,7 @@ tasks = [
 { NavigateOut = "page_name" }
 ```
 
-其中 `page_name` 以及具体导航方式由 `navigates.toml` 配置，详情见 四、Navigate 定义
+其中 `page_name` 以及具体导航方式由 `navigates.toml` 配置，详情见 [四、Navigate 定义][]
 
 #### 3. Multi 组合
 

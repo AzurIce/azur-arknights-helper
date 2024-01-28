@@ -8,9 +8,11 @@ members = ["packages/*"]
 
 [workspace.dependencies]
 aah-core = { path = "packages/aah-core" }
+aah-task-derive = { path = "packages/aah-task-derive" }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 aah-core.workspace = true
 clap = { version = "4.4.12", features = ["derive"] }
+env_logger = "0.10.1"

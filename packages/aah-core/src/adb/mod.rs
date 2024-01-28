@@ -4,10 +4,10 @@ use std::{
 
 use image::{codecs::png::PngDecoder, DynamicImage};
 
-use self::host::Host;
+use self::{host::{Host}, command::host_service::Transport};
 
-#[allow(unused)]
 pub mod host;
+pub mod command;
 
 #[derive(Debug)]
 pub enum MyError {
@@ -91,11 +91,11 @@ pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
     // TODO: check stdout of it to find whether the connect is success or not
     // TODO: or, actually the following code can already check?
 
-    let mut host = host::connect_default()?;
+    let mut host = host::connect_default().expect("failed to connect to adb server");
 
     let serial = serial.to_string();
     let serials = host
-        .devices()?
+        .devices_long()?
         .iter()
         .map(|device_info| device_info.serial.clone())
         .collect::<Vec<String>>();
@@ -161,12 +161,12 @@ impl Device {
     ) -> Result<String, MyError> {
         let switch_command = format!("host:transport:{}", self.serial);
         self.host
-            .execute_command(&switch_command, false, false)
+            .execute_command(Transport::new(self.serial.clone()))
             .map_err(|err| MyError::Adb(err.to_string()))?;
 
         let response = self
             .host
-            .execute_command(command, has_output, has_length)
+            .execute_raw_command(command, has_output, has_length)
             .map_err(|err| MyError::ExecuteCommandFailed(format!("{:?}", err)))?;
 
         Ok(response.replace("\r\n", "\n"))

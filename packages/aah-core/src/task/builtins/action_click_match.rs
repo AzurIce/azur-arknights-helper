@@ -4,7 +4,7 @@ use crate::{
     task::{
         match_task::MatchTask,
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        ExecResult, Task,
+        Task,
     },
     AAH,
 };
