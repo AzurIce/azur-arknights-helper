@@ -1,5 +1,5 @@
 use std::{
-    io::{self, BufRead, Read, Write},
+    io::{self, BufRead, Write},
     process::{ChildStdin, Command, Stdio},
     time::Duration,
 };
@@ -28,8 +28,7 @@ mod test {
         init();
         let controller =
             MiniTouchController::connect("127.0.0.1:16384").expect("failed to connect to device");
-        // controller.screencap().expect("failed to cap the screen");
-        controller.swipe_screen(Direction::Left).unwrap()
+        controller.screencap().expect("failed to cap the screen");
     }
 
     use std::{env, path::Path};
@@ -305,9 +304,6 @@ impl Toucher for MiniToucher {
             info!("{}", progress);
             let cur_x = lerp(start.0 as f32, end.0 as f32, progress) as i32;
             let cur_y = lerp(start.1 as f32, end.1 as f32, progress) as i32;
-            // if cur_x < 0 || cur_y < 0 {
-            //     continue;
-            // }
             self.mv(0, cur_x as i32, cur_y as i32, 0)?;
             self.commit()?;
             self.wait(Duration::from_millis(SWIPE_DELAY_MS as u64))?;
@@ -343,38 +339,6 @@ impl MiniTouchController {
             ..controller
         };
         Ok(controller)
-    }
-
-    pub fn swipe_screen(&self, direction: Direction) -> Result<(), MyError> {
-        // https://android.stackexchange.com/questions/26261/documentation-for-adb-shell-getevent-sendevent
-        // https://ktnr74.blogspot.com/2013/06/emulating-touchscreen-interaction-with.html
-        let delta = match direction {
-            Direction::Up => (0, -(self.height as i32)),
-            Direction::Down => (0, self.height as i32),
-            Direction::Left => (-(self.width as i32), 0),
-            Direction::Right => (self.width as i32, 0),
-        };
-        let start = (self.width / 2, self.height / 2);
-
-        self.inner
-            .execute_command_by_socket(local_service::InputSwipe::new(
-                start,
-                (start.0 as i32 - 9000, start.1 as i32),
-                Duration::from_secs(2),
-            ))?;
-        self.inner
-            .execute_command_by_socket(local_service::InputSwipe::new(
-                start,
-                (start.0 as i32 + 9000, start.1 as i32),
-                Duration::from_secs(2),
-            ))?;
-        // let now = Instant::now();
-        // println!("{}", now.elapsed().as_secs_f32());
-        // let mut imgs = Vec::new();
-        // while now.elapsed().as_secs_f32() <= 2.0 {
-        //     imgs.push(self.screencap()?);
-        // }
-        Ok(())
     }
 }
 

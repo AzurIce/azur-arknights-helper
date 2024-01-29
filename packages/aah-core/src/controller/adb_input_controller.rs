@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use log::info;
 
-use crate::adb::{command::local_service, connect, Device, MyError};
+use crate::adb::{connect, Device, MyError};
 
 use super::Controller;
 
@@ -19,8 +19,7 @@ mod test {
         init();
         let controller =
             AdbInputController::connect("127.0.0.1:16384").expect("failed to connect to device");
-        // controller.screencap().expect("failed to cap the screen");
-        controller.swipe_screen(Direction::Left).unwrap()
+        controller.screencap().expect("failed to cap the screen");
     }
 }
 
@@ -53,38 +52,6 @@ impl AdbInputController {
             ..controller
         };
         Ok(controller)
-    }
-
-    pub fn swipe_screen(&self, direction: Direction) -> Result<(), MyError> {
-        // https://android.stackexchange.com/questions/26261/documentation-for-adb-shell-getevent-sendevent
-        // https://ktnr74.blogspot.com/2013/06/emulating-touchscreen-interaction-with.html
-        let delta = match direction {
-            Direction::Up => (0, -(self.height as i32)),
-            Direction::Down => (0, self.height as i32),
-            Direction::Left => (-(self.width as i32), 0),
-            Direction::Right => (self.width as i32, 0),
-        };
-        let start = (self.width / 2, self.height / 2);
-
-        self.inner
-            .execute_command_by_socket(local_service::InputSwipe::new(
-                start,
-                (start.0 as i32 - 9000, start.1 as i32),
-                Duration::from_secs(2),
-            ))?;
-        self.inner
-            .execute_command_by_socket(local_service::InputSwipe::new(
-                start,
-                (start.0 as i32 + 9000, start.1 as i32),
-                Duration::from_secs(2),
-            ))?;
-        // let now = Instant::now();
-        // println!("{}", now.elapsed().as_secs_f32());
-        // let mut imgs = Vec::new();
-        // while now.elapsed().as_secs_f32() <= 2.0 {
-        //     imgs.push(self.screencap()?);
-        // }
-        Ok(())
     }
 }
 

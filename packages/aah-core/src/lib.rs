@@ -4,7 +4,7 @@
 use std::{error::Error, fs};
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
-use controller::{AdbInputController, Controller};
+use controller::{AdbInputController, Controller, MiniTouchController};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 
@@ -67,7 +67,8 @@ impl AAH {
     pub fn connect<S: AsRef<str>>(serial: S) -> Result<Self, Box<dyn Error>> {
         let task_config = TaskConfig::load("./resources")?;
         let navigate_config = NavigateConfig::load("./resources")?;
-        let controller = Box::new(AdbInputController::connect(serial)?);
+        // let controller = Box::new(AdbInputController::connect(serial)?);
+        let controller = Box::new(MiniTouchController::connect(serial)?);
         Ok(Self {
             controller,
             task_config,
