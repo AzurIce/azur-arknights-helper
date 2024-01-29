@@ -1,16 +1,28 @@
 use std::{
-    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, process::Command, sync::Mutex,
+    collections::BTreeMap,
+    error::Error,
+    fmt::Display,
+    io::{Cursor, Read, Write},
+    net::{Ipv4Addr, SocketAddrV4, TcpStream},
+    process::Command,
+    sync::Mutex,
+    time::Duration,
 };
 
 use image::{codecs::png::PngDecoder, DynamicImage};
+use log::{info, error};
+
+use crate::adb::utils::{read_response_status, read_payload_to_string, ResponseStatus};
 
 use self::{
-    command::AdbCommand,
+    command::{host_service, AdbCommand},
     host::Host,
+    utils::write_request,
 };
 
 pub mod command;
 pub mod host;
+pub mod utils;
 
 #[derive(Debug)]
 pub enum MyError {
@@ -96,11 +108,77 @@ mod test {
 
         let start = Instant::now();
         let bytes2 = device
-            .execute_command_by_socket( local_service::ScreenCap::new())
+            .execute_command_by_socket(local_service::ScreenCap::new())
             .unwrap();
         println!("cost: {}, {}", start.elapsed().as_millis(), bytes2.len());
 
         assert_eq!(bytes, bytes2);
+    }
+}
+
+impl Read for AdbTcpStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl Write for AdbTcpStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+pub struct AdbTcpStream {
+    inner: TcpStream,
+}
+
+impl AdbTcpStream {
+    pub fn connect(socket_addr: SocketAddrV4) -> Result<Self, String> {
+        let stream = TcpStream::connect(socket_addr).map_err(|err| format!("{:?}", err))?;
+        stream
+            .set_read_timeout(Some(Duration::from_secs(2)))
+            .map_err(|err| format!("{:?}", err))?;
+        stream
+            .set_write_timeout(Some(Duration::from_secs(2)))
+            .map_err(|err| format!("{:?}", err))?;
+        let res = Self { inner: stream };
+        Ok(res)
+    }
+
+    pub fn connect_host() -> Result<Self, String> {
+        Self::connect(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 5037))
+    }
+
+    pub fn connect_device(serial: String) -> Result<Self, String> {
+        let mut stream = Self::connect_host()?;
+        stream.execute_command(host_service::Transport::new(serial))?;
+        Ok(stream)
+    }
+
+    pub fn execute_command<T>(
+        &mut self,
+        command: impl AdbCommand<Output = T>,
+    ) -> Result<T, String> {
+        // TODO: maybe reconnect every time is a good choice?
+        // TODO: no, for transport
+        write_request(self, command.raw_command())?;
+
+        command.handle_response(self)
+    }
+
+    pub fn check_response_status(&mut self) -> Result<(), String> {
+        info!("checking response_status...");
+        let status = read_response_status(self)?;
+        if let ResponseStatus::Fail = status {
+            let reason = read_payload_to_string(self)?;
+            error!("response status is FAIL, reason: {}", reason);
+            return Err(reason);
+        }
+        info!("response status is OKAY");
+        Ok(())
     }
 }
 

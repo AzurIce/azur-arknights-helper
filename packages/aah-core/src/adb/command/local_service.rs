@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use crate::adb::{AdbTcpStream, utils::{read_to_end_to_string, read_to_end}};
+
 use super::AdbCommand;
 
 #[cfg(test)]
@@ -50,10 +52,9 @@ impl AdbCommand for ShellCommand {
         format!("shell:{}", self.command)
     }
 
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()?;
-        let res = host.read_to_end_string()?;
-        Ok(res)
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()?;
+        read_to_end_to_string(stream)
     }
 }
 
@@ -73,9 +74,9 @@ impl AdbCommand for ScreenCap {
         "shell:screencap -p".to_string()
     }
 
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()?;
-        host.read_to_end()
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()?;
+        read_to_end(stream)
     }
 }
 
@@ -106,7 +107,7 @@ impl AdbCommand for InputSwipe {
         )
     }
 
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()
     }
 }

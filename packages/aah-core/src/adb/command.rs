@@ -1,5 +1,5 @@
 
-use super::host::Host;
+use super::AdbTcpStream;
 
 pub mod host_service;
 pub mod local_service;
@@ -9,5 +9,5 @@ pub trait AdbCommand {
 
     fn raw_command(&self) -> String;
 
-    fn handle_response(&self, host: &mut Host) -> Result<Self::Output, String>;
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String>;
 }

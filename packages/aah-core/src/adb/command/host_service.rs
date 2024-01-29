@@ -1,4 +1,4 @@
-use crate::adb::DeviceInfo;
+use crate::adb::{DeviceInfo, utils::read_payload_to_string, AdbTcpStream};
 
 use super::AdbCommand;
 
@@ -39,9 +39,9 @@ impl AdbCommand for Version {
         "host:version".to_string()
     }
 
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()?;
-        host.read_string()
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()?;
+        read_payload_to_string(stream)
     }
 }
 
@@ -61,12 +61,10 @@ impl AdbCommand for DeviceLong {
         "host:devices-l".to_string()
     }
 
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()?;
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()?;
 
-        let response = host.read_string()?;
-
-        host.reconnect()?;
+        let response = read_payload_to_string(stream)?;
 
         let devices_info = response
             .lines()
@@ -89,11 +87,12 @@ impl Transport {
 
 impl AdbCommand for Transport {
     type Output = ();
+
     fn raw_command(&self) -> String {
         format!("host:transport:{}", self.serial_number)
     }
-    fn handle_response(&self, host: &mut crate::adb::host::Host) -> Result<Self::Output, String> {
-        host.check_response_status()?;
-        Ok(())
+
+    fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
+        stream.check_response_status()
     }
 }
