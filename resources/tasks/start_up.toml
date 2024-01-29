@@ -1,11 +1,11 @@
 [Multi]
 fail_fast = false
 tasks = [
-    { ActionClickMatch = { match_task = { type = "Template", template = "start.png" }, wrapper = { retry = 3 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "start.png" }, wrapper = { retry = 1 } } },
     { ActionClickMatch = { match_task = { type = "Template", template = "start_wakeup.png" }, wrapper = { delay = 2, retry = 5 } } },
     # 月卡
-    { ActionClickMatch = { match_task = { type = "Template", template = "confirm.png" }, wrapper = { delay = 3, retry = 3 } } },
-    { ActionClickMatch = { match_task = { type = "Template", template = "close.png" }, wrapper = { delay = 2, retry = 3 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "confirm.png" }, wrapper = { delay = 4, retry = 2 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "close.png" }, wrapper = { delay = 2, retry = 2 } } },
     # 公告
-    { ActionClickMatch = { match_task = { type = "Template", template = "close.png" }, wrapper = { delay = 2, retry = 3 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "close.png" }, wrapper = { delay = 2, retry = 2 } } },
 ]

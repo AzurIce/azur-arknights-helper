@@ -10,12 +10,12 @@ use std::{
 };
 
 use image::{codecs::png::PngDecoder, DynamicImage};
-use log::{info, error};
+use log::{error, info};
 
-use crate::adb::utils::{read_response_status, read_payload_to_string, ResponseStatus};
+use crate::adb::utils::{read_payload_to_string, read_response_status, ResponseStatus};
 
 use self::{
-    command::{host_service, AdbCommand},
+    command::{host_service, local_service, AdbCommand},
     host::Host,
     utils::write_request,
 };
@@ -230,19 +230,23 @@ impl Device {
         }
     }
 
+    pub fn connect_adb_tcp_stream(&self) -> Result<AdbTcpStream, MyError> {
+        AdbTcpStream::connect_device(&self.serial).map_err(|err| MyError::S(err))
+    }
+
     // pub fn get_screen_size(&self) -> Result<(u32, u32), MyError> {
     //     let screen = self.screencap()?;
     //     Ok((screen.width(), screen.height()))
     // }
 
     pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        // let bytes = self
-        //     .host
-        //     .execute_local_command(self.serial.clone(), local_service::ScreenCap::new())
-        //     .expect("failed to screencap");
-        let bytes = self
-            .execute_command_by_process("exec-out screencap -p")
+        let mut adb_tcp_stream = self.connect_adb_tcp_stream()?;
+        let bytes = adb_tcp_stream
+            .execute_command(local_service::ScreenCap::new())
             .expect("failed to screencap");
+        // let bytes = self
+        //     .execute_command_by_process("exec-out screencap -p")
+        //     .expect("failed to screencap");
 
         let decoder = PngDecoder::new(Cursor::new(bytes))
             .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;
@@ -268,10 +272,9 @@ impl Device {
         &self,
         command: impl AdbCommand<Output = T>,
     ) -> Result<T, MyError> {
-        self.host
-            .lock()
-            .unwrap()
-            .execute_local_command(self.serial.clone(), command)
+        let mut adb_tcp_stream = self.connect_adb_tcp_stream()?;
+        adb_tcp_stream
+            .execute_command(command)
             .map_err(|err| MyError::Adb(err.to_string()))
     }
 }
