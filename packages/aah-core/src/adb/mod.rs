@@ -137,6 +137,7 @@ pub struct AdbTcpStream {
 
 impl AdbTcpStream {
     pub fn connect(socket_addr: SocketAddrV4) -> Result<Self, String> {
+        info!("connecting to {:?}...", socket_addr);
         let stream = TcpStream::connect(socket_addr).map_err(|err| format!("{:?}", err))?;
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
@@ -145,6 +146,7 @@ impl AdbTcpStream {
             .set_write_timeout(Some(Duration::from_secs(2)))
             .map_err(|err| format!("{:?}", err))?;
         let res = Self { inner: stream };
+        info!("connected");
         Ok(res)
     }
 
@@ -152,9 +154,10 @@ impl AdbTcpStream {
         Self::connect(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 5037))
     }
 
-    pub fn connect_device(serial: String) -> Result<Self, String> {
+    pub fn connect_device<S: AsRef<str>>(serial: S) -> Result<Self, String> {
+        let serial = serial.as_ref();
         let mut stream = Self::connect_host()?;
-        stream.execute_command(host_service::Transport::new(serial))?;
+        stream.execute_command(host_service::Transport::new(serial.to_string()))?;
         Ok(stream)
     }
 
@@ -164,6 +167,7 @@ impl AdbTcpStream {
     ) -> Result<T, String> {
         // TODO: maybe reconnect every time is a good choice?
         // TODO: no, for transport
+        info!("executing command: {:?}...", command.raw_command());
         write_request(self, command.raw_command())?;
 
         command.handle_response(self)

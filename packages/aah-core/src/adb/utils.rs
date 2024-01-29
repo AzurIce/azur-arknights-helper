@@ -1,7 +1,21 @@
 use std::{
     io::{Read, Write},
-    str::FromStr,
+    str::FromStr, process::Command,
 };
+
+pub fn execute_adb_command(serial: &str, command: &str) -> Result<Vec<u8>, String> {
+        let mut args = vec!["-s", serial];
+        args.extend(command.split_whitespace().collect::<Vec<&str>>());
+
+        let res = Command::new("adb")
+            .args(args)
+            .output()
+            .map_err(|err|format!("{:?}", err))?
+            .stdout;
+        Ok(res)
+    }
+
+// Streaming
 
 pub fn read_exact<T: Read>(source: &mut T, len: usize) -> Result<Vec<u8>, String> {
     let mut buf = [0; 65536];

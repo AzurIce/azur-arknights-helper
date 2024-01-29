@@ -1,13 +1,18 @@
-use std::time::Duration;
-
-use log::info;
+use std::{
+    io::{Write, Read, self, BufRead},
+    process::{ChildStdin, Command, Stdio},
+    time::Duration,
+};
 
 use crate::adb::{
     command::local_service::{self, ShellCommand},
-    connect, host, Device, MyError,
+    connect,
+    utils::execute_adb_command,
+    AdbTcpStream, Device, MyError,
 };
+use log::{info, error};
 
-use super::Controller;
+use super::{Controller, Toucher};
 
 #[cfg(test)]
 mod test {
@@ -26,9 +31,21 @@ mod test {
         controller.swipe_screen(Direction::Left).unwrap()
     }
 
+    use std::{env, path::Path};
+
+    #[test]
+    fn test() {
+        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+        // let s2 = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+    }
+
     #[test]
     fn test_minitoucher() {
-        let toucher = MiniToucher::init("127.0.0.1:16384").unwrap();
+        init();
+        env::set_current_dir(Path::new("../../../../")).unwrap();
+        let mut toucher = MiniToucher::new("127.0.0.1:16384".to_string());
+        toucher.click(1000, 1000).unwrap();
     }
 }
 
@@ -39,21 +56,163 @@ pub enum Direction {
     Right,
 }
 
-pub struct MiniToucher {}
+pub struct MiniToucher {
+    serial: String,
+    minitouch_stdin: Option<ChildStdin>,
+}
 
 impl MiniToucher {
-    pub fn init<S: AsRef<str>>(serial: S) -> Result<Self, String> {
-        let serial = serial.as_ref();
-        let mut host = host::connect_default()?;
-        let res = host
-            .execute_local_command(
-                serial,
-                ShellCommand::new("/data/local/tmp/minitouch -h".to_string()),
-            )
+    pub fn new(serial: String) -> Self {
+        Self {
+            serial,
+            minitouch_stdin: None,
+        }
+    }
+
+    fn check_minitouch(&mut self) -> Result<(), String> {
+        let mut device_adb_stream = AdbTcpStream::connect_device(&self.serial)?;
+        let res = device_adb_stream
+            .execute_command(ShellCommand::new(
+                "/data/local/tmp/minitouch -h".to_string(),
+            ))
             .map_err(|err| format!("{:?}", err))?;
-        println!("{res}");
-        let toucher = Self {};
-        Ok(toucher)
+        if res.starts_with("Usage") {
+            Ok(())
+        } else {
+            Err("exec failed".to_string())
+        }
+    }
+
+    fn push_minitouch(&mut self) -> Result<(), String> {
+        let abi = self.get_abi()?;
+        let res = execute_adb_command(
+            &self.serial,
+            format!("push ./resources/minitouch/{abi}/minitouch /data/local/tmp").as_str(),
+        )
+        .map_err(|err| format!("{:?}", err))?;
+        info!("{:?}", res);
+        Ok(())
+    }
+
+    fn get_abi(&self) -> Result<String, String> {
+        let mut device_adb_stream = AdbTcpStream::connect_device(&self.serial)?;
+        device_adb_stream
+            .execute_command(ShellCommand::new("getprop ro.product.cpu.abi".to_string()))
+    }
+
+    pub fn init(&mut self) -> Result<(), String> {
+        info!("initializing minitouch...");
+        // Need to push
+        if self.check_minitouch().is_err() {
+            self.push_minitouch()?;
+        }
+        self.check_minitouch()?;
+
+        info!("spawning minitouch...");
+        let mut minitouch_child = Command::new("adb")
+            .args(vec!["-s", self.serial.as_str(), "shell", "/data/local/tmp/minitouch", "-i"])
+            .stdin(Stdio::piped())
+            // .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .map_err(|err| format!("{:?}", err))?;
+
+        let child_in = minitouch_child
+            .stdin.take()
+            .ok_or("cannot get stdin of minitouch".to_string())?;
+        let child_err = minitouch_child.stderr.take().ok_or("cannot get stdout of minitouch".to_string())?;
+
+        // read info
+        let mut reader = io::BufReader::new(child_err);
+        info!("start reading info...");
+        loop {
+            let mut buf = String::new();
+            match reader.read_line(&mut buf) {
+                Err(err) => {
+                    error!("{}", err)
+                }
+                Ok(sz) => {
+                    if sz == 0 {
+                        info!("readed Ok(0)");
+                        break;
+                    }
+                    buf = buf.replace("\r\n", "\n").strip_suffix("\n").unwrap().to_string();
+                    info!("readed info: {}", buf);
+                    if buf.starts_with('$') {
+                        break;
+                    }
+                    buf.clear();
+                }
+            }
+        }
+        self.minitouch_stdin = Some(child_in);
+        info!("minitouch initialized");
+        Ok(())
+    }
+
+    fn write_command(&mut self, command: &str) -> Result<(), String> {
+        if self.minitouch_stdin.is_none() {
+            self.init()?;
+        }
+
+        info!("writing command: {}", command);
+        let mut command = command.to_string();
+        if !command.ends_with('\n') {
+            command.push('\n');
+        }
+        self.minitouch_stdin
+            .as_mut()
+            .ok_or("not conneted".to_string())
+            .and_then(|s| {
+                s.write_all(command.as_bytes())
+                    .map_err(|err| format!("{:?}", err))
+            })
+    }
+
+    pub fn commit(&mut self) -> Result<(), String> {
+        self.write_command("c")
+    }
+
+    pub fn reset(&mut self) -> Result<(), String> {
+        self.write_command("r")
+    }
+
+    pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> Result<(), String> {
+        self.write_command(format!("d {contact} {x} {y} {pressure}").as_str())
+    }
+
+    pub fn mv(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> Result<(), String> {
+        self.write_command(format!("m {contact} {x} {y} {pressure}").as_str())
+    }
+
+    pub fn up(&mut self, contact: u32) -> Result<(), String> {
+        self.write_command(format!("u {contact}").as_str())
+    }
+
+    pub fn wait(&mut self, duration: Duration) -> Result<(), String> {
+        self.write_command(format!("w {}", duration.as_millis()).as_str())
+    }
+}
+
+impl Toucher for MiniToucher {
+    fn click(&mut self, x: u32, y: u32) -> Result<(), String> {
+        self.down(0, x, y, 0)?;
+        self.commit()?;
+        self.wait(Duration::from_millis(200))?;
+        self.up(0)?;
+        self.commit()?;
+        Ok(())
+    }
+
+    fn swipe(
+        &mut self,
+        start: (u32, u32),
+        end: (i32, i32),
+        duration: Duration,
+        slope_in: bool,
+        slope_out: bool,
+    ) -> Result<(), String> {
+        Ok(())
     }
 }
 

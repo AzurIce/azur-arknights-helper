@@ -26,3 +26,15 @@ pub trait Controller {
 
     fn press_esc(&self) -> Result<(), MyError>;
 }
+
+pub trait Toucher {
+    fn click_in_rect(&mut self, rect: Rect) -> Result<(), String> {
+        let x = rand::random::<u32>() % rect.width + rect.x;
+        let y = rand::random::<u32>() % rect.height + rect.y;
+        self.click(x, y)
+    }
+
+    fn click(&mut self, x: u32, y: u32) -> Result<(), String>;
+
+    fn swipe(&mut self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: bool, slope_out: bool) -> Result<(), String>;
+}
