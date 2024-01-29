@@ -214,7 +214,7 @@ impl<'a> Matcher<'a> {
                 let extrems = find_extremes(&res);
                 let (x, y) = extrems.min_value_location;
                 println!(
-                    "[Matcher::TemplateMatcher]: done! cost: {}s, min: {:?}, max: {:?}, loc: {:?}",
+                    "[Matcher::TemplateMatcher]: cost: {}s, min: {:?}, max: {:?}, loc: {:?}",
                     start_time.elapsed().as_secs_f32(),
                     extrems.min_value,
                     extrems.max_value,
@@ -222,9 +222,11 @@ impl<'a> Matcher<'a> {
                 );
 
                 if extrems.min_value >= THRESHOLD {
+                    println!("[Matcher::TemplateMatcher]: failed");
                     return None;
                 }
 
+                println!("[Matcher::TemplateMatcher]: success!");
                 Some(Rect {
                     x,
                     y,

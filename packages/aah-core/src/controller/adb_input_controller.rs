@@ -34,6 +34,7 @@ pub struct AdbInputController {
     pub inner: Device,
     width: u32,
     height: u32,
+    scale_factor: f32,
 }
 
 impl AdbInputController {
@@ -43,12 +44,14 @@ impl AdbInputController {
             inner: device,
             width: 0,
             height: 0,
+            scale_factor: 1.0,
         };
         let screen = controller.screencap()?;
 
         let controller = Self {
             width: screen.width(),
             height: screen.height(),
+            scale_factor: 1440.0 / screen.height() as f32,
             ..controller
         };
         Ok(controller)
@@ -56,6 +59,10 @@ impl AdbInputController {
 }
 
 impl Controller for AdbInputController {
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor
+    }
+
     fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));

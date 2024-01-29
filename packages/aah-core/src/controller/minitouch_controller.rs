@@ -321,6 +321,7 @@ pub struct MiniTouchController {
     pub inner: Device,
     width: u32,
     height: u32,
+    scale_factor: f32,
 }
 
 impl MiniTouchController {
@@ -330,12 +331,16 @@ impl MiniTouchController {
             inner: device,
             width: 0,
             height: 0,
+            scale_factor: 1.0,
         };
         let screen = controller.screencap()?;
+
+        println!("device screen: {}x{}", screen.width(), screen.height());
 
         let controller = Self {
             width: screen.width(),
             height: screen.height(),
+            scale_factor: 1440.0 / screen.height() as f32,
             ..controller
         };
         Ok(controller)
@@ -343,6 +348,10 @@ impl MiniTouchController {
 }
 
 impl Controller for MiniTouchController {
+    fn scale_factor(&self) -> f32 {
+        self.scale_factor
+    }
+
     fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));
@@ -352,6 +361,7 @@ impl Controller for MiniTouchController {
             .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
         Ok(())
     }
+
     fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError> {
         self.inner.execute_command_by_process(
             format!(

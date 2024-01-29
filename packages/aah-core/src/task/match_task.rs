@@ -20,6 +20,13 @@ impl Task for MatchTask {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, String> {
         println!("[MatchTask]: matching {:?}", self);
+
+        // TODO: 并不是一个好主意，缩放大图消耗时间更多，且误差更大
+        // TODO: 然而测试了一下，发现缩放模板有时也会导致误差较大 (333.9063)
+        // let image = aah
+        //     .controller
+        //     .screencap_scaled()
+        //     .map_err(|err| format!("{:?}", err))?;
         let image = aah
             .controller
             .screencap()

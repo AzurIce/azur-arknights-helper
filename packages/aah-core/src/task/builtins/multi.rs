@@ -35,6 +35,7 @@ impl Task for Multi {
         let mut res = Ok(());
         for task in &self.tasks {
             res = task.run(aah).map(|_| ());
+            println!("{:?}", res);
             if res.is_err() && self.fail_fast {
                 break;
             }
