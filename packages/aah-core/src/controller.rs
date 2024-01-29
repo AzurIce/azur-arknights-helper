@@ -36,5 +36,5 @@ pub trait Toucher {
 
     fn click(&mut self, x: u32, y: u32) -> Result<(), String>;
 
-    fn swipe(&mut self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: bool, slope_out: bool) -> Result<(), String>;
+    fn swipe(&mut self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: f32, slope_out: f32) -> Result<(), String>;
 }
