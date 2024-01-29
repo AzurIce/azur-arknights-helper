@@ -6,7 +6,6 @@ version = 3
 name = "aah-core"
 version = "0.1.0"
 dependencies = [
- "aah-task-derive",
  "env_logger",
  "image",
  "imageproc",
@@ -21,10 +20,6 @@ dependencies = [
  "template-matching",
  "toml",
 ]
-
-[[package]]
-name = "aah-task-derive"
-version = "0.1.0"
 
 [[package]]
 name = "ab_glyph_rasterizer"

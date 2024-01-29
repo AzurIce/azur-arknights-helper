@@ -4,7 +4,7 @@
 use std::{error::Error, fs};
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
-use controller::Controller;
+use controller::{AdbInputController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 
@@ -57,7 +57,7 @@ fn try_init_ocr_engine() -> Result<OcrEngine, Box<dyn Error>> {
 }
 
 pub struct AAH {
-    pub controller: Controller,
+    pub controller: Box<dyn Controller>,
     pub task_config: TaskConfig,
     pub navigate_config: NavigateConfig,
     pub ocr_engine: Option<OcrEngine>,
@@ -67,7 +67,7 @@ impl AAH {
     pub fn connect<S: AsRef<str>>(serial: S) -> Result<Self, Box<dyn Error>> {
         let task_config = TaskConfig::load("./resources")?;
         let navigate_config = NavigateConfig::load("./resources")?;
-        let controller = Controller::connect(serial)?;
+        let controller = Box::new(AdbInputController::connect(serial)?);
         Ok(Self {
             controller,
             task_config,

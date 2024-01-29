@@ -40,7 +40,7 @@ mod test {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ActionSwipe {
     p1: (u32, u32),
-    p2: (u32, u32),
+    p2: (i32, i32),
     #[serde(default = "default_duration")]
     duration: f32,
     wrapper: Option<GenericTaskWrapper>,
@@ -53,7 +53,7 @@ fn default_duration() -> f32 {
 impl ActionSwipe {
     pub fn new(
         p1: (u32, u32),
-        p2: (u32, u32),
+        p2: (i32, i32),
         duration: f32,
         wrapper: Option<GenericTaskWrapper>,
     ) -> Self {

@@ -1,13 +1,16 @@
 use std::{
-    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, process::Command,
+    collections::BTreeMap, error::Error, fmt::Display, io::Cursor, process::Command, sync::Mutex,
 };
 
 use image::{codecs::png::PngDecoder, DynamicImage};
 
-use self::{host::{Host}, command::host_service::Transport};
+use self::{
+    command::AdbCommand,
+    host::Host,
+};
 
-pub mod host;
 pub mod command;
+pub mod host;
 
 #[derive(Debug)]
 pub enum MyError {
@@ -70,12 +73,34 @@ impl TryFrom<&str> for DeviceInfo {
 
 #[cfg(test)]
 mod test {
+    use std::time::Instant;
+
     use super::*;
+    use crate::adb::command::local_service;
 
     #[test]
     fn test_connect() -> Result<(), MyError> {
-        let device = connect("127.0.0.1:16384")?;
+        let _device = connect("127.0.0.1:16384")?;
         Ok(())
+    }
+
+    #[test]
+    fn test_screencap() {
+        let device = connect("127.0.0.1:16384").unwrap();
+
+        let start = Instant::now();
+        let bytes = device
+            .execute_command_by_process("exec-out screencap -p")
+            .unwrap();
+        println!("cost: {}, {}", start.elapsed().as_millis(), bytes.len());
+
+        let start = Instant::now();
+        let bytes2 = device
+            .execute_command_by_socket( local_service::ScreenCap::new())
+            .unwrap();
+        println!("cost: {}, {}", start.elapsed().as_millis(), bytes2.len());
+
+        assert_eq!(bytes, bytes2);
     }
 }
 
@@ -84,7 +109,7 @@ mod test {
 pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
     let serial = serial.as_ref();
 
-    let adb_connect = Command::new("adb")
+    let _adb_connect = Command::new("adb")
         .args(["connect", serial])
         .output()
         .map_err(|err| MyError::DeviceNotFound(format!("{:?}", err)))?;
@@ -109,7 +134,7 @@ pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
 
 pub struct Device {
     /// The Adb host which is using to access this device
-    host: Host,
+    host: Mutex<Host>,
 
     /// Adb device serial number
     serial: String,
@@ -117,7 +142,10 @@ pub struct Device {
 
 impl Device {
     pub fn new(host: Host, serial: String) -> Self {
-        Self { host, serial }
+        Self {
+            host: Mutex::new(host),
+            serial,
+        }
     }
 
     // pub fn get_screen_size(&self) -> Result<(u32, u32), MyError> {
@@ -126,16 +154,17 @@ impl Device {
     // }
 
     pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
+        // let bytes = self
+        //     .host
+        //     .execute_local_command(self.serial.clone(), local_service::ScreenCap::new())
+        //     .expect("failed to screencap");
         let bytes = self
             .execute_command_by_process("exec-out screencap -p")
             .expect("failed to screencap");
 
         let decoder = PngDecoder::new(Cursor::new(bytes))
             .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;
-        // use image::io::Reader as ImageReader;
-        // let mut reader = ImageReader::new(Cursor::new(bytes));
-        // reader.set_format(image::ImageFormat::Png);
-        // let image = reader.decode().map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?.into_rgb8();
+
         let image = DynamicImage::from_decoder(decoder)
             .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;
         Ok(image)
@@ -153,22 +182,14 @@ impl Device {
         Ok(res)
     }
 
-    pub fn execute_command_by_socket(
-        &mut self,
-        command: &str,
-        has_output: bool,
-        has_length: bool,
-    ) -> Result<String, MyError> {
-        let switch_command = format!("host:transport:{}", self.serial);
+    pub fn execute_command_by_socket<T>(
+        &self,
+        command: impl AdbCommand<Output = T>,
+    ) -> Result<T, MyError> {
         self.host
-            .execute_command(Transport::new(self.serial.clone()))
-            .map_err(|err| MyError::Adb(err.to_string()))?;
-
-        let response = self
-            .host
-            .execute_raw_command(command, has_output, has_length)
-            .map_err(|err| MyError::ExecuteCommandFailed(format!("{:?}", err)))?;
-
-        Ok(response.replace("\r\n", "\n"))
+            .lock()
+            .unwrap()
+            .execute_local_command(self.serial.clone(), command)
+            .map_err(|err| MyError::Adb(err.to_string()))
     }
 }

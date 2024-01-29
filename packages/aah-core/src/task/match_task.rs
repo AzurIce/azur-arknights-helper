@@ -3,55 +3,9 @@ use std::path::Path;
 use image::math::Rect;
 use serde::{Deserialize, Serialize};
 
-use crate::{controller::Controller, vision::matcher::{Matcher, convert_image_to_ten}, AAH};
+use crate::{vision::matcher::{Matcher, convert_image_to_ten}, AAH};
 
-use super::{Exec, Task};
-
-/// 动作任务
-
-// 若任何 Match 失败则失败
-// 成功返回所有匹配 Rect
-#[derive(Debug)]
-pub struct AndTask {
-    tasks: Vec<Box<dyn Exec>>,
-}
-
-impl AndTask {
-    pub fn new(tasks: Vec<Box<dyn Exec>>) -> Self {
-        Self { tasks }
-    }
-}
-
-impl Exec for AndTask {
-    fn run(&self, controller: &Controller) -> Result<(), String> {
-        self.tasks.iter().try_for_each(|task| task.run(controller))
-    }
-}
-
-// TODO: change the Exec Trait
-// 若任何 Match 失败则失败
-// 成功返回所有匹配 Rect
-#[derive(Debug)]
-pub struct OrTask {
-    tasks: Vec<Box<dyn Exec>>,
-}
-
-impl OrTask {
-    pub fn new(tasks: Vec<Box<dyn Exec>>) -> Self {
-        Self { tasks }
-    }
-}
-
-impl Exec for OrTask {
-    fn run(&self, controller: &Controller) -> Result<(), String> {
-        for task in &self.tasks {
-            if task.run(controller).is_ok() {
-                return Ok(());
-            }
-        }
-        Err("match failed".to_string())
-    }
-}
+use super::Task;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "template")]
