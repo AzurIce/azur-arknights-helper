@@ -8,6 +8,7 @@ members = ["packages/*"]
 
 [workspace.dependencies]
 aah-core = { path = "packages/aah-core" }
+aah-cv = { path = "packages/aah-cv" }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

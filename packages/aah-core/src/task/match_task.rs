@@ -51,7 +51,7 @@ impl Task for MatchTask {
                         &template,
                         new_width,
                         new_height,
-                        image::imageops::FilterType::Triangle,
+                        image::imageops::FilterType::Lanczos3,
                     )
                 } else {
                     template

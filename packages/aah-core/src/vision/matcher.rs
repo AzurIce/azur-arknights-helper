@@ -4,7 +4,7 @@ use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
 use ocrs::OcrEngine;
 use rten_tensor::{NdTensorBase, NdTensorView};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
-use template_matching::{find_extremes, match_template, MatchTemplateMethod};
+use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
 
 pub fn convert_image_to_ten(
     image: DynamicImage,
@@ -205,20 +205,19 @@ impl<'a> Matcher<'a> {
         match self {
             Self::Template { image, template } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredDifferences;
+                let method = MatchTemplateMethod::SumOfSquaredErrors;
                 println!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
+                println!("finding_extremes...");
                 let extrems = find_extremes(&res);
                 let (x, y) = extrems.min_value_location;
                 println!(
-                    "[Matcher::TemplateMatcher]: cost: {}s, min: {:?}, max: {:?}, loc: {:?}",
+                    "[Matcher::TemplateMatcher]: cost: {}s, {:?}",
                     start_time.elapsed().as_secs_f32(),
-                    extrems.min_value,
-                    extrems.max_value,
-                    extrems.min_value_location
+                    extrems
                 );
 
                 if extrems.min_value >= THRESHOLD {

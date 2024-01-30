@@ -1,12 +1,7 @@
 use std::f32::consts::PI;
 
-use image::{DynamicImage, GenericImage, GenericImageView, Luma, Pixel};
-use ndarray::{Array, Array1, Array2, Axis};
-
-use crate::{
-    adb::{AdbTcpStream, Device},
-    controller::Controller,
-};
+use crate::controller::Controller;
+use ndarray::{Array2, Axis, Array1};
 
 use super::Analyzer;
 
@@ -44,7 +39,9 @@ impl Analyzer for DepotAnalyzer {
         let x_period = 312;
         let y_period = 380;
 
-        let mut screen = controller.screencap_scaled().map_err(|err| format!("{:?}", err))?;
+        let mut screen = controller
+            .screencap_scaled()
+            .map_err(|err| format!("{:?}", err))?;
 
         let screen = screen.crop(
             0,
