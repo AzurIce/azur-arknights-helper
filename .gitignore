@@ -1,3 +1,4 @@
 target
 .direnv
 .gitignore
+.DS_Store

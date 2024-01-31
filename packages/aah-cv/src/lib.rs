@@ -6,6 +6,8 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+pub mod template_matching;
+
 use std::{borrow::Cow, mem::size_of};
 use imageproc::template_matching::Extremes;
 use wgpu::util::DeviceExt;
