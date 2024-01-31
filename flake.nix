@@ -25,23 +25,25 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        rust-tools = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rust-src" ];
+        };
       in
       {
         devShells.default = pkgs.mkShell {
+          # RUST_SRC_PATH = "${rust-tools}/lib/rustlib/src/rust/library";
+          DYLD_LIBRARY_PATH="${pkgs.libclang.lib}/lib";
+
           buildInputs = with pkgs; [
-            clang
-            llvmPackages_16.bintools
+            # clang
+            libclang
+            # llvmPackages_16.bintools
             # openssl
-            pkg-config
-            rust-bin.nightly.latest.default
-          ] ++ (with pkgs.darwin.apple_sdk.frameworks; pkgs.lib.optionals pkgs.stdenv.isDarwin [
-            System
-            IOKit
-            Security
-            CoreFoundation
-            AppKit
-            WebKit
-          ]);
+            # pkg-config
+            opencv
+          ] ++ [
+            rust-tools
+          ];
         };
       }
     );
