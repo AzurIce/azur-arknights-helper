@@ -23,7 +23,6 @@ rten-tensor = "0.1.0"
 reqwest = { version = "0.11.23", features = ["blocking"] }
 log = "0.4"
 rust-embed = "8.2.0"
-opencv = "0.88.8"
 # rayon = "1.8"
 # show-image = { version = "0.13.1", features = ["image"] }
 
