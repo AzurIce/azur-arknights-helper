@@ -30,7 +30,7 @@ fn main() {
         let result = imageproc::template_matching::match_template(
             &input_luma8,
             &template_luma8,
-            imageproc::template_matching::MatchTemplateMethod::CrossCorrelation,
+            imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
         );
         println!(
             "imageproc::template_matching::match_template took {} ms",

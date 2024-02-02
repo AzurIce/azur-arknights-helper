@@ -25,6 +25,9 @@
         pkgs = import nixpkgs {
           inherit system overlays;
         };
+        rust-tools = pkgs.rust-bin.nightly.latest.default.override {
+          extensions = [ "rust-src" ];
+        };
       in
       {
         devShells.default = pkgs.mkShell {
@@ -33,7 +36,8 @@
             llvmPackages_16.bintools
             # openssl
             pkg-config
-            rust-bin.nightly.latest.default
+          ] ++ [
+            rust-tools
           ] ++ (with pkgs.darwin.apple_sdk.frameworks; pkgs.lib.optionals pkgs.stdenv.isDarwin [
             System
             IOKit

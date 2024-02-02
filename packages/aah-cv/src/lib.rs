@@ -3,8 +3,8 @@
 //! Faster alternative to [imageproc::template_matching](https://docs.rs/imageproc/latest/imageproc/template_matching/index.html).
 
 #![deny(clippy::all)]
-#![allow(dead_code)]
-#![allow(unused_variables)]
+// #![allow(dead_code)]
+// #![allow(unused_variables)]
 
 pub mod template_matching;
 
