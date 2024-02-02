@@ -1,9 +1,9 @@
-use std::ops::{AddAssign, SubAssign};
+use std::ops::{AddAssign, DivAssign, MulAssign, SubAssign};
 
 use fft2d::slice::{fft_2d, ifft_2d};
 use fftconvolve::{fftconvolve, fftcorrelate};
 use image::{GrayImage, Luma};
-use imageproc::template_matching::Extremes;
+use imageproc::{integral_image::integral_image, template_matching::Extremes};
 use ndarray::{s, Array, Array2, Zip};
 use nshare::RefNdarray2;
 use rustfft::{num_complex::Complex, Fft, FftDirection, FftPlanner};
@@ -97,24 +97,25 @@ mod test {
         let image = image::open("./test/image.png").unwrap();
         let template = image::open("./test/template.png").unwrap();
 
-        let start = Instant::now();
         let image_luma8 = image.to_luma8();
         let template_luma8 = template.to_luma8();
-        let res = imageproc::template_matching::match_template(
-            &image_luma8,
-            &template_luma8,
-            imageproc::template_matching::MatchTemplateMethod::CrossCorrelation,
-        );
-        let res = imageproc::template_matching::find_extremes(&res);
-        println!(
-            "imageproc(CrossCorrelation): {:?}, cost: {}",
-            res,
-            start.elapsed().as_millis()
-        );
+        let image_luma32f = image.to_luma32f();
+        let template_luma32f = template.to_luma32f();
+
+        // let start = Instant::now();
+        // let res = imageproc::template_matching::match_template(
+        //     &image_luma8,
+        //     &template_luma8,
+        //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelation,
+        // );
+        // let res = imageproc::template_matching::find_extremes(&res);
+        // println!(
+        //     "imageproc(CrossCorrelation): {:?}, cost: {}s",
+        //     res,
+        //     start.elapsed().as_secs_f32()
+        // );
 
         let start = Instant::now();
-        let image_luma8 = image.to_luma8();
-        let template_luma8 = template.to_luma8();
         let res = imageproc::template_matching::match_template(
             &image_luma8,
             &template_luma8,
@@ -122,55 +123,91 @@ mod test {
         );
         let res = imageproc::template_matching::find_extremes(&res);
         println!(
-            "imageproc(CrossCorrelationNormalized): {:?}, cost: {}",
+            "imageproc(CrossCorrelationNormalized): {:?}, cost: {}s",
             res,
-            start.elapsed().as_millis()
+            start.elapsed().as_secs_f32()
         );
 
-        let start = Instant::now();
-        let image_luma8 = image.to_luma8();
-        let template_luma8 = template.to_luma8();
-        let res = imageproc::template_matching::match_template(
-            &image_luma8,
-            &template_luma8,
-            imageproc::template_matching::MatchTemplateMethod::SumOfSquaredErrors,
-        );
-        let res = imageproc::template_matching::find_extremes(&res);
-        println!(
-            "imageproc(SumOfSquaredErrors): {:?}, cost: {}",
-            res,
-            start.elapsed().as_millis()
-        );
+        // let start = Instant::now();
+        // let res = imageproc::template_matching::match_template(
+        //     &image_luma8,
+        //     &template_luma8,
+        //     imageproc::template_matching::MatchTemplateMethod::SumOfSquaredErrors,
+        // );
+        // let res = imageproc::template_matching::find_extremes(&res);
+        // println!(
+        //     "imageproc(SumOfSquaredErrors): {:?}, cost: {}s",
+        //     res,
+        //     start.elapsed().as_secs_f32()
+        // );
 
         let start = Instant::now();
-        let image_luma32f = image.to_luma32f();
-        let template_luma32f = template.to_luma32f();
         let res = super::match_template(
             &image_luma32f.into_ndarray2(),
             &template_luma32f.into_ndarray2(),
         );
         let res = super::find_extremes(&res);
-        println!("aah-cv: {:?}, cost: {}", res, start.elapsed().as_millis());
+        println!("aah-cv: {:?}, cost: {}s", res, start.elapsed().as_secs_f32());
     }
 
     use super::*;
 
     #[test]
-    fn test_integral_image() {
+    fn test_integral() {
         let mat = Array2::ones((5, 5));
-        let res = integral_arr2f32(&mat);
-        println!("{:?}", res);
+        let integral = integral_arr2f32(&mat);
+        println!("{:?}", integral);
         assert_eq!(
-            res,
+            integral,
             Array2::from_shape_fn((5, 5), |(y, x)| { (x as f32 + 1.0) * (y as f32 + 1.0) })
         );
+        let res = subsum_from_integral_arrf32(&integral, 2, 2, 3, 3);
+        assert_eq!(res, 9.0);
+        let res = subsum_from_integral_arrf32(&integral, 0, 2, 2, 2);
+        assert_eq!(res, 4.0);
+        let res = subsum_from_integral_arrf32(&integral, 0, 0, 2, 2);
+        assert_eq!(res, 4.0);
+    }
+
+    #[test]
+    fn test_integral_squared() {
+        let mat = Array2::ones((5, 5));
+        let integral = integral_square_arr2f32(&mat);
+        println!("{:?}", integral);
+        assert_eq!(
+            integral,
+            Array2::from_shape_fn((5, 5), |(y, x)| { (x as f32 + 1.0) * (y as f32 + 1.0) })
+        );
+        let mat = Array2::from_shape_fn((5, 5), |(y, x)| y as f32 * 5.0 + x as f32);
+        let mat_squared = mat.map(|&x| x * x);
+        let res_integral = integral_arr2f32(&mat_squared);
+        let integral = integral_square_arr2f32(&mat);
+        println!("{:?}", integral);
+        assert_eq!(integral, res_integral);
     }
 }
 
 pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
     // let conv = convolve_dft(image, kernel);
-    let conv = fftcorrelate(image, kernel, fftconvolve::Mode::Valid).unwrap();
-    conv
+    let integral_image = integral_square_arr2f32(image);
+    let suqared_sum_kernal = kernel.map(|x| x * x).sum();
+
+    let mut res = fftcorrelate(image, kernel, fftconvolve::Mode::Valid).unwrap();
+
+    let (y_image, x_image) = image.dim();
+    let (y_kernel, x_kernel) = kernel.dim();
+    let (y_len, x_len) = (y_image - y_kernel + 1, x_image - x_kernel + 1);
+    for x in 0..x_len {
+        for y in 0..y_len {
+            res.get_mut((y, x)).unwrap().div_assign(
+                (suqared_sum_kernal
+                    * subsum_from_integral_arrf32(&integral_image, x, y, x_kernel, y_kernel))
+                .sqrt(),
+            )
+        }
+    }
+
+    res
 }
 
 pub fn find_extremes(input: &Array2<f32>) -> Extremes<f32> {
@@ -227,26 +264,85 @@ pub fn integral_arr2f32(mat: &Array2<f32>) -> Array2<f32> {
     let (x_len, y_len) = mat.dim();
 
     let mut res = mat.clone();
-    for cur_x in 0..x_len {
-        for cur_y in 0..y_len {
+    for cur_y in 0..x_len {
+        for cur_x in 0..y_len {
             if cur_x > 0 && cur_y > 0 {
-                let v = res[[cur_x - 1, cur_y]];
-                res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
-                let v = res[[cur_x, cur_y - 1]];
-                res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
-                let v = res[[cur_x - 1, cur_y - 1]];
-                res.get_mut((cur_x, cur_y)).unwrap().sub_assign(v);
+                let v = res[[cur_y - 1, cur_x]];
+                res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                let v = res[[cur_y, cur_x - 1]];
+                res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                let v = res[[cur_y - 1, cur_x - 1]];
+                res.get_mut((cur_y, cur_x)).unwrap().sub_assign(v);
             } else {
-                if cur_x > 0 {
-                    let v = res[[cur_x - 1, cur_y]];
-                    res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
-                }
                 if cur_y > 0 {
-                    let v = res[[cur_x, cur_y - 1]];
-                    res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
+                    let v = res[[cur_y - 1, cur_x]];
+                    res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                }
+                if cur_x > 0 {
+                    let v = res[[cur_y, cur_x - 1]];
+                    res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
                 }
             }
         }
     }
     res
+}
+
+pub fn integral_square_arr2f32(mat: &Array2<f32>) -> Array2<f32> {
+    let (x_len, y_len) = mat.dim();
+
+    let mut res = mat.clone();
+    for cur_y in 0..x_len {
+        for cur_x in 0..y_len {
+            let v = res[[cur_y, cur_x]];
+            res.get_mut((cur_y, cur_x)).unwrap().mul_assign(v);
+            if cur_x > 0 && cur_y > 0 {
+                let v = res[[cur_y - 1, cur_x]];
+                res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                let v = res[[cur_y, cur_x - 1]];
+                res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                let v = res[[cur_y - 1, cur_x - 1]];
+                res.get_mut((cur_y, cur_x)).unwrap().sub_assign(v);
+            } else {
+                if cur_y > 0 {
+                    let v = res[[cur_y - 1, cur_x]];
+                    res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                }
+                if cur_x > 0 {
+                    let v = res[[cur_y, cur_x - 1]];
+                    res.get_mut((cur_y, cur_x)).unwrap().add_assign(v);
+                }
+            }
+        }
+    }
+    res
+}
+
+pub fn subsum_from_integral_arrf32(
+    integral_mat: &Array2<f32>,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+) -> f32 {
+    let right = x + width - 1;
+    let bottom = y + height - 1;
+    let res = integral_mat[[bottom, right]];
+    if x > 0 && y > 0 {
+        res + integral_mat[[y - 1, x - 1]]
+            - integral_mat[[bottom, x - 1]]
+            - integral_mat[[y - 1, right]]
+    } else {
+        if x > 0 {
+            res - integral_mat[[bottom, x - 1]]
+        } else if y > 0 {
+            res - integral_mat[[y - 1, right]]
+        } else {
+            res
+        }
+    }
+}
+
+pub fn square_sum_arr2f32(mat: &Array2<f32>) -> f32 {
+    mat.iter().map(|&p| p * p).sum()
 }
