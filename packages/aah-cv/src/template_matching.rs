@@ -1,3 +1,5 @@
+use std::ops::{AddAssign, SubAssign};
+
 use fft2d::slice::{fft_2d, ifft_2d};
 use fftconvolve::{fftconvolve, fftcorrelate};
 use image::{GrayImage, Luma};
@@ -87,8 +89,10 @@ mod test {
     #[test]
     fn test_template_match() {
         /*
-        imageproc: Extremes { max_value: 348514530.0, min_value: 108662460.0, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 105563
-        aah-cv: Extremes { max_value: 5359.685, min_value: 1671.0929, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 1037
+        imageproc(CrossCorrelation): Extremes { max_value: 348514530.0, min_value: 108662460.0, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 108810
+        imageproc(CrossCorrelationNormalized): Extremes { max_value: 0.9999335, min_value: 0.5512544, max_value_location: (88, 227), min_value_location: (140, 316) }, cost: 113587
+        imageproc(SumOfSquaredErrors): Extremes { max_value: 411913200.0, min_value: 38708.0, max_value_location: (343, 81), min_value_location: (88, 227) }, cost: 189774
+        aah-cv: Extremes { max_value: 5359.685, min_value: 1671.0929, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 1098
         */
         let image = image::open("./test/image.png").unwrap();
         let template = image::open("./test/template.png").unwrap();
@@ -96,16 +100,70 @@ mod test {
         let start = Instant::now();
         let image_luma8 = image.to_luma8();
         let template_luma8 = template.to_luma8();
-        let res = imageproc::template_matching::match_template(&image_luma8, &template_luma8, imageproc::template_matching::MatchTemplateMethod::CrossCorrelation);
+        let res = imageproc::template_matching::match_template(
+            &image_luma8,
+            &template_luma8,
+            imageproc::template_matching::MatchTemplateMethod::CrossCorrelation,
+        );
         let res = imageproc::template_matching::find_extremes(&res);
-        println!("imageproc: {:?}, cost: {}", res, start.elapsed().as_millis());
+        println!(
+            "imageproc(CrossCorrelation): {:?}, cost: {}",
+            res,
+            start.elapsed().as_millis()
+        );
+
+        let start = Instant::now();
+        let image_luma8 = image.to_luma8();
+        let template_luma8 = template.to_luma8();
+        let res = imageproc::template_matching::match_template(
+            &image_luma8,
+            &template_luma8,
+            imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
+        );
+        let res = imageproc::template_matching::find_extremes(&res);
+        println!(
+            "imageproc(CrossCorrelationNormalized): {:?}, cost: {}",
+            res,
+            start.elapsed().as_millis()
+        );
+
+        let start = Instant::now();
+        let image_luma8 = image.to_luma8();
+        let template_luma8 = template.to_luma8();
+        let res = imageproc::template_matching::match_template(
+            &image_luma8,
+            &template_luma8,
+            imageproc::template_matching::MatchTemplateMethod::SumOfSquaredErrors,
+        );
+        let res = imageproc::template_matching::find_extremes(&res);
+        println!(
+            "imageproc(SumOfSquaredErrors): {:?}, cost: {}",
+            res,
+            start.elapsed().as_millis()
+        );
 
         let start = Instant::now();
         let image_luma32f = image.to_luma32f();
         let template_luma32f = template.to_luma32f();
-        let res = super::match_template(&image_luma32f.into_ndarray2(), &template_luma32f.into_ndarray2());
+        let res = super::match_template(
+            &image_luma32f.into_ndarray2(),
+            &template_luma32f.into_ndarray2(),
+        );
         let res = super::find_extremes(&res);
         println!("aah-cv: {:?}, cost: {}", res, start.elapsed().as_millis());
+    }
+
+    use super::*;
+
+    #[test]
+    fn test_integral_image() {
+        let mat = Array2::ones((5, 5));
+        let res = integral_arr2f32(&mat);
+        println!("{:?}", res);
+        assert_eq!(
+            res,
+            Array2::from_shape_fn((5, 5), |(y, x)| { (x as f32 + 1.0) * (y as f32 + 1.0) })
+        );
     }
 }
 
@@ -163,4 +221,32 @@ fn convolve_dft(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
     // Array2::from_shape_fn((image_height, image_width), |(y, x)| {
     //     res[y * image_width + x].re.round() as f32
     // })
+}
+
+pub fn integral_arr2f32(mat: &Array2<f32>) -> Array2<f32> {
+    let (x_len, y_len) = mat.dim();
+
+    let mut res = mat.clone();
+    for cur_x in 0..x_len {
+        for cur_y in 0..y_len {
+            if cur_x > 0 && cur_y > 0 {
+                let v = res[[cur_x - 1, cur_y]];
+                res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
+                let v = res[[cur_x, cur_y - 1]];
+                res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
+                let v = res[[cur_x - 1, cur_y - 1]];
+                res.get_mut((cur_x, cur_y)).unwrap().sub_assign(v);
+            } else {
+                if cur_x > 0 {
+                    let v = res[[cur_x - 1, cur_y]];
+                    res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
+                }
+                if cur_y > 0 {
+                    let v = res[[cur_x, cur_y - 1]];
+                    res.get_mut((cur_x, cur_y)).unwrap().add_assign(v);
+                }
+            }
+        }
+    }
+    res
 }
