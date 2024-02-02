@@ -4,7 +4,7 @@ use fft2d::slice::{fft_2d, ifft_2d};
 use fftconvolve::{fftconvolve, fftcorrelate};
 use image::{GrayImage, Luma};
 use imageproc::{integral_image::integral_image, template_matching::Extremes};
-use ndarray::{s, Array, Array2, Zip};
+use ndarray::{s, Array, Array2, AssignElem, Zip};
 use nshare::RefNdarray2;
 use rustfft::{num_complex::Complex, Fft, FftDirection, FftPlanner};
 
@@ -17,8 +17,6 @@ mod test {
     use ndarray::Array2;
     use nshare::ToNdarray2;
     use rustfft::{num_complex::Complex, FftPlanner};
-
-    use super::convolve_dft;
 
     #[test]
     fn test_fft() {
@@ -74,19 +72,6 @@ mod test {
     }
 
     #[test]
-    fn test_convolve_dft() {
-        let x = (1..=36).collect::<Vec<u8>>();
-        let image = GrayImage::from_raw(6, 6, x).unwrap().into_ndarray2();
-        let image = image.map(|&x| x as f32);
-        println!("image: {:?}", image);
-        let template = Array2::from_shape_simple_fn((2, 2), || 1.0 / 4.0);
-        println!("template: {:?}", template);
-
-        let res = convolve_dft(&image, &template);
-        println!("res: {:?}", res);
-    }
-
-    #[test]
     fn test_template_match() {
         /*
         imageproc(CrossCorrelation): Extremes { max_value: 348514530.0, min_value: 108662460.0, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 108810
@@ -115,18 +100,18 @@ mod test {
         //     start.elapsed().as_secs_f32()
         // );
 
-        let start = Instant::now();
-        let res = imageproc::template_matching::match_template(
-            &image_luma8,
-            &template_luma8,
-            imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
-        );
-        let res = imageproc::template_matching::find_extremes(&res);
-        println!(
-            "imageproc(CrossCorrelationNormalized): {:?}, cost: {}s",
-            res,
-            start.elapsed().as_secs_f32()
-        );
+        // let start = Instant::now();
+        // let res = imageproc::template_matching::match_template(
+        //     &image_luma8,
+        //     &template_luma8,
+        //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
+        // );
+        // let res = imageproc::template_matching::find_extremes(&res);
+        // println!(
+        //     "imageproc(CrossCorrelationNormalized): {:?}, cost: {}s",
+        //     res,
+        //     start.elapsed().as_secs_f32()
+        // );
 
         // let start = Instant::now();
         // let res = imageproc::template_matching::match_template(
@@ -188,22 +173,33 @@ mod test {
 }
 
 pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
-    // let conv = convolve_dft(image, kernel);
-    let integral_image = integral_square_arr2f32(image);
-    let suqared_sum_kernal = kernel.map(|x| x * x).sum();
-
     let mut res = fftcorrelate(image, kernel, fftconvolve::Mode::Valid).unwrap();
 
-    let (y_image, x_image) = image.dim();
-    let (y_kernel, x_kernel) = kernel.dim();
-    let (y_len, x_len) = (y_image - y_kernel + 1, x_image - x_kernel + 1);
+    let integral_squared_image = integral_square_arr2f32(image);
+    let integral_image = integral_arr2f32(&image);
+
+    let suqared_sum_kernal = kernel.map(|x| x * x).sum();
+    let kernel_sum = kernel.sum();
+    let kernel_sqsum = kernel.map(|x| x * x).sum();
+
+    let kernel_var = kernel_sqsum - kernel_sum * kernel_sum / kernel.len() as f32;
+    let kernel_avg = kernel_sum / kernel.len() as f32;
+
+    let (image_h, image_w) = image.dim();
+    let (kernel_h, kernel_w) = kernel.dim();
+    let (y_len, x_len) = (image_h - kernel_h + 1, image_w - kernel_w + 1);
     for x in 0..x_len {
         for y in 0..y_len {
-            res.get_mut((y, x)).unwrap().div_assign(
-                (suqared_sum_kernal
-                    * subsum_from_integral_arrf32(&integral_image, x, y, x_kernel, y_kernel))
-                .sqrt(),
-            )
+            let value_sum = subsum_from_integral_arrf32(&integral_image, x, y, kernel_w, kernel_h);
+            let value_sqsum = subsum_from_integral_arrf32(&integral_squared_image, x, y, kernel_w, kernel_h);
+
+            let value_var = value_sqsum - value_sum * value_sum / kernel.len() as f32;
+
+            let v = res[[y, x]];
+
+            let v = (v - value_sum * kernel_avg) / (value_var * kernel_var).sqrt();
+
+            res.get_mut((y, x)).unwrap().assign_elem(v)
         }
     }
 
@@ -237,27 +233,6 @@ pub fn find_extremes(input: &Array2<f32>) -> Extremes<f32> {
         min_value_location: (min_value_location.0 as u32, min_value_location.1 as u32),
         max_value_location: (max_value_location.0 as u32, max_value_location.1 as u32),
     }
-}
-
-fn convolve_dft(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
-    assert!(image.len() >= kernel.len());
-
-    fftconvolve(image, kernel, fftconvolve::Mode::Valid).unwrap()
-    // let (image_width, image_height) = image.dim();
-    // let (kernel_width, kernel_height) = kernel.dim();
-
-    // let mut image = image.iter().map(|&x| Complex::new(x as f64, 0.0)).collect::<Vec<Complex<f64>>>();
-    // fft_2d(image_width, image_height, &mut image);
-    // let mut kernel = kernel.iter().map(|&x| Complex::new(x as f64, 0.0)).collect::<Vec<Complex<f64>>>();
-    // fft_2d(kernel_width, kernel_height, &mut kernel);
-
-    // let mut res = image.iter().zip(kernel.iter()).map(|(&x, &y)| {
-    //     x * y
-    // }).collect::<Vec<Complex<f64>>>();
-    // ifft_2d(image_width, image_height, &mut res);
-    // Array2::from_shape_fn((image_height, image_width), |(y, x)| {
-    //     res[y * image_width + x].re.round() as f32
-    // })
 }
 
 pub fn integral_arr2f32(mat: &Array2<f32>) -> Array2<f32> {
