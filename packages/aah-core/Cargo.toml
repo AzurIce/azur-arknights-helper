@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 aah-cv.workspace = true
 ndarray = { version = "0.15.6", features = ["rayon"] }
-# nshare = "0.9.0"
+nshare = "0.9.0"
 nalgebra = "0.32.3"
 image = "0.24.8"
 imageproc = "0.23.0"
