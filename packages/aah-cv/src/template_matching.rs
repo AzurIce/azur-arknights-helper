@@ -89,61 +89,9 @@ mod test {
 
     #[test]
     fn test_template_match() {
-        /*
-        imageproc(CrossCorrelation): Extremes { max_value: 348514530.0, min_value: 108662460.0, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 108810
-        imageproc(CrossCorrelationNormalized): Extremes { max_value: 0.9999335, min_value: 0.5512544, max_value_location: (88, 227), min_value_location: (140, 316) }, cost: 113587
-        imageproc(SumOfSquaredErrors): Extremes { max_value: 411913200.0, min_value: 38708.0, max_value_location: (343, 81), min_value_location: (88, 227) }, cost: 189774
-        aah-cv: Extremes { max_value: 5359.685, min_value: 1671.0929, max_value_location: (147, 0), min_value_location: (137, 288) }, cost: 1098
-        */
-        // let image = image::open("./test/image.png").unwrap();
-        // let template = image::open("./test/template.png").unwrap();
-
-        // let image_luma8 = image.to_luma8();
-        // let template_luma8 = template.to_luma8();
-        // let image_luma32f = image.to_luma32f();
-        // let template_luma32f = template.to_luma32f();
-
-        // let start = Instant::now();
-        // let res = imageproc::template_matching::match_template(
-        //     &image_luma8,
-        //     &template_luma8,
-        //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelation,
-        // );
-        // let res = imageproc::template_matching::find_extremes(&res);
-        // println!(
-        //     "imageproc(CrossCorrelation): {:?}, cost: {}s",
-        //     res,
-        //     start.elapsed().as_secs_f32()
-        // );
-
-        // let start = Instant::now();
-        // let res = imageproc::template_matching::match_template(
-        //     &image_luma8,
-        //     &template_luma8,
-        //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
-        // );
-        // let res = imageproc::template_matching::find_extremes(&res);
-        // println!(
-        //     "imageproc(CrossCorrelationNormalized): {:?}, cost: {}s",
-        //     res,
-        //     start.elapsed().as_secs_f32()
-        // );
-
-        // let start = Instant::now();
-        // let res = imageproc::template_matching::match_template(
-        //     &image_luma8,
-        //     &template_luma8,
-        //     imageproc::template_matching::MatchTemplateMethod::SumOfSquaredErrors,
-        // );
-        // let res = imageproc::template_matching::find_extremes(&res);
-        // println!(
-        //     "imageproc(SumOfSquaredErrors): {:?}, cost: {}s",
-        //     res,
-        //     start.elapsed().as_secs_f32()
-        // );
-
         // test_template_match_with_image_and_template("image.png", "template.png");
-        test_template_match_with_image_and_template("main.png", "EnterMissionMistCity.png");
+        // test_template_match_with_image_and_template("main.png", "EnterMissionMistCity.png");
+        test_template_match_with_image_and_template("start.png", "start_btn.png");
     }
 
     use super::*;
@@ -206,7 +154,21 @@ pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> 
             let value_var = value_sqsum / kernel.len() as f64 - value_avg * value_avg;
 
             let mut v = res[[y, x]];
-            v = (v - value_sum * kernel_avg) / ((value_var * kernel_var).sqrt() * kernel.len() as f64);
+            v -= value_sum * kernel_avg;
+
+            let factor = (value_var * kernel_var).sqrt() * kernel.len() as f64;
+            if v.abs() < factor {
+                v /= factor;
+            } else if v.abs() < 1.125 * factor {
+                v = v.signum()
+            } else {
+                v = 0.0;
+            }
+
+            // if v.is_infinite() {
+            //     println!("value_sum: {}, kernel_avg: {}, value_var: {}, kernel_var: {}", value_sum, kernel_avg, value_var, kernel_var);
+            // }
+
             res.get_mut((y, x)).unwrap().assign_elem(v)
         }
     }
