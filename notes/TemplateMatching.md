@@ -1,3 +1,45 @@
+OpenCV 中的 **模板匹配** 位于 `imgproc` 模块下：[opencv/modules/imgproc/src/templmatch.cpp at 4.x · opencv/opencv (github.com)](https://github.com/opencv/opencv/blob/4.x/modules/imgproc/src/templmatch.cpp)。
+
+OpenCV 会优先尝试加速实现，直接返回：
+
+- `CV_OCL_RUN` OpenCL 加速实现
+- `CV_IPP_RUN_FAST` Intel® Integrated Performance Primitives 加速实现
+
+如果没有加速实现，就执行一个朴素实现。
+
+
+
+模板匹配函数如下：
+
+```cpp
+void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result, int method, InputArray _mask )
+```
+
+要求图像深度为 `CV_8U` 或 `CV_32F`，且维数小于等于 2。
+
+匹配方式 `method` 有如下六种：
+
+- `TM_SQDIFF`
+- `TM_SQDIFF_NORMED`
+- `TM_CCORR`
+- `TM_CCORR_NORMED`
+- `TM_CCOEFF`
+- `TM_CCOEFF_NORMED`
+
+会首先执行 `crossCorr(img, templ, result, Point(0,0), 0, 0);`
+
+然后执行 `common_matchTemplate(img, templ, result, method, cn);`
+
+### 1. crossCorr
+
+
+
+### 2. common_matchTemplate
+
+
+
+
+
 ```rust
 pub fn m_match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32>> {
     use image::GenericImageView;

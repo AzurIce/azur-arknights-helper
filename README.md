@@ -2,6 +2,8 @@
 
 <s>本来想拿 MaaCore 在 Rust 里搓点有意思的东西，但是 cpp 的构建过程实在是太烦人了，所以决定纯 Rust 重写。</s>
 
+- [ ] 实现 TemplateMatching
+
 ## 如何使用
 
 ```

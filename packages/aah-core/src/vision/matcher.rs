@@ -1,5 +1,6 @@
 use std::{error::Error, time::Instant};
 
+use color_print::cprintln;
 use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
 use ocrs::OcrEngine;
 use rten_tensor::{NdTensorBase, NdTensorView};
@@ -205,27 +206,27 @@ impl<'a> Matcher<'a> {
         match self {
             Self::Template { image, template } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrors;
-                println!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
+                let method = MatchTemplateMethod::CrossCorrelation;
+                cprintln!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
-                println!("finding_extremes...");
+                cprintln!("finding_extremes...");
                 let extrems = find_extremes(&res);
                 let (x, y) = extrems.min_value_location;
-                println!(
+                cprintln!(
                     "[Matcher::TemplateMatcher]: cost: {}s, {:?}",
                     start_time.elapsed().as_secs_f32(),
                     extrems
                 );
 
                 if extrems.min_value >= THRESHOLD {
-                    println!("[Matcher::TemplateMatcher]: failed");
+                    cprintln!("[Matcher::TemplateMatcher]: <red>failed</red>");
                     return None;
                 }
 
-                println!("[Matcher::TemplateMatcher]: success!");
+                cprintln!("[Matcher::TemplateMatcher]: <green>success!</green>");
                 Some(Rect {
                     x,
                     y,
