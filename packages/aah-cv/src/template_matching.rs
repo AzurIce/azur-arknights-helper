@@ -1,10 +1,12 @@
 use std::{
-    ops::{AddAssign, SubAssign}, time::Instant
+    ops::{AddAssign, SubAssign},
+    time::Instant,
 };
 
 use fftconvolve::fftcorrelate;
 use imageproc::template_matching::Extremes;
-use ndarray::{Array2, AssignElem};
+use ndarray::{Array2, AssignElem, Dim};
+use wgpu::util::DeviceExt;
 
 #[cfg(test)]
 mod test {
@@ -77,7 +79,7 @@ mod test {
         let start = Instant::now();
         let res = super::match_template(
             &image_luma32f.into_ndarray2(),
-            &template_luma32f.into_ndarray2()
+            &template_luma32f.into_ndarray2(),
         );
         let res = super::find_extremes(&res.map(|&x| x as f32));
         println!(
@@ -90,8 +92,28 @@ mod test {
     #[test]
     fn test_template_match() {
         // test_template_match_with_image_and_template("image.png", "template.png");
+        /*
+        matching start.png start_btn.png...
+        map to f64 cost: 68ms
+        fftcorrelate cost: 17940ms
+        integral and integral squared cost: 1644ms
+        kernel avg and var cost: 0ms
+        normalize cost: 1932ms
+        aah-cv: Extremes { max_value: 0.9999873, min_value: -0.38987702, max_value_location: (1253, 1336), min_value_location: (541, 71) }, cost: 21.77749s
+        test template_matching::test::test_template_match ... ok
+         */
+        // test_template_match_with_image_and_template("start.png", "start_btn.png");
+        /*
+        matching main.png EnterMissionMistCity.png...
+        map to f64 cost: 67ms
+        fftcorrelate cost: 23164ms
+        integral and integral squared cost: 1533ms
+        kernel avg and var cost: 0ms
+        normalize cost: 1588ms
+        aah-cv: Extremes { max_value: 0.99995416, min_value: -0.42217892, max_value_location: (1445, 1105), min_value_location: (1679, 945) }, cost: 26.527304s
+        test template_matching::test::test_template_match ... ok
+         */
         // test_template_match_with_image_and_template("main.png", "EnterMissionMistCity.png");
-        test_template_match_with_image_and_template("start.png", "start_btn.png");
     }
 
     use super::*;
@@ -115,7 +137,6 @@ mod test {
 }
 
 pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
-
     let start = Instant::now();
     let image = image.map(|&x| x as f64);
     let squared_image = image.map(|&x| x * x);
@@ -129,7 +150,10 @@ pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> 
 
     let integral_image = integral_arr2(&image);
     let integral_squared_image = integral_arr2(&squared_image);
-    println!("integral and integral squared cost: {}ms", start.elapsed().as_millis());
+    println!(
+        "integral and integral squared cost: {}ms",
+        start.elapsed().as_millis()
+    );
     let start = Instant::now();
 
     let kernel_sum = kernel.sum();
@@ -145,8 +169,7 @@ pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> 
     let (y_len, x_len) = (image_h - kernel_h + 1, image_w - kernel_w + 1);
     for x in 0..x_len {
         for y in 0..y_len {
-            let value_sum =
-                subsum_from_integral_arrf64(&integral_image, x, y, kernel_w, kernel_h);
+            let value_sum = subsum_from_integral_arrf64(&integral_image, x, y, kernel_w, kernel_h);
             let value_sqsum =
                 subsum_from_integral_arrf64(&integral_squared_image, x, y, kernel_w, kernel_h);
 
@@ -302,4 +325,363 @@ pub fn subsum_from_integral_arrf64(
 
 pub fn square_sum_arr2f32(mat: &Array2<f32>) -> f32 {
     mat.iter().map(|&p| p * p).sum()
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct ShaderUniforms {
+    input_width: u32,
+    input_height: u32,
+    template_width: u32,
+    template_height: u32,
+}
+
+pub struct TemplateMatcher {
+    instance: wgpu::Instance,
+    adapter: wgpu::Adapter,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    shader: wgpu::ShaderModule,
+    bind_group_layout: wgpu::BindGroupLayout,
+    pipeline_layout: wgpu::PipelineLayout,
+
+    last_pipeline: Option<wgpu::ComputePipeline>,
+    // last_method: Option<MatchTemplateMethod>,
+
+    last_input_size: (u32, u32),
+    last_template_size: (u32, u32),
+    last_result_size: (u32, u32),
+
+    uniform_buffer: wgpu::Buffer,
+    input_buffer: Option<wgpu::Buffer>,
+    template_buffer: Option<wgpu::Buffer>,
+    result_buffer: Option<wgpu::Buffer>,
+    staging_buffer: Option<wgpu::Buffer>,
+    bind_group: Option<wgpu::BindGroup>,
+
+    matching_ongoing: bool,
+}
+
+impl Default for TemplateMatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TemplateMatcher {
+    pub fn new() -> Self {
+        let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+            backends: wgpu::Backends::all(),
+            ..Default::default()
+        });
+
+        let adapter = pollster::block_on(async {
+            instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: wgpu::PowerPreference::HighPerformance,
+                    compatible_surface: None,
+                    force_fallback_adapter: false,
+                })
+                .await
+                .expect("Adapter request failed")
+        });
+
+        let (device, queue) = pollster::block_on(async {
+            adapter
+                .request_device(
+                    &wgpu::DeviceDescriptor {
+                        label: None,
+                        required_features: wgpu::Features::empty(),
+                        required_limits: wgpu::Limits::default(),
+                    },
+                    None,
+                )
+                .await
+                .expect("Device request failed")
+        });
+
+        let shader = device.create_shader_module(wgpu::include_wgsl!("../shaders/matching.wgsl"));
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: None,
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: None,
+            bind_group_layouts: &[&bind_group_layout],
+            push_constant_ranges: &[],
+        });
+
+        let uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("uniform_buffer"),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            size: std::mem::size_of::<ShaderUniforms>() as _,
+            mapped_at_creation: false,
+        });
+
+        Self {
+            instance,
+            adapter,
+            device,
+            queue,
+            shader,
+            pipeline_layout,
+            bind_group_layout,
+            last_pipeline: None,
+            // last_method: None,
+            last_input_size: (0, 0),
+            last_template_size: (0, 0),
+            last_result_size: (0, 0),
+            uniform_buffer,
+            input_buffer: None,
+            template_buffer: None,
+            result_buffer: None,
+            staging_buffer: None,
+            bind_group: None,
+            matching_ongoing: false,
+        }
+    }
+
+    /// Waits for the latest [match_template] execution and returns the result.
+    /// Returns [None] if no matching was started.
+    pub fn wait_for_result(&mut self) -> Option<Array2<f32>> {
+        if !self.matching_ongoing {
+            return None;
+        }
+        self.matching_ongoing = false;
+
+        let (result_width, result_height) = self.last_result_size;
+
+        let buffer_slice = self.staging_buffer.as_ref().unwrap().slice(..);
+        let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
+
+        self.device.poll(wgpu::Maintain::Wait);
+
+        pollster::block_on(async {
+            let result;
+
+            if let Some(Ok(())) = receiver.receive().await {
+                let data = buffer_slice.get_mapped_range();
+                result = bytemuck::cast_slice(&data).to_vec();
+                drop(data);
+                self.staging_buffer.as_ref().unwrap().unmap();
+            } else {
+                result = vec![0.0; (result_width * result_height) as usize]
+            };
+
+            Array2::from_shape_vec((result_width as usize, result_height as usize), result).ok()
+        })
+    }
+
+    /// Slides a template over the input and scores the match at each point using the requested method.
+    /// To get the result of the matching, call [wait_for_result].
+    pub fn match_template<'a>(
+        &mut self,
+        input: Array2<f32>,
+        template: Array2<f32>,
+        // method: MatchTemplateMethod,
+    ) {
+        if self.matching_ongoing {
+            // Discard previous result if not collected.
+            self.wait_for_result();
+        }
+
+        // let input = input.into();
+        // let template = template.into();
+
+        if self.last_pipeline.is_none() /* || self.last_method != Some(method) */ {
+            // self.last_method = Some(method);
+
+            // let entry_point = match method {
+            //     MatchTemplateMethod::SumOfAbsoluteErrors => "main_sae",
+            //     MatchTemplateMethod::SumOfSquaredErrors => "main_sse",
+            //     MatchTemplateMethod::CrossCorrelation => "main_cc",
+            // };
+            let entry_point = "main";
+
+            self.last_pipeline = Some(self.device.create_compute_pipeline(
+                &wgpu::ComputePipelineDescriptor {
+                    label: None,
+                    layout: Some(&self.pipeline_layout),
+                    module: &self.shader,
+                    entry_point,
+                },
+            ));
+        }
+
+        let mut buffers_changed = false;
+
+        let input_size = (input.dim().0 as u32, input.dim().1 as u32);
+        if self.input_buffer.is_none() || self.last_input_size != input_size {
+            buffers_changed = true;
+
+            self.last_input_size = input_size;
+
+            self.input_buffer = Some(self.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("input_buffer"),
+                    contents: bytemuck::cast_slice(&input.as_slice().unwrap()),
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                },
+            ));
+        } else {
+            self.queue.write_buffer(
+                self.input_buffer.as_ref().unwrap(),
+                0,
+                bytemuck::cast_slice(&input.as_slice().unwrap()),
+            );
+        }
+
+        let template_size = (template.dim().0 as u32, template.dim().1 as u32);
+        if self.template_buffer.is_none() || self.last_template_size != template_size {
+            self.queue.write_buffer(
+                &self.uniform_buffer,
+                0,
+                bytemuck::cast_slice(&[ShaderUniforms {
+                    input_width: input_size.0,
+                    input_height: input_size.1,
+                    template_width: template_size.0,
+                    template_height: template_size.1,
+                }]),
+            );
+            buffers_changed = true;
+
+            self.last_template_size = template_size;
+
+            self.template_buffer = Some(self.device.create_buffer_init(
+                &wgpu::util::BufferInitDescriptor {
+                    label: Some("template_buffer"),
+                    contents: bytemuck::cast_slice(&template.as_slice().unwrap()),
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                },
+            ));
+        } else {
+            self.queue.write_buffer(
+                self.template_buffer.as_ref().unwrap(),
+                0,
+                bytemuck::cast_slice(&template.as_slice().unwrap()),
+            );
+        }
+
+        let result_width = input_size.0 - template_size.0 + 1;
+        let result_height = input_size.1 - template_size.1 + 1;
+        let result_buf_size = (result_width * result_height) as u64 * std::mem::size_of::<f32>() as u64;
+
+        if buffers_changed {
+            self.last_result_size = (result_width, result_height);
+
+            self.result_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("result_buffer"),
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_SRC
+                    | wgpu::BufferUsages::COPY_DST,
+                size: result_buf_size,
+                mapped_at_creation: false,
+            }));
+
+            self.staging_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("staging_buffer"),
+                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+                size: result_buf_size,
+                mapped_at_creation: false,
+            }));
+
+            self.bind_group = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: None,
+                layout: &self.bind_group_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self.input_buffer.as_ref().unwrap().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: self.template_buffer.as_ref().unwrap().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: self.result_buffer.as_ref().unwrap().as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: self.uniform_buffer.as_entire_binding(),
+                    },
+                ],
+            }));
+        }
+
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("encoder"),
+            });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("compute_pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(self.last_pipeline.as_ref().unwrap());
+            compute_pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
+            compute_pass.dispatch_workgroups(
+                (result_width as f32 / 16.0).ceil() as u32,
+                (result_height as f32 / 16.0).ceil() as u32,
+                1,
+            );
+        }
+
+        encoder.copy_buffer_to_buffer(
+            self.result_buffer.as_ref().unwrap(),
+            0,
+            self.staging_buffer.as_ref().unwrap(),
+            0,
+            result_buf_size,
+        );
+
+        self.queue.submit(std::iter::once(encoder.finish()));
+        self.matching_ongoing = true;
+    }
 }

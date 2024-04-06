@@ -2,6 +2,7 @@ use std::{error::Error, time::Instant};
 
 use color_print::cprintln;
 use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
+use nshare::{RefNdarray2, ToNdarray2};
 use ocrs::OcrEngine;
 use rten_tensor::{NdTensorBase, NdTensorView};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
@@ -211,9 +212,14 @@ impl<'a> Matcher<'a> {
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
-                let res = match_template(image, template, method);
+                // let res = match_template(image, template, method);
+                let res = aah_cv::template_matching::match_template(
+                    &image.clone().into_ndarray2(),
+                    &template.clone().into_ndarray2(),
+                );
                 cprintln!("finding_extremes...");
-                let extrems = find_extremes(&res);
+                // let extrems = find_extremes(&res);
+                let extrems = aah_cv::template_matching::find_extremes(&res);
                 let (x, y) = extrems.min_value_location;
                 cprintln!(
                     "[Matcher::TemplateMatcher]: cost: {}s, {:?}",

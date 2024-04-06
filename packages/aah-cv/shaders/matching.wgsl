@@ -23,6 +23,12 @@ var<uniform> uniforms: Uniforms;
 
 @compute
 @workgroup_size(16, 16, 1)
+fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
+
+}
+
+@compute
+@workgroup_size(16, 16, 1)
 fn main_sae(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
     var y = global_id.y;
