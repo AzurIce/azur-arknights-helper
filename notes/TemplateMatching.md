@@ -30,7 +30,217 @@ void cv::matchTemplate( InputArray _img, InputArray _templ, OutputArray _result,
 
 然后执行 `common_matchTemplate(img, templ, result, method, cn);`
 
+
+
+corrSize 为 imgSize - templSize + 1
+
+
+
 ### 1. crossCorr
+
+1. 计算 `blockSize`
+
+    首先计算 `templ * blockScale` 四舍五入，
+
+    然后再与 `minBlockSize - templSize + 1` 取最大。
+
+```cpp
+void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
+                Point anchor, double delta, int borderType )
+{
+    const double blockScale = 4.5;
+    const int minBlockSize = 256;
+    std::vector<uchar> buf;
+
+    Mat templ = _templ;
+    int depth = img.depth(), cn = img.channels();
+    int tdepth = templ.depth(), tcn = templ.channels();
+    int cdepth = corr.depth(), ccn = corr.channels();
+
+    CV_Assert( img.dims <= 2 && templ.dims <= 2 && corr.dims <= 2 );
+
+    if( depth != tdepth && tdepth != std::max(CV_32F, depth) )
+    {
+        _templ.convertTo(templ, std::max(CV_32F, depth));
+        tdepth = templ.depth();
+    }
+
+    CV_Assert( depth == tdepth || tdepth == CV_32F);
+    CV_Assert( corr.rows <= img.rows + templ.rows - 1 &&
+               corr.cols <= img.cols + templ.cols - 1 );
+
+    CV_Assert( ccn == 1 || delta == 0 );
+
+    int maxDepth = depth > CV_8S ? CV_64F : std::max(std::max(CV_32F, tdepth), cdepth);
+    Size blocksize, dftsize;
+
+    blocksize.width = cvRound(templ.cols*blockScale);
+    blocksize.width = std::max( blocksize.width, minBlockSize - templ.cols + 1 );
+    blocksize.width = std::min( blocksize.width, corr.cols );
+    blocksize.height = cvRound(templ.rows*blockScale);
+    blocksize.height = std::max( blocksize.height, minBlockSize - templ.rows + 1 );
+    blocksize.height = std::min( blocksize.height, corr.rows );
+
+    dftsize.width = std::max(getOptimalDFTSize(blocksize.width + templ.cols - 1), 2);
+    dftsize.height = getOptimalDFTSize(blocksize.height + templ.rows - 1);
+    if( dftsize.width <= 0 || dftsize.height <= 0 )
+        CV_Error( cv::Error::StsOutOfRange, "the input arrays are too big" );
+
+    // recompute block size
+    blocksize.width = dftsize.width - templ.cols + 1;
+    blocksize.width = MIN( blocksize.width, corr.cols );
+    blocksize.height = dftsize.height - templ.rows + 1;
+    blocksize.height = MIN( blocksize.height, corr.rows );
+
+    Mat dftTempl( dftsize.height*tcn, dftsize.width, maxDepth );
+    Mat dftImg( dftsize, maxDepth );
+
+    int i, k, bufSize = 0;
+    if( tcn > 1 && tdepth != maxDepth )
+        bufSize = templ.cols*templ.rows*CV_ELEM_SIZE(tdepth);
+
+    if( cn > 1 && depth != maxDepth )
+        bufSize = std::max( bufSize, (blocksize.width + templ.cols - 1)*
+            (blocksize.height + templ.rows - 1)*CV_ELEM_SIZE(depth));
+
+    if( (ccn > 1 || cn > 1) && cdepth != maxDepth )
+        bufSize = std::max( bufSize, blocksize.width*blocksize.height*CV_ELEM_SIZE(cdepth));
+
+    buf.resize(bufSize);
+
+    Ptr<hal::DFT2D> c = hal::DFT2D::create(dftsize.width, dftsize.height, dftTempl.depth(), 1, 1, CV_HAL_DFT_IS_INPLACE, templ.rows);
+
+    // compute DFT of each template plane
+    for( k = 0; k < tcn; k++ )
+    {
+        int yofs = k*dftsize.height;
+        Mat src = templ;
+        Mat dst(dftTempl, Rect(0, yofs, dftsize.width, dftsize.height));
+        Mat dst1(dftTempl, Rect(0, yofs, templ.cols, templ.rows));
+
+        if( tcn > 1 )
+        {
+            src = tdepth == maxDepth ? dst1 : Mat(templ.size(), tdepth, &buf[0]);
+            int pairs[] = {k, 0};
+            mixChannels(&templ, 1, &src, 1, pairs, 1);
+        }
+
+        if( dst1.data != src.data )
+            src.convertTo(dst1, dst1.depth());
+
+        if( dst.cols > templ.cols )
+        {
+            Mat part(dst, Range(0, templ.rows), Range(templ.cols, dst.cols));
+            part = Scalar::all(0);
+        }
+        c->apply(dst.data, (int)dst.step, dst.data, (int)dst.step);
+    }
+
+    int tileCountX = (corr.cols + blocksize.width - 1)/blocksize.width;
+    int tileCountY = (corr.rows + blocksize.height - 1)/blocksize.height;
+    int tileCount = tileCountX * tileCountY;
+
+    Size wholeSize = img.size();
+    Point roiofs(0,0);
+    Mat img0 = img;
+
+    if( !(borderType & BORDER_ISOLATED) )
+    {
+        img.locateROI(wholeSize, roiofs);
+        img0.adjustROI(roiofs.y, wholeSize.height-img.rows-roiofs.y,
+                       roiofs.x, wholeSize.width-img.cols-roiofs.x);
+    }
+    borderType |= BORDER_ISOLATED;
+
+    Ptr<hal::DFT2D> cF, cR;
+    int f = CV_HAL_DFT_IS_INPLACE;
+    int f_inv = f | CV_HAL_DFT_INVERSE | CV_HAL_DFT_SCALE;
+    cF = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f, blocksize.height + templ.rows - 1);
+    cR = hal::DFT2D::create(dftsize.width, dftsize.height, maxDepth, 1, 1, f_inv, blocksize.height);
+
+    // calculate correlation by blocks
+    for( i = 0; i < tileCount; i++ )
+    {
+        int x = (i%tileCountX)*blocksize.width;
+        int y = (i/tileCountX)*blocksize.height;
+
+        Size bsz(std::min(blocksize.width, corr.cols - x),
+                 std::min(blocksize.height, corr.rows - y));
+        Size dsz(bsz.width + templ.cols - 1, bsz.height + templ.rows - 1);
+        int x0 = x - anchor.x + roiofs.x, y0 = y - anchor.y + roiofs.y;
+        int x1 = std::max(0, x0), y1 = std::max(0, y0);
+        int x2 = std::min(img0.cols, x0 + dsz.width);
+        int y2 = std::min(img0.rows, y0 + dsz.height);
+        Mat src0(img0, Range(y1, y2), Range(x1, x2));
+        Mat dst(dftImg, Rect(0, 0, dsz.width, dsz.height));
+        Mat dst1(dftImg, Rect(x1-x0, y1-y0, x2-x1, y2-y1));
+        Mat cdst(corr, Rect(x, y, bsz.width, bsz.height));
+
+        for( k = 0; k < cn; k++ )
+        {
+            Mat src = src0;
+            dftImg = Scalar::all(0);
+
+            if( cn > 1 )
+            {
+                src = depth == maxDepth ? dst1 : Mat(y2-y1, x2-x1, depth, &buf[0]);
+                int pairs[] = {k, 0};
+                mixChannels(&src0, 1, &src, 1, pairs, 1);
+            }
+
+            if( dst1.data != src.data )
+                src.convertTo(dst1, dst1.depth());
+
+            if( x2 - x1 < dsz.width || y2 - y1 < dsz.height )
+                copyMakeBorder(dst1, dst, y1-y0, dst.rows-dst1.rows-(y1-y0),
+                               x1-x0, dst.cols-dst1.cols-(x1-x0), borderType);
+
+            if (bsz.height == blocksize.height)
+                cF->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, 0, dsz.height );
+
+            Mat dftTempl1(dftTempl, Rect(0, tcn > 1 ? k*dftsize.height : 0,
+                                         dftsize.width, dftsize.height));
+            mulSpectrums(dftImg, dftTempl1, dftImg, 0, true);
+
+            if (bsz.height == blocksize.height)
+                cR->apply(dftImg.data, (int)dftImg.step, dftImg.data, (int)dftImg.step);
+            else
+                dft( dftImg, dftImg, DFT_INVERSE + DFT_SCALE, bsz.height );
+
+            src = dftImg(Rect(0, 0, bsz.width, bsz.height));
+
+            if( ccn > 1 )
+            {
+                if( cdepth != maxDepth )
+                {
+                    Mat plane(bsz, cdepth, &buf[0]);
+                    src.convertTo(plane, cdepth, 1, delta);
+                    src = plane;
+                }
+                int pairs[] = {0, k};
+                mixChannels(&src, 1, &cdst, 1, pairs, 1);
+            }
+            else
+            {
+                if( k == 0 )
+                    src.convertTo(cdst, cdepth, 1, delta);
+                else
+                {
+                    if( maxDepth != cdepth )
+                    {
+                        Mat plane(bsz, cdepth, &buf[0]);
+                        src.convertTo(plane, cdepth);
+                        src = plane;
+                    }
+                    add(src, cdst, cdst);
+                }
+            }
+        }
+    }
+}
+```
 
 
 

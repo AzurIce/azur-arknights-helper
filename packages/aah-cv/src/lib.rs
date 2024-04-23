@@ -8,6 +8,7 @@
 
 pub mod template_matching;
 pub mod utils;
+pub mod fft;
 
 use std::{borrow::Cow, mem::size_of};
 use imageproc::template_matching::Extremes;
