@@ -1,6 +1,6 @@
 use nalgebra::Complex;
 use std::{borrow::Cow, str::FromStr};
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, BufferBinding};
 
 pub fn bit_reverse_swap<T>(input: &mut [T]) {
     // do bit reverse swap on input
@@ -31,14 +31,12 @@ fn inner_fft(buf: &mut [Complex<f64>], omega: &[Complex<f64>]) {
     let mut l = 2;
     while l <= n {
         let m = l / 2;
-        let mut p = 0;
-        while p != n {
+        for p in 0..n / l {
             for i in 0..m {
-                let t = omega[n / l * i] * buf[p + m + i];
-                buf[p + m + i] = buf[p + i] - t;
-                buf[p + i] += t;
+                let t = omega[n / l * i] * buf[p * l + m + i];
+                buf[p * l + m + i] = buf[p * l + i] - t;
+                buf[p * l + i] += t;
             }
-            p += l;
         }
         l <<= 1;
     }
@@ -56,7 +54,7 @@ pub fn fft(input: Vec<Complex<f64>>) -> Vec<Complex<f64>> {
             Complex::new(theta.cos(), theta.sin())
         })
         .collect::<Vec<_>>();
-    println!("!!!omega!!!: {:?}", omega);
+    // println!("!!!omega!!!: {:?}", omega);
 
     inner_fft(&mut output, &omega);
 
@@ -70,7 +68,7 @@ pub fn ifft(input: Vec<Complex<f64>>) -> Vec<Complex<f64>> {
 
     let omega = (0..n)
         .map(|i| {
-            let theta = 2.0 * std::f64::consts::PI / n as f64 * i as f64 ;
+            let theta = 2.0 * std::f64::consts::PI / n as f64 * i as f64;
             Complex::new(theta.cos(), theta.sin())
         })
         .collect::<Vec<_>>();
@@ -84,31 +82,30 @@ pub fn ifft(input: Vec<Complex<f64>>) -> Vec<Complex<f64>> {
 // Indicates a u32 overflow in an intermediate Collatz value
 const OVERFLOW: u32 = 0xffffffff;
 
-#[cfg_attr(test, allow(dead_code))]
-async fn run() {
-    let numbers = {
-        let default = vec![1, 2, 3, 4];
-        println!("No numbers were provided, defaulting to {default:?}");
-        default
-    };
+// #[cfg_attr(test, allow(dead_code))]
+// async fn run() {
+//     let numbers = (0..8).map(|i| [i as f32, 0.0]).collect::<Vec<[f32; 2]>>();
 
-    let steps = execute_gpu(&numbers).await.unwrap();
+//     let steps = execute_gpu(&numbers).await.unwrap();
 
-    let disp_steps: Vec<String> = steps
-        .iter()
-        .map(|&n| match n {
-            OVERFLOW => "OVERFLOW".to_string(),
-            _ => n.to_string(),
-        })
-        .collect();
+//     let disp_steps: Vec<String> = steps
+//         .iter()
+//         .map(|&n| match n {
+//             OVERFLOW => "OVERFLOW".to_string(),
+//             _ => n.to_string(),
+//         })
+//         .collect();
 
-    println!("Steps: [{}]", disp_steps.join(", "));
-    #[cfg(target_arch = "wasm32")]
-    log::info!("Steps: [{}]", disp_steps.join(", "));
+//     println!("Steps: [{}]", disp_steps.join(", "));
+//     #[cfg(target_arch = "wasm32")]
+//     log::info!("Steps: [{}]", disp_steps.join(", "));
+// }
+
+fn execute_gpu_block(numbers: &[[f32; 2]]) -> Option<Vec<[f32; 2]>> {
+    pollster::block_on(execute_gpu(numbers))
 }
 
-#[cfg_attr(test, allow(dead_code))]
-async fn execute_gpu(numbers: &[u32]) -> Option<Vec<u32>> {
+async fn execute_gpu(numbers: &[[f32; 2]]) -> Option<Vec<[f32; 2]>> {
     // Instantiates instance of WebGPU
     let instance = wgpu::Instance::default();
 
@@ -137,8 +134,14 @@ async fn execute_gpu(numbers: &[u32]) -> Option<Vec<u32>> {
 async fn execute_gpu_inner(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
-    numbers: &[u32],
-) -> Option<Vec<u32>> {
+    input: &[[f32; 2]],
+) -> Option<Vec<[f32; 2]>> {
+    let mut input = input.iter().cloned().collect::<Vec<[f32; 2]>>();
+    bit_reverse_swap(&mut input);
+
+    let n = input.len() as u32;
+    // println!("input len {n}: {:?}", input);
+
     // Loads the shader from WGSL
     let cs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: None,
@@ -146,7 +149,8 @@ async fn execute_gpu_inner(
     });
 
     // Gets the size in bytes of the buffer.
-    let size = std::mem::size_of_val(numbers) as wgpu::BufferAddress;
+    // let size = std::mem::size_of_val(&input) as wgpu::BufferAddress;
+    let size = input.len() as u64 * std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress;
 
     // Instantiates buffer without data.
     // `usage` of buffer specifies how it can be used:
@@ -159,6 +163,19 @@ async fn execute_gpu_inner(
         mapped_at_creation: false,
     });
 
+    let uniform_n_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("n"),
+        size: 4,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+    let uniform_l_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("l"),
+        size: 4,
+        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        mapped_at_creation: false,
+    });
+
     // Instantiates buffer with data (`numbers`).
     // Usage allowing the buffer to be:
     //   A storage buffer (can be bound within a bind group and thus available to a shader).
@@ -166,10 +183,26 @@ async fn execute_gpu_inner(
     //   The source of a copy.
     let storage_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Storage Buffer"),
-        contents: bytemuck::cast_slice(numbers),
+        contents: bytemuck::cast_slice(&input),
         usage: wgpu::BufferUsages::STORAGE
             | wgpu::BufferUsages::COPY_DST
             | wgpu::BufferUsages::COPY_SRC,
+    });
+
+    let omega = (0..n)
+        .map(|i| {
+            let theta = 2.0 * std::f64::consts::PI / n as f64 * i as f64;
+            [theta.cos() as f32, theta.sin() as f32]
+
+            // Complex::new(theta.cos(), theta.sin())
+        })
+        .collect::<Vec<_>>();
+    // let omega_inverse = omega.iter().map(|&[r, i]| [r, -i]).collect::<Vec<_>>();
+
+    let omega_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Omega Buffer"),
+        contents: bytemuck::cast_slice(&omega),
+        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
     });
 
     // A bind group defines how buffers are accessed by shaders.
@@ -178,10 +211,62 @@ async fn execute_gpu_inner(
 
     // A pipeline specifies the operation of a shader
 
+    let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("Bindgroup layout"),
+        entries: &[
+            wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 1,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 2,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 3,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ],
+    });
+
+    let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Pipeline layout"),
+        bind_group_layouts: &[&bind_group_layout],
+        ..Default::default()
+    });
+
     // Instantiates the pipeline.
     let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
         label: None,
-        layout: None,
+        layout: Some(&pipeline_layout),
         module: &cs_module,
         entry_point: "main",
         // compilation_options: Default::default(),
@@ -192,29 +277,72 @@ async fn execute_gpu_inner(
     let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: None,
         layout: &bind_group_layout,
-        entries: &[wgpu::BindGroupEntry {
-            binding: 0,
-            resource: storage_buffer.as_entire_binding(),
-        }],
+        entries: &[
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: storage_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: omega_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: uniform_n_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: uniform_l_buffer.as_entire_binding(),
+            },
+        ],
     });
 
-    // A command encoder executes one or many pipelines.
-    // It is to WebGPU what a command buffer is to Vulkan.
+    queue.write_buffer(&uniform_n_buffer, 0, bytemuck::bytes_of(&n));
+
+    let mut l = 2;
+    let mut res: Option<Vec<[f32; 2]>> = None;
+    while l <= n {
+        // println!("iter {l}");
+        // let m = l / 2;
+
+        // iter(l as u32);
+        let mut encoder =
+            device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+
+        // let mut iter = |l: u32| {
+        queue.write_buffer(&uniform_l_buffer, 0, bytemuck::bytes_of(&l));
+        // A command encoder executes one or many pipelines.
+        // It is to WebGPU what a command buffer is to Vulkan.
+        {
+            let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: None,
+                timestamp_writes: None,
+            });
+            cpass.set_pipeline(&compute_pipeline);
+            cpass.set_bind_group(0, &bind_group, &[]);
+            cpass.insert_debug_marker("compute collatz iterations");
+            cpass.dispatch_workgroups(n as u32 / l as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
+        }
+        queue.submit(Some(encoder.finish()));
+        // };
+        // for p in 0..n/l {
+        // for i in 0..m {
+        // let t = omega[n / l * i] * buf[p*l + m + i];
+        // buf[p*l + m + i] = buf[p*l + i] - t;
+        // buf[p*l + i] += t;
+        // }
+        // }
+        // println!("{:?}", res);
+
+        l <<= 1;
+    }
+    // ? get result
     let mut encoder =
         device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
-    {
-        let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
-            label: None,
-            timestamp_writes: None,
-        });
-        cpass.set_pipeline(&compute_pipeline);
-        cpass.set_bind_group(0, &bind_group, &[]);
-        cpass.insert_debug_marker("compute collatz iterations");
-        cpass.dispatch_workgroups(numbers.len() as u32, 1, 1); // Number of cells to run, the (x,y,z) size of item being processed
-    }
     // Sets adds copy operation to command encoder.
     // Will copy data from storage buffer on GPU to staging buffer on CPU.
     encoder.copy_buffer_to_buffer(&storage_buffer, 0, &staging_buffer, 0, size);
+    // encoder.copy_buffer_to_buffer(&omega_buffer, 0, &staging_buffer, 0, size);
 
     // Submits command encoder for processing
     queue.submit(Some(encoder.finish()));
@@ -231,11 +359,11 @@ async fn execute_gpu_inner(
     device.poll(wgpu::Maintain::wait()).panic_on_timeout();
 
     // Awaits until `buffer_future` can be read from
-    if let Ok(Ok(())) = receiver.recv_async().await {
+    res = if let Ok(Ok(())) = receiver.recv_async().await {
         // Gets contents of buffer
         let data = buffer_slice.get_mapped_range();
         // Since contents are got in bytes, this converts these bytes back to u32
-        let result = bytemuck::cast_slice(&data).to_vec();
+        let result: Vec<[f32; 2]> = bytemuck::cast_slice(&data).to_vec();
 
         // With the current interface, we have to make sure all mapped views are
         // dropped before we unmap the buffer.
@@ -250,22 +378,20 @@ async fn execute_gpu_inner(
         Some(result)
     } else {
         panic!("failed to run compute on gpu!")
-    }
+    };
+    res
 }
 
 #[cfg(test)]
 mod test {
+    use std::time::Instant;
+
     use num::Complex;
     use rustfft::FftPlanner;
 
     use crate::fft::{bit_reverse_swap, ifft};
 
-    use super::{fft, run};
-
-    #[test]
-    pub fn test_main() {
-        pollster::block_on(run());
-    }
+    use super::{execute_gpu_block, fft};
 
     #[test]
     pub fn test_bit_reverse_swap() {
@@ -279,28 +405,58 @@ mod test {
         let data = (0..8)
             .map(|i| Complex::new(i as f64, 0.0))
             .collect::<Vec<Complex<f64>>>();
-        println!("original: {:?}", data);
+        // println!("original: {:?}", data);
 
+        let t = Instant::now();
         let data = fft(data);
-        println!("fft: {:?}", data);
+        println!("fft cost: {:?}", t.elapsed()); // 1.1ms
+        println!("{:?}", data);
 
+        let t = Instant::now();
         let data = ifft(data);
-        println!("ifft: {:?}", data);
+        println!("ifft cost: {:?}", t.elapsed()); // 1.2ms
+        println!("{:?}", data);
 
         println!("-------------------------");
 
-        let mut data = (0..8)
+        // let mut data = (0..8)
+        //     .map(|i| Complex::new(i as f64, 0.0))
+        //     .collect::<Vec<Complex<f64>>>();
+        // let mut planner = FftPlanner::new();
+        // let fft = planner.plan_fft_forward(8);
+        // let inv_fft = planner.plan_fft_inverse(8);
+
+        // fft.process(&mut data);
+        // println!("fft: {:?}", data);
+
+        // inv_fft.process(&mut data);
+        // println!("inv_fft: {:?}", data)
+    }
+
+    fn test_gpu_fft_with_size(size: usize) {
+        println!("testing in size {size}...");
+        let data = (0..size)
             .map(|i| Complex::new(i as f64, 0.0))
             .collect::<Vec<Complex<f64>>>();
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(8);
-        let inv_fft = planner.plan_fft_inverse(8);
+        // println!("original: {:?}", data);
 
-        fft.process(&mut data);
-        println!("fft: {:?}", data);
+        let t = Instant::now();
+        let data = fft(data);
+        println!("naive fft cost: {:?}", t.elapsed()); // 1.1ms
+                                                       // println!("{:?}", data);
 
-        inv_fft.process(&mut data);
-        println!("inv_fft: {:?}", data)
+        let t = Instant::now();
+        let numbers = (0..size)
+            .map(|i| [i as f32, 0.0])
+            .collect::<Vec<[f32; 2]>>();
+        let res = execute_gpu_block(&numbers);
+        println!("gpu fft cost: {:?}", t.elapsed()); // 1.1ms
+                                                     // println!("{:?}", res)
+    }
+
+    #[test]
+    pub fn test_gpu_fft() {
+        test_gpu_fft_with_size(65536);
     }
 }
 

@@ -1,3 +1,5 @@
+
+
 OpenCV 中的 **模板匹配** 位于 `imgproc` 模块下：[opencv/modules/imgproc/src/templmatch.cpp at 4.x · opencv/opencv (github.com)](https://github.com/opencv/opencv/blob/4.x/modules/imgproc/src/templmatch.cpp)。
 
 OpenCV 会优先尝试加速实现，直接返回：
