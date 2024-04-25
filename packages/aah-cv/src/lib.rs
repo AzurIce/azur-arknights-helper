@@ -6,19 +6,20 @@
 // #![allow(dead_code)]
 // #![allow(unused_variables)]
 
+pub mod convolve;
+pub mod fft;
 pub mod template_matching;
 pub mod utils;
-pub mod fft;
 
-use std::{borrow::Cow, mem::size_of};
 use imageproc::template_matching::Extremes;
+use std::{borrow::Cow, mem::size_of};
 use wgpu::util::DeviceExt;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MatchTemplateMethod {
     SumOfAbsoluteErrors,
     SumOfSquaredErrors,
-    CrossCorrelation
+    CrossCorrelation,
 }
 
 /// Slides a template over the input and scores the match at each point using the requested method.
