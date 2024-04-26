@@ -7,19 +7,19 @@ struct Uniforms {
 
 @group(0)
 @binding(0)
-var<uniform> uniforms: Uniforms;
+var<storage, read_write> result_buf: array<f32>;
 
 @group(0)
 @binding(1)
-var<storage, read> image_buf: array<f32>;
+var<uniform> uniforms: Uniforms;
 
 @group(0)
 @binding(2)
-var<storage, read> kernel_buf: array<f32>;
+var<storage, read> image_buf: array<f32>;
 
 @group(0)
 @binding(3)
-var<storage, read_write> result_buf: array<f32>;
+var<storage, read> kernel_buf: array<f32>;
 
 @compute
 @workgroup_size(16, 16, 1)
@@ -37,7 +37,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var result_width = image_width - kernel_width + 1u;
     var result_height = image_height - kernel_height + 1u;
 
-    if x > result_width || y > result_height {
+    if x >= result_width || y >= result_height {
         return;
     }
 
@@ -51,6 +51,3 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
         }
     }
 }
-
-
-// TODO: bit-reverse on CPU, then iterate n time, in each time every calculate is paralleled

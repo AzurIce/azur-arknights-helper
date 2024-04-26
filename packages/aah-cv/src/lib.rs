@@ -6,10 +6,12 @@
 // #![allow(dead_code)]
 // #![allow(unused_variables)]
 
+pub mod gpu;
 pub mod convolve;
 pub mod fft;
 pub mod template_matching;
 pub mod utils;
+pub mod matching;
 
 use imageproc::template_matching::Extremes;
 use std::{borrow::Cow, mem::size_of};

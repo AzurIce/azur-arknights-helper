@@ -252,6 +252,12 @@ void crossCorr( const Mat& img, const Mat& _templ, Mat& corr,
 
 
 
+
+
+
+
+
+
 ```rust
 pub fn m_match_template(image: &GrayImage, template: &GrayImage) -> Image<Luma<f32>> {
     use image::GenericImageView;
