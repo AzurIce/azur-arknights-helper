@@ -1,9 +1,8 @@
-use std::path::Path;
-
 use image::math::Rect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
+    controller::DEFAULT_HEIGHT,
     vision::matcher::{convert_image_to_ten, Matcher},
     AAH,
 };
@@ -40,9 +39,9 @@ impl Task for MatchTask {
                 let image = image.to_luma32f();
                 let template = aah.get_template(template_filename).unwrap().to_luma32f();
 
-                let template = if image.height() != 1440 {
+                let template = if image.height() != DEFAULT_HEIGHT {
                     // let scale_factor = 2560.0 / image.width() as f32;
-                    let scale_factor = image.height() as f32 / 1440.0;
+                    let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
 
                     let new_width = (template.width() as f32 * scale_factor) as u32;
                     let new_height = (template.height() as f32 * scale_factor) as u32;
@@ -59,17 +58,18 @@ impl Task for MatchTask {
                 Matcher::Template { image, template }
             }
             Self::Ocr(text) => {
-                let image = convert_image_to_ten(image)
-                    .map_err(|err| format!("failed to convert image to tensor: {:?}", err))?;
-                if let Some(ocr_engine) = &aah.ocr_engine {
-                    Matcher::Ocr {
-                        image,
-                        text: text.clone(),
-                        engine: ocr_engine,
-                    }
-                } else {
-                    return Err("".to_string());
-                }
+                return Err("not implemented".to_string());
+                // let image = convert_image_to_ten(image)
+                //     .map_err(|err| format!("failed to convert image to tensor: {:?}", err))?;
+                // if let Some(ocr_engine) = &aah.ocr_engine {
+                //     Matcher::Ocr {
+                //         image,
+                //         text: text.clone(),
+                //         engine: ocr_engine,
+                //     }
+                // } else {
+                //     return Err("".to_string());
+                // }
             }
         };
 

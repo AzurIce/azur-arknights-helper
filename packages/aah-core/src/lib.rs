@@ -9,6 +9,7 @@ use std::{
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{minitouch, Controller};
 use ocrs::OcrEngine;
+use task::builtins::BuiltinTask;
 
 use crate::task::Task;
 
@@ -20,7 +21,10 @@ pub mod vision;
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{
+        path::Path,
+        sync::{Mutex, OnceLock},
+    };
 
     use super::*;
 
@@ -40,8 +44,14 @@ mod tests {
             .unwrap();
     }
 
+    fn state() -> &'static Mutex<Option<AAH>> {
+        static l: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
+        l.get_or_init(|| Mutex::new(None))
+    }
+
     #[test]
     fn foo() {
+        // let aah = Mutex::new(AAH::connect("127.0.0.1:16384", "../../resources").unwrap());
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");
@@ -55,12 +65,11 @@ mod tests {
 pub struct AAH {
     pub res_dir: PathBuf,
     /// [`controller`] 承担设备控制相关操作（比如触摸、截图等）
-    pub controller: Box<dyn Controller>,
+    pub controller: Box<dyn Controller + Sync + Send>,
     /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
     pub task_config: TaskConfig,
     /// 由 `navigates.toml` 加载的导航配置
     pub navigate_config: NavigateConfig,
-    pub ocr_engine: Option<OcrEngine>,
     /// 屏幕内容的缓存
     pub screen_cache: Option<image::DynamicImage>,
 }
@@ -85,7 +94,6 @@ impl AAH {
             controller,
             task_config,
             navigate_config,
-            ocr_engine: None, // Some(try_init_ocr_engine()?)
             screen_cache: None,
         })
     }
@@ -136,5 +144,10 @@ impl AAH {
         let path = self.res_dir.join("templates").join(name);
         let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
         Ok(image)
+    }
+
+    pub fn get_tasks(&self) -> Vec<BuiltinTask> {
+        // TODO
+        vec![]
     }
 }

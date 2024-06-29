@@ -10,20 +10,19 @@ pub mod minitouch;
 // pub use adb_input_controller::AdbInputController;
 
 /// 默认宽高
-const DEFAULT_WIDTH: u32 = 1920;
-const DEFAULT_HEIGHT: u32 = 1280;
+pub const DEFAULT_WIDTH: u32 = 1920;
+pub const DEFAULT_HEIGHT: u32 = 1280;
 
 pub struct ScreenPos {
     x: f32,
     y: f32,
-    ratio: f32
+    ratio: f32,
 }
 
 struct RawScreenPos {
     x: f32,
     y: f32,
 }
-
 
 // impl Into<RawScreenPos> for ScreenPos {
 //     fn into(self) -> RawScreenPos {
@@ -56,7 +55,7 @@ pub trait Controller {
             x: (rect_scaled.x as f32 / scale_fector) as u32,
             y: (rect_scaled.y as f32 / scale_fector) as u32,
             width: (rect_scaled.width as f32 / scale_fector) as u32,
-            height: (rect_scaled.height as f32 / scale_fector) as u32
+            height: (rect_scaled.height as f32 / scale_fector) as u32,
         };
         self.click_in_rect(rect)
     }
