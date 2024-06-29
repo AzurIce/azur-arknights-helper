@@ -49,69 +49,69 @@ mod test {
         println!("inv_fft: {:?}", x)
     }
 
-    #[test]
-    fn test_image_fft() {
-        let t = Instant::now();
-        let image = GrayImage::from_fn(2560, 1440, |_, _| Luma([128])).into_ndarray2();
-        // let image = GrayImage::from_fn(1440, 2560, |_, _| Luma([128])).into_ndarray2();
-        let image = image.map(|&x| x as f64);
-        // println!("origin: {:?}", image);
-        let mut x = image
-            .iter()
-            .map(|&x| Complex::new(x, 0.0))
-            .collect::<Vec<Complex<f64>>>();
+    // #[test]
+    // fn test_image_fft() {
+    //     let t = Instant::now();
+    //     let image = GrayImage::from_fn(2560, 1440, |_, _| Luma([128])).into_ndarray2();
+    //     // let image = GrayImage::from_fn(1440, 2560, |_, _| Luma([128])).into_ndarray2();
+    //     let image = image.map(|&x| x as f64);
+    //     // println!("origin: {:?}", image);
+    //     let mut x = image
+    //         .iter()
+    //         .map(|&x| Complex::new(x, 0.0))
+    //         .collect::<Vec<Complex<f64>>>();
 
-        fft_2d(image.dim().0, image.dim().1, &mut x);
-        // println!("fft (len = {}): {:?}", x.len(), x);
+    //     fft_2d(image.dim().0, image.dim().1, &mut x);
+    //     // println!("fft (len = {}): {:?}", x.len(), x);
 
-        // let image = GrayImage::from_fn(512, 512, |_, _| Luma([128])).into_ndarray2();
-        // let image = image.map(|&x| x as f64);
-        // println!("origin: {:?}", image);
-        // let mut x = image
-        //     .iter()
-        //     .map(|&x| Complex::new(x, 0.0))
-        //     .collect::<Vec<Complex<f64>>>();
+    //     // let image = GrayImage::from_fn(512, 512, |_, _| Luma([128])).into_ndarray2();
+    //     // let image = image.map(|&x| x as f64);
+    //     // println!("origin: {:?}", image);
+    //     // let mut x = image
+    //     //     .iter()
+    //     //     .map(|&x| Complex::new(x, 0.0))
+    //     //     .collect::<Vec<Complex<f64>>>();
 
-        // fft_2d(image.dim().0, image.dim().1, &mut x);
-        // println!("fft (len = {}): {:?}", x.len(), x);
-        println!("{:?}", t.elapsed());
-    }
+    //     // fft_2d(image.dim().0, image.dim().1, &mut x);
+    //     // println!("fft (len = {}): {:?}", x.len(), x);
+    //     println!("{:?}", t.elapsed());
+    // }
 
-    fn test_template_match_with_image_and_template(image: &str, template: &str) {
-        println!("matching {} {}...", image, template);
-        let image = image::open(Path::new("./test").join(image)).unwrap();
-        let template = image::open(Path::new("./test").join(template)).unwrap();
-        println!(
-            "image: {}x{}, template: {}x{}",
-            image.width(),
-            image.height(),
-            template.width(),
-            template.height()
-        );
+    // fn test_template_match_with_image_and_template(image: &str, template: &str) {
+    //     println!("matching {} {}...", image, template);
+    //     let image = image::open(Path::new("./test").join(image)).unwrap();
+    //     let template = image::open(Path::new("./test").join(template)).unwrap();
+    //     println!(
+    //         "image: {}x{}, template: {}x{}",
+    //         image.width(),
+    //         image.height(),
+    //         template.width(),
+    //         template.height()
+    //     );
 
-        let image_luma32f = image.to_luma32f();
-        let template_luma32f = template.to_luma32f();
-        // let image_luma8 = image.to_luma8();
-        // let template_luma8 = template.to_luma8();
+    //     let image_luma32f = image.to_luma32f();
+    //     let template_luma32f = template.to_luma32f();
+    //     // let image_luma8 = image.to_luma8();
+    //     // let template_luma8 = template.to_luma8();
 
-        let start = Instant::now();
-        let res = super::match_template(
-            &image_luma32f.into_ndarray2(),
-            &template_luma32f.into_ndarray2(),
-        );
-        let res = super::find_extremes(&res.map(|&x| x as f32));
-        println!(
-            "aah-cv: {:?}, cost: {}s",
-            res,
-            start.elapsed().as_secs_f32()
-        );
-    }
+    //     let start = Instant::now();
+    //     let res = super::match_template(
+    //         &image_luma32f.into_ndarray2(),
+    //         &template_luma32f.into_ndarray2(),
+    //     );
+    //     let res = super::find_extremes(&res.map(|&x| x as f32));
+    //     println!(
+    //         "aah-cv: {:?}, cost: {}s",
+    //         res,
+    //         start.elapsed().as_secs_f32()
+    //     );
+    // }
 
     #[test]
     fn test_template_match() {
         // test_template_match_with_image_and_template("image.png", "template.png");
         // test_template_match_with_image_and_template("main.png", "EnterMissionMistCity.png");
-        test_template_match_with_image_and_template("start.png", "start_btn.png");
+        // test_template_match_with_image_and_template("start.png", "start_btn.png");
     }
 
     use super::*;

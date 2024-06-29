@@ -27,28 +27,28 @@ fn main() {
 
         // Start matching with imageproc
         let time = Instant::now();
-        let result = imageproc::template_matching::match_template(
-            &input_luma8,
-            &template_luma8,
-            imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
-        );
-        println!(
-            "imageproc::template_matching::match_template took {} ms",
-            time.elapsed().as_millis()
-        );
-        let extremes = imageproc::template_matching::find_extremes(&result);
-        println!("{:?}", extremes);
+        // let result = imageproc::template_matching::match_template(
+        //     &input_luma8,
+        //     &template_luma8,
+        //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
+        // );
+        // println!(
+        //     "imageproc::template_matching::match_template took {} ms",
+        //     time.elapsed().as_millis()
+        // );
+        // let extremes = imageproc::template_matching::find_extremes(&result);
+        // println!("{:?}", extremes);
 
-        // Get result from GPU accelerated matching
-        let time = Instant::now();
-        let result = matcher.wait_for_result().unwrap();
-        println!(
-            "template_matching::match_template took {:.2} ms",
-            (time.elapsed() + matcher_start_elapsed).as_micros() as f32 / 1000.0
-        );
+        // // Get result from GPU accelerated matching
+        // let time = Instant::now();
+        // let result = matcher.wait_for_result().unwrap();
+        // println!(
+        //     "template_matching::match_template took {:.2} ms",
+        //     (time.elapsed() + matcher_start_elapsed).as_micros() as f32 / 1000.0
+        // );
 
-        let extremes = find_extremes(&result);
-        println!("{:?}", extremes);
-        println!();
+        // let extremes = find_extremes(&result);
+        // println!("{:?}", extremes);
+        // println!();
     }
 }
