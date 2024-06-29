@@ -29,3 +29,14 @@ impl Task for ByName {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::AAH;
+
+    #[test]
+    fn test_name_task() {
+        let aah = AAH::connect("127.0.0.1:16384", "../resources").unwrap();
+        aah.run_task("wakeup").unwrap();
+    }
+}

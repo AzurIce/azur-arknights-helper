@@ -20,7 +20,7 @@ fn main() {
 
     if let Some(task) = cli.task {
         let serial = cli.serial_number.unwrap_or("127.0.0.1:16384".to_string());
-        let aah = AAH::connect(serial).expect("failed to connect to the device");
+        let aah = AAH::connect(serial, "./resources").expect("failed to connect to the device");
         aah.run_task(task).expect("failed to execute task");
     }
 }
