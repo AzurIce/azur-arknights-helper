@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use crate::controller::Controller;
-use ndarray::{Array2, Axis, Array1};
+use ndarray::{Array1, Array2, Axis};
 
 use super::Analyzer;
 

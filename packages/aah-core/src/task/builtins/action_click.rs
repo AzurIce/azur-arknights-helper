@@ -4,7 +4,8 @@ use crate::{
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
         Task,
-    }, AAH,
+    },
+    AAH,
 };
 
 #[cfg(test)]

@@ -62,7 +62,10 @@ impl Controller for MiniTouchController {
     }
 
     fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError> {
-        info!("[Controller]: swiping from {:?} to {:?} for {:?}", start, end, duration);
+        info!(
+            "[Controller]: swiping from {:?} to {:?} for {:?}",
+            start, end, duration
+        );
         self.inner.execute_command_by_process(
             format!(
                 "shell input swipe {} {} {} {} {}",

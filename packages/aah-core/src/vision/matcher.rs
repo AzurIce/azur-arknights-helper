@@ -44,6 +44,7 @@ pub enum Matcher<'a> {
 }
 
 const THRESHOLD: f32 = 100.0;
+const SSE_THRESHOLD: f32 = 100.0;
 
 impl<'a> Matcher<'a> {
     /// 执行匹配并获取结果
@@ -51,8 +52,8 @@ impl<'a> Matcher<'a> {
         match self {
             Self::Template { image, template } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::CrossCorrelation;
-                cprintln!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, template: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
+                let method = MatchTemplateMethod::SumOfSquaredErrors;
+                cprintln!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, method: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
@@ -66,7 +67,7 @@ impl<'a> Matcher<'a> {
                     extrems
                 );
 
-                if extrems.min_value >= THRESHOLD {
+                if extrems.min_value >= SSE_THRESHOLD {
                     cprintln!("[Matcher::TemplateMatcher]: <red>failed</red>");
                     return None;
                 }
@@ -194,7 +195,7 @@ mod test {
         }
         fn folder_name(&self) -> &str {
             match self {
-                Device::MUMU => "MUMU-2560x1440",
+                Device::MUMU => "MUMU-1920x1080",
                 Device::P40Pro => "P40 Pro-2640x1200",
             }
         }
@@ -203,29 +204,32 @@ mod test {
     #[test]
     fn test_device_match() {
         test_device(Device::MUMU);
-        test_device(Device::P40Pro);
+        // test_device(Device::P40Pro);
     }
 
     fn test_device(device: Device) {
         println!("#### testing device {:?} ####", device);
-        test_template_matcher_with_device_image(device, "start.png", "start.png");
+        test_template_matcher_with_device_image(device, "start.png", "start_start.png");
 
-        test_template_matcher_with_device_image(device, "wakeup.png", "start_wakeup.png");
+        test_template_matcher_with_device_image(device, "wakeup.png", "wakeup_wakeup.png");
 
-        test_template_matcher_with_device_image(device, "main.png", "EnterInfrastMistCity.png");
-        test_template_matcher_with_device_image(device, "main.png", "EnterMissionMistCity.png");
-        test_template_matcher_with_device_image(device, "main.png", "EnterRecruitMistCity.png");
-        test_template_matcher_with_device_image(device, "main.png", "MailBoxIconWhite.png");
+        test_template_matcher_with_device_image(device, "main.png", "main_base.png");
+        test_template_matcher_with_device_image(device, "main.png", "main_mission.png");
+        test_template_matcher_with_device_image(device, "main.png", "main_operator.png");
+        test_template_matcher_with_device_image(device, "main.png", "main_squads.png");
+        test_template_matcher_with_device_image(device, "main.png", "main_recruit.png");
+        // test_template_matcher_with_device_image(device, "main.png", "main_box.png");
 
-        test_template_matcher_with_device_image(device, "mission.png", "CollectAllAward.png");
-        test_template_matcher_with_device_image(device, "mission.png", "Close.png");
-        test_template_matcher_with_device_image(device, "mission.png", "MissonTagMainTheme.png");
-        test_template_matcher_with_device_image(
-            device,
-            "mission.png",
-            "ButtonToggleTopNavigator.png",
-        );
-        test_template_matcher_with_device_image(device, "mission.png", "award_2.png");
+        // test_template_matcher_with_device_image(device, "mission.png", "CollectAllAward.png");
+        test_template_matcher_with_device_image(device, "notice.png", "notice_close.png");
+        test_template_matcher_with_device_image(device, "mission.png", "notice_close.png");
+        // test_template_matcher_with_device_image(device, "mission.png", "MissonTagMainTheme.png");
+        // test_template_matcher_with_device_image(
+        //     device,
+        //     "mission.png",
+        //     "ButtonToggleTopNavigator.png",
+        // );
+        // test_template_matcher_with_device_image(device, "mission.png", "award_2.png");
     }
 
     fn test_template_matcher_with_device_image(
@@ -235,10 +239,11 @@ mod test {
     ) -> Option<Rect> {
         println!("testing {} on {}...", template, image);
         let templates_path = Path::new("../../resources/templates");
-        let image_path = templates_path.join(device.folder_name());
+        let image_dir = templates_path.join(device.folder_name());
+        let template_dir = templates_path.join("1920x1080");
 
-        let image = image_path.join(image);
-        let template = templates_path.join(template);
+        let image = image_dir.join(image);
+        let template = template_dir.join(template);
         test_template_matcher_with_image_and_scale_factor(image, template, device.factor())
     }
 

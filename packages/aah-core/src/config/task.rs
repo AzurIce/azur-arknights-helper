@@ -3,8 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::{collections::HashMap, error::Error, fs};
 
-
-use crate::task::builtins::{BuiltinTask, test_tasks};
+use crate::task::builtins::{test_tasks, BuiltinTask};
 
 #[cfg(test)]
 mod test {
@@ -109,4 +108,3 @@ impl Default for TaskConfig {
         Self(map)
     }
 }
-

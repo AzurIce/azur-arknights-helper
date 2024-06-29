@@ -9,7 +9,9 @@ pub fn save_image(image: &DynamicImage, path: &str) {
     if !path.ends_with(".png") {
         path.push_str(".png")
     }
-    image.save_with_format(path, image::ImageFormat::Png).expect("failed to save");
+    image
+        .save_with_format(path, image::ImageFormat::Png)
+        .expect("failed to save");
 }
 
 pub fn try_init_ocr_engine() -> Result<OcrEngine, Box<dyn Error>> {

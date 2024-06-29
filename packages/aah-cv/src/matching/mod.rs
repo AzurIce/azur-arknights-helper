@@ -1,6 +1,4 @@
-pub struct TemplateMatcher {
-    
-}
+pub struct TemplateMatcher {}
 
 use std::{
     error::Error,
@@ -123,7 +121,8 @@ mod test {
     #[test]
     fn test_integral() {
         let mat = Array2::ones((5, 5));
-        let integral: ArrayBase<OwnedRepr<_>, ndarray::prelude::Dim<[usize; 2]>> = integral_arr2(&mat);
+        let integral: ArrayBase<OwnedRepr<_>, ndarray::prelude::Dim<[usize; 2]>> =
+            integral_arr2(&mat);
         println!("{:?}", integral);
         assert_eq!(
             integral,

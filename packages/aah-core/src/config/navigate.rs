@@ -3,7 +3,7 @@ use std::{collections::HashMap, error::Error, fs, path::Path};
 use serde::{Deserialize, Serialize};
 
 use crate::task::{
-    builtins::{ActionClickMatch, ByName, BuiltinTask},
+    builtins::{ActionClickMatch, BuiltinTask, ByName},
     match_task::MatchTask,
 };
 

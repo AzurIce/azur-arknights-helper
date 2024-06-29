@@ -1,19 +1,20 @@
 use std::{
     io::{Read, Write},
-    str::FromStr, process::Command,
+    process::Command,
+    str::FromStr,
 };
 
 pub fn execute_adb_command(serial: &str, command: &str) -> Result<Vec<u8>, String> {
-        let mut args = vec!["-s", serial];
-        args.extend(command.split_whitespace().collect::<Vec<&str>>());
+    let mut args = vec!["-s", serial];
+    args.extend(command.split_whitespace().collect::<Vec<&str>>());
 
-        let res = Command::new("adb")
-            .args(args)
-            .output()
-            .map_err(|err|format!("{:?}", err))?
-            .stdout;
-        Ok(res)
-    }
+    let res = Command::new("adb")
+        .args(args)
+        .output()
+        .map_err(|err| format!("{:?}", err))?
+        .stdout;
+    Ok(res)
+}
 
 // Streaming
 

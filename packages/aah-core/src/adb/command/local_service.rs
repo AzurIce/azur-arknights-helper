@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use crate::adb::{AdbTcpStream, utils::{read_to_end_to_string, read_to_end}};
+use crate::adb::{
+    utils::{read_to_end, read_to_end_to_string},
+    AdbTcpStream,
+};
 
 use super::AdbCommand;
 

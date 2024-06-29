@@ -1,7 +1,7 @@
 use std::time::Instant;
 
-use image::{DynamicImage, GenericImageView};
 use aah_cv::{find_extremes, MatchTemplateMethod, TemplateMatcher};
+use image::{DynamicImage, GenericImageView};
 
 fn main() {
     let input_image = image::load_from_memory(include_bytes!("shot.png")).unwrap();

@@ -20,7 +20,11 @@ fn default_fail_fast() -> bool {
 }
 
 impl Multi {
-    pub fn new(tasks: Vec<BuiltinTask>, fail_fast: bool, wrapper: Option<GenericTaskWrapper>) -> Self {
+    pub fn new(
+        tasks: Vec<BuiltinTask>,
+        fail_fast: bool,
+        wrapper: Option<GenericTaskWrapper>,
+    ) -> Self {
         Self {
             tasks,
             fail_fast,

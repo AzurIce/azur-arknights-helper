@@ -13,33 +13,63 @@ pub use action_click_match::ActionClickMatch;
 pub use action_press_esc::ActionPressEsc;
 pub use action_press_home::ActionPressHome;
 pub use action_swipe::ActionSwipe;
+pub use by_name::ByName;
 pub use multi::Multi;
 pub use navigate::Navigate;
-pub use by_name::ByName;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
-use crate::{AAH, task::{match_task::MatchTask, wrapper::GenericTaskWrapper}};
+use crate::{
+    task::{match_task::MatchTask, wrapper::GenericTaskWrapper},
+    AAH,
+};
 
 use super::Task;
 
 pub fn test_tasks() -> Vec<(&'static str, BuiltinTask)> {
     vec![
-
-        ("press_esc", BuiltinTask::ActionPressEsc(ActionPressEsc::new(None))),
-        ("press_home", BuiltinTask::ActionPressHome(ActionPressHome::new(None))),
-        ("click", BuiltinTask::ActionClick(ActionClick::new(0, 0, Some(GenericTaskWrapper::default())))),
-        ("swipe", BuiltinTask::ActionSwipe(ActionSwipe::new((0, 0), (200, 0), 1.0, None))),
-        ("click_match", BuiltinTask::ActionClickMatch(ActionClickMatch::new(
-            MatchTask::Template("ButtonToggleTopNavigator.png".to_string()),
-            None,
-        ))),
+        (
+            "press_esc",
+            BuiltinTask::ActionPressEsc(ActionPressEsc::new(None)),
+        ),
+        (
+            "press_home",
+            BuiltinTask::ActionPressHome(ActionPressHome::new(None)),
+        ),
+        (
+            "click",
+            BuiltinTask::ActionClick(ActionClick::new(0, 0, Some(GenericTaskWrapper::default()))),
+        ),
+        (
+            "swipe",
+            BuiltinTask::ActionSwipe(ActionSwipe::new((0, 0), (200, 0), 1.0, None)),
+        ),
+        (
+            "click_match",
+            BuiltinTask::ActionClickMatch(ActionClickMatch::new(
+                MatchTask::Template("ButtonToggleTopNavigator.png".to_string()),
+                None,
+            )),
+        ),
         ("navigate_in", BuiltinTask::NavigateIn("name".to_string())),
         ("navigate_out", BuiltinTask::NavigateIn("name".to_string())),
-        ("by_name", BuiltinTask::ByName(ByName::new("press_esc", Some(GenericTaskWrapper::default())))),
-        ("multiple", BuiltinTask::Multi(Multi::new(vec![
-            BuiltinTask::ActionPressEsc(ActionPressEsc::new(None)),
-            BuiltinTask::ActionPressHome(ActionPressHome::new(None)),
-        ], false, None))),
+        (
+            "by_name",
+            BuiltinTask::ByName(ByName::new(
+                "press_esc",
+                Some(GenericTaskWrapper::default()),
+            )),
+        ),
+        (
+            "multiple",
+            BuiltinTask::Multi(Multi::new(
+                vec![
+                    BuiltinTask::ActionPressEsc(ActionPressEsc::new(None)),
+                    BuiltinTask::ActionPressHome(ActionPressHome::new(None)),
+                ],
+                false,
+                None,
+            )),
+        ),
     ]
 }
 
