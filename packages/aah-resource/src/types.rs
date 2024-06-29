@@ -102,15 +102,56 @@ pub enum BuildableType {
 
 #[cfg(test)]
 mod test {
-    use image::{GenericImage, Rgba};
+    use image::{DynamicImage, GenericImage, Rgba};
 
     use super::{HeightType, Level};
 
-    #[test]
-    fn draw_tile_centers() {
-        let level = serde_json::from_str::<Level>(&LS_6).unwrap();
-        let mut image = image::open("./assets/in_battle.png").unwrap();
+    fn draw_box(
+        image: &mut DynamicImage,
+        x: i32,
+        y: i32,
+        width: u32,
+        height: u32,
+        rgba_u8: [u8; 4],
+    ) {
+        for dx in 0..width {
+            let px = x + dx as i32;
+            let py1 = y;
+            let py2 = y + height as i32;
 
+            if px >= 0 && py1 >= 0 && px < image.width() as i32 && py2 < image.height() as i32 {
+                image.put_pixel(px as u32, py1 as u32, Rgba(rgba_u8));
+            }
+            if px >= 0 && py2 >= 0 && px < image.width() as i32 && py2 < image.height() as i32 {
+                image.put_pixel(px as u32, py2 as u32, Rgba(rgba_u8));
+            }
+        }
+
+        for dy in 0..height {
+            let py = y + dy as i32;
+            let px1 = x;
+            let px2 = x + width as i32;
+
+            if px1 >= 0 && py >= 0 && px1 < image.width() as i32 && py < image.height() as i32 {
+                image.put_pixel(px1 as u32, py as u32, Rgba(rgba_u8));
+            }
+            if px2 >= 0 && py >= 0 && px2 < image.width() as i32 && py < image.height() as i32 {
+                image.put_pixel(px2 as u32, py as u32, Rgba(rgba_u8));
+            }
+        }
+        // for dx in 0..width {
+        //     for dy in 0..=height {
+        //         let px = x + dx as i32;
+        //         let py = y + dy as i32;
+        //         // 边界检查
+        //         if px >= 0 && py >= 0 && px < image.width() as i32 && py < image.height() as i32 {
+        //             image.put_pixel(px as u32, py as u32, Rgba(rgba_u8));
+        //         }
+        //     }
+        // }
+    }
+
+    fn draw_tile_centers(image: &mut DynamicImage, level: &Level) {
         for i in 0..level.height {
             for j in 0..level.width {
                 let tile_world_pos = level.tile_world_pos(i, j);
@@ -126,6 +167,69 @@ mod test {
                 image.put_pixel(x, y, Rgba([0, 255, 0, 255]))
             }
         }
+    }
+
+    fn draw_direction_box(image: &mut DynamicImage, level: &Level) {
+        for i in 0..level.height {
+            for j in 0..level.width {
+                let tile_world_pos = level.tile_world_pos(i, j);
+                let tile_screen_pos = level.calc_tile_screen_pos(i, j, false);
+                println!(
+                    "({i}, {j}): world {:?}, screen {:?}",
+                    tile_world_pos, tile_screen_pos
+                );
+                let (x, y) = (
+                    tile_screen_pos.0.round() as u32,
+                    tile_screen_pos.1.round() as u32,
+                );
+                let x = x as i32 - 48;
+                let y = y as i32 - 48;
+                draw_box(image, x, y, 96, 96, [255, 0, 0, 255]);
+            }
+        }
+    }
+
+    fn crop_direction_box(image: &DynamicImage, level: &Level, y: u32, x: u32) -> image::DynamicImage {
+        let tile_screen_pos = level.calc_tile_screen_pos(y, x, false);
+        let (x, y) = (
+            tile_screen_pos.0.round() as u32 - 48,
+            tile_screen_pos.1.round() as u32 - 48,
+        );
+        image.crop_imm(x, y, 96, 96)
+    }
+
+    #[test]
+    fn cut() {
+        let level = serde_json::from_str::<Level>(&LS_6).unwrap();
+        let image = image::open("./assets/LS-6_0.png").unwrap();
+        crop_direction_box(&image, &level, 2, 3).save("./assets/output/LS-6_0_left0.png").unwrap();
+        crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_0_right0.png").unwrap();
+        crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_0_left1.png").unwrap();
+        crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_0_up0.png").unwrap();
+        crop_direction_box(&image, &level, 3, 4).save("./assets/output/LS-6_0_right1.png").unwrap();
+        crop_direction_box(&image, &level, 4, 4).save("./assets/output/LS-6_0_right2.png").unwrap();
+        crop_direction_box(&image, &level, 5, 4).save("./assets/output/LS-6_0_right3.png").unwrap();
+        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_0_left2.png").unwrap();
+
+        let image = image::open("./assets/LS-6_1.png").unwrap();
+        crop_direction_box(&image, &level, 2, 3).save("./assets/output/LS-6_1_left0.png").unwrap();
+        crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_1_right0.png").unwrap();
+        crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_1_left1.png").unwrap();
+        crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_1_up0.png").unwrap();
+        crop_direction_box(&image, &level, 3, 4).save("./assets/output/LS-6_1_right1.png").unwrap();
+        crop_direction_box(&image, &level, 4, 4).save("./assets/output/LS-6_1_right2.png").unwrap();
+        crop_direction_box(&image, &level, 5, 4).save("./assets/output/LS-6_1_right3.png").unwrap();
+        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_1_left2.png").unwrap();
+    }
+
+    #[test]
+    fn fooo() {
+        let level = serde_json::from_str::<Level>(&LS_6).unwrap();
+        let mut image = image::open("./assets/in_battle.png").unwrap();
+
+        draw_tile_centers(&mut image, &level);
+        draw_direction_box(&mut image, &level);
+
         image.save("./assets/in_battle_drawed.png").unwrap();
     }
 
