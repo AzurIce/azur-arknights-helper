@@ -9,8 +9,9 @@ use crate::adb::MyError;
 pub mod minitouch;
 // pub use adb_input_controller::AdbInputController;
 
-const DEFAULT_WIDTH: f32 = 1920.0;
-const DEFAULT_HEIGHT: f32 = 1280.0;
+/// 默认宽高
+const DEFAULT_WIDTH: u32 = 1920;
+const DEFAULT_HEIGHT: u32 = 1280;
 
 pub struct ScreenPos {
     x: f32,
@@ -39,7 +40,7 @@ pub trait Controller {
     /// A scale factor from the device's resolution to 1920x1080
     /// $device_res * scale_factor = 1920x1080$
     fn scale_factor(&self) -> f32 {
-        self.screen_size().0 as f32 / DEFAULT_HEIGHT
+        self.screen_size().0 as f32 / DEFAULT_HEIGHT as f32
     }
 
     fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
@@ -101,9 +102,9 @@ pub trait Controller {
 
     fn screencap_scaled(&self) -> Result<image::DynamicImage, MyError> {
         let screen = self.screencap()?;
-        let screen = if screen.height() != 1440 {
+        let screen = if screen.height() != DEFAULT_HEIGHT {
             // let scale_factor = 2560.0 / image.width() as f32;
-            let scale_factor = 1440.0 / screen.height() as f32;
+            let scale_factor = DEFAULT_HEIGHT as f32 / screen.height() as f32;
 
             let new_width = (screen.width() as f32 * scale_factor) as u32;
             let new_height = (screen.height() as f32 * scale_factor) as u32;
