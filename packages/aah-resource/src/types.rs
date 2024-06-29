@@ -206,20 +206,20 @@ mod test {
         crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_0_right0.png").unwrap();
         crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_0_left1.png").unwrap();
         crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_0_up0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 4).save("./assets/output/LS-6_0_right1.png").unwrap();
-        crop_direction_box(&image, &level, 4, 4).save("./assets/output/LS-6_0_right2.png").unwrap();
-        crop_direction_box(&image, &level, 5, 4).save("./assets/output/LS-6_0_right3.png").unwrap();
-        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_0_left2.png").unwrap();
+        crop_direction_box(&image, &level, 3, 5).save("./assets/output/LS-6_0_right1.png").unwrap();
+        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_0_right2.png").unwrap();
+        crop_direction_box(&image, &level, 5, 5).save("./assets/output/LS-6_0_right3.png").unwrap();
+        crop_direction_box(&image, &level, 4, 6).save("./assets/output/LS-6_0_left2.png").unwrap();
 
         let image = image::open("./assets/LS-6_1.png").unwrap();
         crop_direction_box(&image, &level, 2, 3).save("./assets/output/LS-6_1_left0.png").unwrap();
         crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_1_right0.png").unwrap();
         crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_1_left1.png").unwrap();
         crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_1_up0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 4).save("./assets/output/LS-6_1_right1.png").unwrap();
-        crop_direction_box(&image, &level, 4, 4).save("./assets/output/LS-6_1_right2.png").unwrap();
-        crop_direction_box(&image, &level, 5, 4).save("./assets/output/LS-6_1_right3.png").unwrap();
-        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_1_left2.png").unwrap();
+        crop_direction_box(&image, &level, 3, 5).save("./assets/output/LS-6_1_right1.png").unwrap();
+        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_1_right2.png").unwrap();
+        crop_direction_box(&image, &level, 5, 5).save("./assets/output/LS-6_1_right3.png").unwrap();
+        crop_direction_box(&image, &level, 4, 6).save("./assets/output/LS-6_1_left2.png").unwrap();
     }
 
     #[test]
