@@ -1,13 +1,13 @@
 [base.enter_task.ActionClickMatch.match_task]
 type = "Template"
-template = "EnterInfrastMistCity.png"
+template = "main_base.png"
 
 [base.exit_task.ByName]
 name = "back"
 
 [mission.enter_task.ActionClickMatch.match_task]
 type = "Template"
-template = "EnterMissionMistCity.png"
+template = "main_mission.png"
 
 [mission.exit_task.ByName]
 name = "back"
