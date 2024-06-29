@@ -1,3 +1,5 @@
+图像匹配时将模板图像大小根据截图图像进行缩放，然后在截图图像上匹配。
+
 
 
 OpenCV 中的 **模板匹配** 位于 `imgproc` 模块下：[opencv/modules/imgproc/src/templmatch.cpp at 4.x · opencv/opencv (github.com)](https://github.com/opencv/opencv/blob/4.x/modules/imgproc/src/templmatch.cpp)。
