@@ -1,3 +1,5 @@
+use crate::utils::{camera_euler_angles_xyz, world_to_screen};
+use nalgebra as na;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -17,6 +19,53 @@ pub struct Level {
     pub height: u32,
     pub tiles: Vec<Vec<Tile>>, // height[width]
     pub view: [[f32; 3]; 2],
+}
+
+impl Level {
+    // 计算相机位置
+    pub fn camera_pos(&self, side: bool, width: f32, height: f32) -> na::Vector3<f32> {
+        let (x, y, z) = if side {
+            (self.view[1][0], self.view[1][1], self.view[1][2])
+        } else {
+            (self.view[0][0], self.view[0][1], self.view[0][2])
+        };
+
+        const FROM_RATIO: f32 = 9.0 / 16.0;
+        const TO_RATIO: f32 = 3.0 / 4.0;
+        let ratio = height / width;
+        let t = (FROM_RATIO - ratio) / (FROM_RATIO - TO_RATIO);
+        let pos_adj = na::Vector3::new(-1.4 * t, -2.8 * t, 0.0);
+
+        na::Vector3::new(x + pos_adj.x, y + pos_adj.y, z + pos_adj.z)
+    }
+
+    pub fn get_tile(&self, y: usize, x: usize) -> &Tile {
+        self.tiles.get(y).unwrap().get(x).unwrap()
+    }
+
+    // 计算 `tile_pos` 中心点在世界坐标中的位置
+    pub fn tile_world_pos(&self, y: u32, x: u32) -> na::Vector3<f32> {
+        let tile = self.get_tile(y as usize, x as usize);
+        let z = match tile.height_type {
+            HeightType::HightLand => 0.0,
+            HeightType::LowLand => -0.4,
+        };
+        na::Vector3::new(
+            x as f32 - (self.width as i32 - 1) as f32 / 2.0,
+            (self.height - 1) as f32 / 2.0 - y as f32,
+            z,
+        )
+    }
+
+    /// 计算 `tile_pos` 中心点在屏幕中的位置
+    pub fn calc_tile_screen_pos(&self, y: u32, x: u32, side: bool) -> (f32, f32) {
+        let width = 1920.0;
+        let height = 1080.0;
+        let camera_pos = self.camera_pos(side, width, height);
+        let camera_euler = camera_euler_angles_xyz(side);
+        let world_pos = self.tile_world_pos(y, x);
+        world_to_screen(camera_pos, camera_euler, world_pos, width, height)
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,7 +102,32 @@ pub enum BuildableType {
 
 #[cfg(test)]
 mod test {
+    use image::{GenericImage, Rgb, Rgba};
+
     use super::{HeightType, Level};
+
+    #[test]
+    fn draw_tile_centers() {
+        let level = serde_json::from_str::<Level>(&LS_6).unwrap();
+        let mut image = image::open("./assets/in_battle.png").unwrap();
+
+        for i in 0..level.height {
+            for j in 0..level.width {
+                let tile_world_pos = level.tile_world_pos(i, j);
+                let tile_screen_pos = level.calc_tile_screen_pos(i, j, false);
+                println!(
+                    "({i}, {j}): world {:?}, screen {:?}",
+                    tile_world_pos, tile_screen_pos
+                );
+                let (x, y) = (
+                    tile_screen_pos.0.round() as u32,
+                    tile_screen_pos.1.round() as u32,
+                );
+                image.put_pixel(x, y, Rgba([0, 255, 0, 255]))
+            }
+        }
+        image.save("./assets/in_battle_drawed.png").unwrap();
+    }
 
     #[test]
     fn ser() {
@@ -64,14 +138,18 @@ mod test {
 
     #[test]
     fn f() {
-        let level = r#"
-{
-    "name": "坍塌",
-    "code": "0-1",
-    "levelId": "obt/main/level_main_00-01",
-    "stageId": "main_00-01",
+        let level = serde_json::from_str::<Level>(&LS_6).unwrap();
+        println!("{level:?}")
+    }
+
+    const LS_6: &str = r#"
+    {
+    "name": "运动战演习",
+    "code": "LS-6",
+    "levelId": "obt/weekly/level_weekly_killcost_6",
+    "stageId": "wk_kc_6",
     "width": 9,
-    "height": 6,
+    "height": 8,
     "tiles": [
       [
         {
@@ -148,38 +226,96 @@ mod test {
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_flystart",
+          "isStart": true,
+          "isEnd": false
+        }
+      ],
+      [
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_start",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_end",
+          "isStart": false,
+          "isEnd": true
         },
         {
           "heightType": 1,
@@ -201,9 +337,44 @@ mod test {
           "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
+          "isStart": false,
+          "isEnd": false
         }
       ],
       [
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 2,
+          "tileKey": "tile_wall",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 2,
+          "tileKey": "tile_wall",
+          "isStart": false,
+          "isEnd": false
+        },
         {
           "heightType": 0,
           "buildableType": 0,
@@ -219,6 +390,64 @@ mod test {
           "isEnd": false
         },
         {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_start",
+          "isStart": true,
+          "isEnd": false
+        }
+      ],
+      [
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_start",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 1,
+          "tileKey": "tile_road",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_end",
+          "isStart": false,
+          "isEnd": true
+        },
+        {
           "heightType": 1,
           "buildableType": 2,
           "tileKey": "tile_wall",
@@ -226,37 +455,16 @@ mod test {
           "isEnd": false
         },
         {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
+          "heightType": 1,
+          "buildableType": 2,
+          "tileKey": "tile_wall",
           "isStart": false,
           "isEnd": false
         },
         {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
@@ -277,23 +485,9 @@ mod test {
           "isEnd": false
         },
         {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 0,
-          "buildableType": 1,
-          "tileKey": "tile_road",
+          "heightType": 1,
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
@@ -303,6 +497,20 @@ mod test {
           "tileKey": "tile_wall",
           "isStart": false,
           "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 2,
+          "tileKey": "tile_wall",
+          "isStart": false,
+          "isEnd": false
+        },
+        {
+          "heightType": 0,
+          "buildableType": 0,
+          "tileKey": "tile_end",
+          "isStart": false,
+          "isEnd": true
         },
         {
           "heightType": 0,
@@ -337,56 +545,56 @@ mod test {
         {
           "heightType": 1,
           "buildableType": 0,
+          "tileKey": "tile_flystart",
+          "isStart": true,
+          "isEnd": false
+        },
+        {
+          "heightType": 1,
+          "buildableType": 0,
           "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
         {
           "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
-          "isStart": false,
-          "isEnd": false
-        },
-        {
-          "heightType": 1,
-          "buildableType": 2,
-          "tileKey": "tile_wall",
+          "buildableType": 0,
+          "tileKey": "tile_forbidden",
           "isStart": false,
           "isEnd": false
         },
@@ -467,17 +675,14 @@ mod test {
     "view": [
       [
         0.0,
-        -4.81,
-        -7.76
+        -5.6,
+        -8.9
       ],
       [
-        0.5975098586953793,
-        -5.31,
-        -8.642108163374733
+        0.79546878123568,
+        -6.1,
+        -9.764789001808651
       ]
     ]
-}"#;
-        let level = serde_json::from_str::<Level>(&level).unwrap();
-        println!("{level:?}")
-    }
+  }"#;
 }

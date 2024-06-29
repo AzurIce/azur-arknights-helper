@@ -16,11 +16,19 @@ https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev/tools/Re
 
 计算映射代码：
 
+https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev/src/MaaCore/Task/BattleHelper.cpp#L57-L76
+
+
+
 https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/37aff294435a63d448095e20dedd3784a170b221/src/MaaCore/Config/Miscellaneous/TilePack.cpp#L86-L121
 
 
 
 https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/37aff294435a63d448095e20dedd3784a170b221/3rdparty/include/Arknights-Tile-Pos/TileCalc2.hpp
+
+
+
+
 
 
 
