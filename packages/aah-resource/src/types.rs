@@ -102,7 +102,7 @@ pub enum BuildableType {
 
 #[cfg(test)]
 mod test {
-    use image::{GenericImage, Rgb, Rgba};
+    use image::{GenericImage, Rgba};
 
     use super::{HeightType, Level};
 

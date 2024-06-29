@@ -1,11 +1,7 @@
 use image::math::Rect;
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    controller::DEFAULT_HEIGHT,
-    vision::matcher::Matcher,
-    AAH,
-};
+use crate::{controller::DEFAULT_HEIGHT, vision::matcher::Matcher, AAH};
 
 use super::Task;
 

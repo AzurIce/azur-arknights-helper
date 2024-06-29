@@ -38,7 +38,7 @@ pub enum Matcher {
     // Ocr {
     //     image: NdTensorBase<f32, Vec<f32>, 3>,
     //     text: String,
-        // engine: &'a OcrEngine,
+    // engine: &'a OcrEngine,
     // },
 }
 
@@ -78,41 +78,40 @@ impl Matcher {
                     width: template.width(),
                     height: template.height(),
                 })
-            }
-            // TODO: implement OcrMatcher
-            // Self::Ocr {
-            //     image,
-            //     text,
-            //     engine,
-            // } => {
-            //     let ocr = || -> Result<Rect, Box<dyn Error>> {
-            //         let ocr_input = engine.prepare_input(image.view())?;
+            } // TODO: implement OcrMatcher
+              // Self::Ocr {
+              //     image,
+              //     text,
+              //     engine,
+              // } => {
+              //     let ocr = || -> Result<Rect, Box<dyn Error>> {
+              //         let ocr_input = engine.prepare_input(image.view())?;
 
-            //         // Phase 1: Detect text words
-            //         let word_rects = engine.detect_words(&ocr_input)?;
-            //         for rect in &word_rects {
-            //             println!("{:?}", rect);
-            //         }
+              //         // Phase 1: Detect text words
+              //         let word_rects = engine.detect_words(&ocr_input)?;
+              //         for rect in &word_rects {
+              //             println!("{:?}", rect);
+              //         }
 
-            //         // Phase 2: Perform layout analysis
-            //         let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
+              //         // Phase 2: Perform layout analysis
+              //         let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
 
-            //         // Phase 3: Recognize text
-            //         let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
+              //         // Phase 3: Recognize text
+              //         let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
 
-            //         for line in line_texts
-            //             .iter()
-            //             .flatten()
-            //             // Filter likely spurious detections. With future model improvements
-            //             // this should become unnecessary.
-            //             .filter(|l| l.to_string().len() > 1)
-            //         {
-            //             println!("{}", line);
-            //         }
-            //         todo!()
-            //     };
-            //     ocr().ok()
-            // }
+              //         for line in line_texts
+              //             .iter()
+              //             .flatten()
+              //             // Filter likely spurious detections. With future model improvements
+              //             // this should become unnecessary.
+              //             .filter(|l| l.to_string().len() > 1)
+              //         {
+              //             println!("{}", line);
+              //         }
+              //         todo!()
+              //     };
+              //     ocr().ok()
+              // }
         }
     }
 }

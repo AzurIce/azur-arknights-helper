@@ -4,8 +4,8 @@ pub fn world_to_screen(
     camera_pos: na::Vector3<f32>,
     camera_euler: na::Vector3<f32>,
     world_pos: na::Vector3<f32>,
-	screen_width: f32,
-	screen_height: f32,
+    screen_width: f32,
+    screen_height: f32,
 ) -> (f32, f32) {
     let matrix = camera_matrix_from_trans(
         &camera_pos,
@@ -18,17 +18,16 @@ pub fn world_to_screen(
     let world_pos_homogeneous = na::Vector4::new(world_pos.x, world_pos.y, world_pos.z, 1.0);
     let result = matrix * world_pos_homogeneous;
     let mut result = result / result.w;
-	result.x = -result.x;
-	
+    result.x = -result.x;
 
-	// println!("{:?}", result);
+    // println!("{:?}", result);
     let result = (result + na::Vector4::new(1.0, 1.0, 1.0, 1.0)) / 2.0;
 
     (
         (result.x * screen_width).round(),
         (result.y * screen_height).round(),
     )
-	// (result.x, result.y)
+    // (result.x, result.y)
 }
 
 // ? yxz
@@ -54,7 +53,7 @@ pub(crate) fn camera_matrix_from_trans(
     let sin_x = euler.x.sin();
     let tan_f = fov_2_y.tan();
 
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     let translate = na::Matrix4::new(
         1.0, 0.0, 0.0, -pos.x,
 		0.0, 1.0, 0.0, -pos.y,
@@ -62,7 +61,7 @@ pub(crate) fn camera_matrix_from_trans(
 		0.0, 0.0, 0.0, 1.0,
     );
 
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     let matrix_y = na::Matrix4::new(
         cos_y, 0.0, sin_y, 0.0,
 		0.0, 1.0, 0.0, 0.0,
@@ -70,7 +69,7 @@ pub(crate) fn camera_matrix_from_trans(
 		0.0, 0.0, 0.0, 1.0,
     );
 
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     let matrix_x = na::Matrix4::new(
         1.0, 0.0, 0.0, 0.0,
 		0.0, cos_x, -sin_x, 0.0,
@@ -78,7 +77,7 @@ pub(crate) fn camera_matrix_from_trans(
 		0.0, 0.0, 0.0, 1.0,
     );
 
-	#[rustfmt::skip]
+    #[rustfmt::skip]
     let proj = na::Matrix4::new(
         ratio / tan_f, 0.0, 0.0, 0.0,
         0.0, 1.0 / tan_f, 0.0, 0.0,
