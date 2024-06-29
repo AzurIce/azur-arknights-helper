@@ -12,7 +12,6 @@ pub struct MiniTouchController {
     pub inner: adb::Device,
     width: u32,
     height: u32,
-    screen_cache: Option<image::DynamicImage>,
 }
 
 impl MiniTouchController {
@@ -25,7 +24,6 @@ impl MiniTouchController {
             inner: device,
             width: 0,
             height: 0,
-            screen_cache: None,
         };
         let screen = controller.screencap()?;
 
@@ -39,7 +37,6 @@ impl MiniTouchController {
         let controller = Self {
             width: screen.width(),
             height: screen.height(),
-            screen_cache: Some(screen),
             ..controller
         };
         Ok(controller)

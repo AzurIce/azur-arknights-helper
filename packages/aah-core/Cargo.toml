@@ -17,7 +17,7 @@ rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 toml = "0.8.8"
 serde_json = "1.0.110"
-ocrs = "0.3.1"
+# ocrs = "0.3.1"
 rten = "0.2.0"
 rten-tensor = "0.1.0"
 reqwest = { version = "0.11.23", features = ["blocking"] }

@@ -8,7 +8,6 @@ use std::{
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{minitouch, Controller};
-use ocrs::OcrEngine;
 use task::builtins::BuiltinTask;
 
 use crate::task::Task;
@@ -21,10 +20,7 @@ pub mod vision;
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        path::Path,
-        sync::{Mutex, OnceLock},
-    };
+    use std::path::Path;
 
     use super::*;
 
@@ -42,11 +38,6 @@ mod tests {
         screen
             .save_with_format(target_path, image::ImageFormat::Png)
             .unwrap();
-    }
-
-    fn state() -> &'static Mutex<Option<AAH>> {
-        static l: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
-        l.get_or_init(|| Mutex::new(None))
     }
 
     #[test]

@@ -15,7 +15,6 @@ dependencies = [
  "nalgebra 0.32.6",
  "ndarray",
  "nshare",
- "ocrs",
  "rand 0.8.5",
  "reqwest",
  "rten",
@@ -1971,19 +1970,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ocrs"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f750199bbf6c80cbee76b7fec5ae697fffeec1cbe4089f4dcd88ef863e563fbc"
-dependencies = [
- "rayon",
- "rten",
- "rten-imageproc",
- "rten-tensor",
- "wasm-bindgen",
-]
-
-[[package]]
 name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2470,15 +2456,6 @@ dependencies = [
  "rten-vecmath",
  "smallvec",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "rten-imageproc"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13625923b2da7c2be5e242c55e623a6cb1a9f85f84c9325f0de80741d6def0da"
-dependencies = [
- "rten-tensor",
 ]
 
 [[package]]

@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     controller::DEFAULT_HEIGHT,
-    vision::matcher::{convert_image_to_ten, Matcher},
+    vision::matcher::Matcher,
     AAH,
 };
 

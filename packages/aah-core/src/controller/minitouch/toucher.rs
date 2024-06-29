@@ -5,10 +5,7 @@ use std::{
 };
 
 use crate::{
-    adb::{
-        command::local_service::ShellCommand, connect, utils::execute_adb_command, AdbTcpStream,
-        Device, MyError,
-    },
+    adb::{command::local_service::ShellCommand, utils::execute_adb_command, AdbTcpStream},
     controller::Toucher,
 };
 use log::{error, info};

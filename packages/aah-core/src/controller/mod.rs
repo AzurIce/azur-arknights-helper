@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use image::{math::Rect, DynamicImage};
-use nalgebra::coordinates::X;
 
 use crate::adb::MyError;
 

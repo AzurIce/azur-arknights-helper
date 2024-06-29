@@ -2,7 +2,6 @@ use std::{error::Error, time::Instant};
 
 use color_print::cprintln;
 use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
-use ocrs::OcrEngine;
 use rten_tensor::{NdTensorBase, NdTensorView};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
 use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
@@ -31,22 +30,22 @@ pub fn convert_image_to_ten(
 }
 
 /// 匹配器，目前只实现了模板匹配
-pub enum Matcher<'a> {
+pub enum Matcher {
     Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
     },
-    Ocr {
-        image: NdTensorBase<f32, Vec<f32>, 3>,
-        text: String,
-        engine: &'a OcrEngine,
-    },
+    // Ocr {
+    //     image: NdTensorBase<f32, Vec<f32>, 3>,
+    //     text: String,
+        // engine: &'a OcrEngine,
+    // },
 }
 
 const THRESHOLD: f32 = 100.0;
-const SSE_THRESHOLD: f32 = 100.0;
+const SSE_THRESHOLD: f32 = 50.0;
 
-impl<'a> Matcher<'a> {
+impl Matcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> Option<Rect> {
         match self {
@@ -81,39 +80,39 @@ impl<'a> Matcher<'a> {
                 })
             }
             // TODO: implement OcrMatcher
-            Self::Ocr {
-                image,
-                text,
-                engine,
-            } => {
-                let ocr = || -> Result<Rect, Box<dyn Error>> {
-                    let ocr_input = engine.prepare_input(image.view())?;
+            // Self::Ocr {
+            //     image,
+            //     text,
+            //     engine,
+            // } => {
+            //     let ocr = || -> Result<Rect, Box<dyn Error>> {
+            //         let ocr_input = engine.prepare_input(image.view())?;
 
-                    // Phase 1: Detect text words
-                    let word_rects = engine.detect_words(&ocr_input)?;
-                    for rect in &word_rects {
-                        println!("{:?}", rect);
-                    }
+            //         // Phase 1: Detect text words
+            //         let word_rects = engine.detect_words(&ocr_input)?;
+            //         for rect in &word_rects {
+            //             println!("{:?}", rect);
+            //         }
 
-                    // Phase 2: Perform layout analysis
-                    let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
+            //         // Phase 2: Perform layout analysis
+            //         let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
 
-                    // Phase 3: Recognize text
-                    let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
+            //         // Phase 3: Recognize text
+            //         let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
 
-                    for line in line_texts
-                        .iter()
-                        .flatten()
-                        // Filter likely spurious detections. With future model improvements
-                        // this should become unnecessary.
-                        .filter(|l| l.to_string().len() > 1)
-                    {
-                        println!("{}", line);
-                    }
-                    todo!()
-                };
-                ocr().ok()
-            }
+            //         for line in line_texts
+            //             .iter()
+            //             .flatten()
+            //             // Filter likely spurious detections. With future model improvements
+            //             // this should become unnecessary.
+            //             .filter(|l| l.to_string().len() > 1)
+            //         {
+            //             println!("{}", line);
+            //         }
+            //         todo!()
+            //     };
+            //     ocr().ok()
+            // }
         }
     }
 }
@@ -124,7 +123,7 @@ mod test {
 
     use image::{imageops::crop_imm, math::Rect, DynamicImage};
 
-    use crate::vision::utils::try_init_ocr_engine;
+    // use crate::vision::utils::try_init_ocr_engine;
 
     use super::{convert_image_to_ten, Matcher};
 
@@ -163,22 +162,22 @@ mod test {
         println!("{:?}", res)
     }
 
-    #[test]
-    fn test_ocr() -> Result<(), Box<dyn Error>> {
-        let engine = try_init_ocr_engine().expect("failed to init ocr engine");
-        let image = get_device_image(Device::MUMU, "wakeup.png")?;
-        let image = convert_image_to_ten(image)?;
-        let text = "开始唤醒".to_string();
+    // #[test]
+    // fn test_ocr() -> Result<(), Box<dyn Error>> {
+    //     let engine = try_init_ocr_engine().expect("failed to init ocr engine");
+    //     let image = get_device_image(Device::MUMU, "wakeup.png")?;
+    //     let image = convert_image_to_ten(image)?;
+    //     let text = "开始唤醒".to_string();
 
-        let matcher = Matcher::Ocr {
-            image,
-            text,
-            engine: &engine,
-        };
-        let rect = matcher.result().unwrap();
-        println!("{:?}", rect);
-        Ok(())
-    }
+    //     let matcher = Matcher::Ocr {
+    //         image,
+    //         text,
+    //         engine: &engine,
+    //     };
+    //     let rect = matcher.result().unwrap();
+    //     println!("{:?}", rect);
+    //     Ok(())
+    // }
 
     #[derive(Debug, Clone, Copy)]
     enum Device {
@@ -221,8 +220,8 @@ mod test {
         // test_template_matcher_with_device_image(device, "main.png", "main_box.png");
 
         // test_template_matcher_with_device_image(device, "mission.png", "CollectAllAward.png");
-        test_template_matcher_with_device_image(device, "notice.png", "notice_close.png");
-        test_template_matcher_with_device_image(device, "mission.png", "notice_close.png");
+        test_template_matcher_with_device_image(device, "notice.png", "close.png");
+        test_template_matcher_with_device_image(device, "mission.png", "back.png");
         // test_template_matcher_with_device_image(device, "mission.png", "MissonTagMainTheme.png");
         // test_template_matcher_with_device_image(
         //     device,
