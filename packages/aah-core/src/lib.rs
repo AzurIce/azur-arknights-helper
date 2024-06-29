@@ -1,7 +1,10 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::{error::Error, path::Path};
+use std::{
+    error::Error,
+    path::{Path, PathBuf},
+};
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{minitouch, Controller};
@@ -50,6 +53,7 @@ mod tests {
 
 /// AAH 的实例
 pub struct AAH {
+    pub res_dir: PathBuf,
     /// [`controller`] 承担设备控制相关操作（比如触摸、截图等）
     pub controller: Box<dyn Controller>,
     /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
@@ -69,6 +73,7 @@ impl AAH {
         serial: S,
         res_dir: P,
     ) -> Result<Self, Box<dyn Error>> {
+        let res_dir = res_dir.as_ref().to_path_buf();
         let task_config =
             TaskConfig::load(&res_dir).map_err(|err| format!("task config not found: {err}"))?;
         let navigate_config = NavigateConfig::load(&res_dir)
@@ -76,6 +81,7 @@ impl AAH {
         // let controller = Box::new(AdbInputController::connect(serial)?);
         let controller = Box::new(minitouch::MiniTouchController::connect(serial)?);
         Ok(Self {
+            res_dir,
             controller,
             task_config,
             navigate_config,
@@ -121,5 +127,14 @@ impl AAH {
                 Ok(self.screen_cache.as_ref().unwrap().clone())
             }
         }
+    }
+
+    /// 从 `{res_path}/resources/templates/1920x1080` 目录中根据文件名称获取模板
+    /// - `name` 为完整文件名
+    pub fn get_template<S: AsRef<str>>(&self, name: S) -> Result<image::DynamicImage, String> {
+        let name = name.as_ref();
+        let path = self.res_dir.join("templates").join(name);
+        let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
+        Ok(image)
     }
 }
