@@ -8,7 +8,7 @@ use super::Analyzer;
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{controller::MiniTouchController, vision::analyzer::Analyzer};
+    use crate::{controller::minitouch::MiniTouchController, vision::analyzer::Analyzer};
 
     #[test]
     fn test_depot_analyzer() {

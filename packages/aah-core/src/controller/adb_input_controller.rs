@@ -59,8 +59,8 @@ impl AdbInputController {
 }
 
 impl Controller for AdbInputController {
-    fn scale_factor(&self) -> f32 {
-        self.scale_factor
+    fn screen_size(&self) -> (u32, u32) {
+        (self.width, self.height)
     }
 
     fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
