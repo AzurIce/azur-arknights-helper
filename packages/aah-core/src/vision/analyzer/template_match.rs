@@ -1,6 +1,6 @@
 use image::math::Rect;
 
-use crate::{controller::DEFAULT_HEIGHT, vision::matcher::Matcher, AAH};
+use crate::{controller::DEFAULT_HEIGHT, vision::matcher::best_matcher::BestMatcher, AAH};
 
 use super::Analyzer;
 
@@ -61,9 +61,13 @@ impl Analyzer for TemplateMatchAnalyzer {
             template
         };
 
-        let res = Matcher::Template { image, template, threshold: None }
-            .result()
-            .ok_or("match failed".to_string())?;
+        let res = BestMatcher::Template {
+            image,
+            template,
+            threshold: None,
+        }
+        .result()
+        .ok_or("match failed".to_string())?;
         Ok(Self::Output { rect: res })
     }
 }

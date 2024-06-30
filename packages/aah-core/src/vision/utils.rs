@@ -1,5 +1,24 @@
 use image::{DynamicImage, GenericImage, Luma, Rgba};
 
+pub fn rgb_to_hsv_v(pixel: &Rgba<u8>) -> u8 {
+    let r = pixel[0];
+    let g = pixel[1];
+    let b = pixel[2];
+
+    let max = r.max(g).max(b);
+    // HSV V is simply the max of the RGB values
+    max
+}
+
+pub fn average_hsv_v(image: &DynamicImage) -> u8 {
+    let (sum, count) = image
+        .to_rgba8()
+        .pixels()
+        .map(|p| rgb_to_hsv_v(p))
+        .fold((0, 0), |(sum, count), v| (sum + v as u32, count + 1));
+    (sum / count) as u8
+}
+
 pub fn binarize_image(image: &DynamicImage, threshold: u8) -> DynamicImage {
     let mut image = image.to_luma8();
     for (x, y, pixel) in image.enumerate_pixels_mut() {

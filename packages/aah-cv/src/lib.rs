@@ -48,8 +48,13 @@ pub struct Match {
     pub value: f32,
 }
 
-pub fn find_matches(input: &Image<'_>, threshold: f32) -> Vec<Match> {
-    let mut matches = Vec::new();
+pub fn find_matches(
+    input: &Image<'_>,
+    template_width: u32,
+    template_height: u32,
+    threshold: f32,
+) -> Vec<Match> {
+    let mut matches: Vec<Match> = Vec::new();
 
     let input_width = input.width;
     let input_height = input.height;
@@ -58,11 +63,23 @@ pub fn find_matches(input: &Image<'_>, threshold: f32) -> Vec<Match> {
         for x in 0..input_width {
             let idx = (y * input.width) + x;
             let value = input.data[idx as usize];
+
             if value < threshold {
-                matches.push(Match {
-                    location: (x, y),
-                    value,
-                });
+                if let Some(m) = matches.iter_mut().rev().find(|m| {
+                    ((m.location.0 as i32 - x as i32).abs() as u32) < template_width
+                        && ((m.location.1 as i32 - y as i32).abs() as u32) < template_height
+                }) {
+                    if value > m.value {
+                        m.location = (x, y);
+                        m.value = value;
+                    }
+                    continue;
+                } else {
+                    matches.push(Match {
+                        location: (x, y),
+                        value,
+                    });
+                }
             }
         }
     }

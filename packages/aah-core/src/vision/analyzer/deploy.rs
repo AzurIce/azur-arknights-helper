@@ -11,12 +11,12 @@ impl Analyzer for DeployAnalyzer {
     type Output = DeployAnalyzerOutput;
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
         // Make sure that we are in the operation-start page
-        let cost_pos_analyzer =
-            MultiTemplateMatchAnalyzer::new("battle_deploy-card-cost".to_string())
-                .analyze(core)
-                .unwrap();
-        println!("{:?}", cost_pos_analyzer);
-        Ok(DeployAnalyzerOutput {  })
+        let res =
+            MultiTemplateMatchAnalyzer::new("battle_deploy-card-cost1.png".to_string(), None, None)
+                .analyze(core)?
+                .rects;
+
+        Ok(DeployAnalyzerOutput {})
     }
 }
 

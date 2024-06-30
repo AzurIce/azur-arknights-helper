@@ -3,10 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     controller::DEFAULT_HEIGHT,
-    vision::{
-        analyzer::{template_match::TemplateMatchAnalyzer, Analyzer},
-        matcher::Matcher,
-    },
+    vision::analyzer::{template_match::TemplateMatchAnalyzer, Analyzer},
     AAH,
 };
 

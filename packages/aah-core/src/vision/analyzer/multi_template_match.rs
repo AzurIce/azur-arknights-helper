@@ -1,10 +1,6 @@
-use image::math::Rect;
+use image::{math::Rect, DynamicImage};
 
-use crate::{
-    controller::DEFAULT_HEIGHT,
-    vision::matcher::{Matcher, MultiMatcher},
-    AAH,
-};
+use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::multi_matcher::MultiMatcher, utils::binarize_image}, AAH};
 
 use super::Analyzer;
 
@@ -15,11 +11,21 @@ pub struct MultiTemplateMatchAnalyzerOutput {
 
 pub struct MultiTemplateMatchAnalyzer {
     template_filename: String,
+    binarize_threshold: Option<u8>,
+    threshold: Option<f32>,
 }
 
 impl MultiTemplateMatchAnalyzer {
-    pub fn new(template_filename: String) -> Self {
-        Self { template_filename }
+    pub fn new(
+        template_filename: String,
+        binarize_threshold: Option<u8>,
+        threshold: Option<f32>,
+    ) -> Self {
+        Self {
+            template_filename,
+            binarize_threshold,
+            threshold,
+        }
     }
 }
 
@@ -42,12 +48,7 @@ impl Analyzer for MultiTemplateMatchAnalyzer {
             .controller
             .screencap()
             .map_err(|err| format!("{:?}", err))?;
-
-        let image = image.to_luma32f();
-        let template = core
-            .get_template(&self.template_filename)
-            .unwrap()
-            .to_luma32f();
+        let template = core.get_template(&self.template_filename).unwrap();
 
         let template = if image.height() != DEFAULT_HEIGHT {
             let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
@@ -55,31 +56,49 @@ impl Analyzer for MultiTemplateMatchAnalyzer {
             let new_width = (template.width() as f32 * scale_factor) as u32;
             let new_height = (template.height() as f32 * scale_factor) as u32;
 
-            image::imageops::resize(
+            DynamicImage::ImageRgba8(image::imageops::resize(
                 &template,
                 new_width,
                 new_height,
                 image::imageops::FilterType::Lanczos3,
-            )
+            ))
         } else {
             template
         };
 
-        let res = MultiMatcher::Template { image, template, threshold: None }
-            .result()
-            .ok_or("match failed".to_string())?;
+        let mut image = image;
+        let mut template = template;
+        if let Some(threshold) = self.binarize_threshold {
+            image = binarize_image(&image, threshold);
+            template = binarize_image(&template, threshold);
+        }
+
+        let res = MultiMatcher::Template {
+            image: image.to_luma32f(),
+            template: template.to_luma32f(),
+            threshold: self.threshold,
+        }
+        .result()
+        .ok_or("match failed".to_string())?;
         Ok(Self::Output { rects: res })
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{vision::analyzer::{multi_template_match::MultiTemplateMatchAnalyzer, Analyzer}, AAH};
+    use crate::{
+        vision::analyzer::{multi_template_match::MultiTemplateMatchAnalyzer, Analyzer},
+        AAH,
+    };
 
     #[test]
     fn test_multi_template_match_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
-        let mut analyzer = MultiTemplateMatchAnalyzer::new("battle_deploy-card-cost".to_string());
+        let mut analyzer = MultiTemplateMatchAnalyzer::new(
+            "battle_deploy-card-cost0".to_string(),
+            Some(127),
+            None,
+        );
         let output = analyzer.analyze(&mut core).unwrap();
         println!("{:?}", output);
     }
