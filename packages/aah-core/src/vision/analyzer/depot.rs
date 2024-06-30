@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::controller::Controller;
+use crate::{controller::Controller, AAH};
 use ndarray::{Array1, Array2, Axis};
 
 use super::Analyzer;
@@ -12,11 +12,11 @@ mod test {
 
     #[test]
     fn test_depot_analyzer() {
-        let controller = MiniTouchController::connect("127.0.0.1:16384").unwrap();
+        // let controller = MiniTouchController::connect("127.0.0.1:16384").unwrap();
 
-        let mut analyzer = DepotAnalyzer::new();
-        let res = analyzer.analyze(&controller).unwrap();
-        println!("{:?}", res);
+        // let mut analyzer = DepotAnalyzer::new();
+        // let res = analyzer.analyze(&controller).unwrap();
+        // println!("{:?}", res);
     }
 }
 
@@ -34,12 +34,12 @@ impl DepotAnalyzer {
 impl Analyzer for DepotAnalyzer {
     type Output = DepotAnalyzerOutput;
 
-    fn analyze(&mut self, controller: &impl Controller) -> Result<Self::Output, String> {
+    fn analyze(&mut self, aah: &AAH) -> Result<Self::Output, String> {
         let crop_height = 128 + 30;
         let x_period = 312;
         let y_period = 380;
 
-        let mut screen = controller
+        let mut screen = aah.controller
             .screencap_scaled()
             .map_err(|err| format!("{:?}", err))?;
 

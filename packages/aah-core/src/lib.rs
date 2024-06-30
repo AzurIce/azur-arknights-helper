@@ -48,7 +48,10 @@ mod tests {
         // save_screenshot(dir, "wakeup.png");
         // save_screenshot(dir, "notice.png");
         // save_screenshot(dir, "main.png");
-        save_screenshot(dir, "mission.png");
+        // save_screenshot(dir, "confirm.png");
+        save_screenshot(dir, "operation-start.png");
+        // let dir = "../aah-resource/assets";
+        // save_screenshot(dir, "LS-6_1.png");
     }
 }
 

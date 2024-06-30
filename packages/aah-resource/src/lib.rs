@@ -1,5 +1,5 @@
 //! This crate is for handling game resources.
-pub mod types;
+pub mod level;
 mod utils;
 
 pub fn add(left: usize, right: usize) -> usize {

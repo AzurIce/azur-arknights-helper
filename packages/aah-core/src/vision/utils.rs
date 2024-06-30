@@ -1,8 +1,61 @@
-use std::{error::Error, fs};
+use image::{DynamicImage, GenericImage, Luma, Rgba};
 
-use image::DynamicImage;
-// use ocrs::{OcrEngine, OcrEngineParams};
-use rten::Model;
+pub fn binarize_image(image: &DynamicImage, threshold: u8) -> DynamicImage {
+    let mut image = image.to_luma8();
+    for (x, y, pixel) in image.enumerate_pixels_mut() {
+        let Luma([gray]) = *pixel;
+
+        let binary_value = if gray >= threshold { 255u8 } else { 0u8 };
+
+        *pixel = Luma([binary_value]);
+    }
+    DynamicImage::ImageLuma8(image)
+}
+
+pub fn draw_box(
+    image: &mut DynamicImage,
+    x: i32,
+    y: i32,
+    width: u32,
+    height: u32,
+    rgba_u8: [u8; 4],
+) {
+    for dx in 0..width {
+        let px = x + dx as i32;
+        let py1 = y;
+        let py2 = y + height as i32;
+
+        if px >= 0 && py1 >= 0 && px < image.width() as i32 && py2 < image.height() as i32 {
+            image.put_pixel(px as u32, py1 as u32, Rgba(rgba_u8));
+        }
+        if px >= 0 && py2 >= 0 && px < image.width() as i32 && py2 < image.height() as i32 {
+            image.put_pixel(px as u32, py2 as u32, Rgba(rgba_u8));
+        }
+    }
+
+    for dy in 0..height {
+        let py = y + dy as i32;
+        let px1 = x;
+        let px2 = x + width as i32;
+
+        if px1 >= 0 && py >= 0 && px1 < image.width() as i32 && py < image.height() as i32 {
+            image.put_pixel(px1 as u32, py as u32, Rgba(rgba_u8));
+        }
+        if px2 >= 0 && py >= 0 && px2 < image.width() as i32 && py < image.height() as i32 {
+            image.put_pixel(px2 as u32, py as u32, Rgba(rgba_u8));
+        }
+    }
+    // for dx in 0..width {
+    //     for dy in 0..=height {
+    //         let px = x + dx as i32;
+    //         let py = y + dy as i32;
+    //         // 边界检查
+    //         if px >= 0 && py >= 0 && px < image.width() as i32 && py < image.height() as i32 {
+    //             image.put_pixel(px as u32, py as u32, Rgba(rgba_u8));
+    //         }
+    //     }
+    // }
+}
 
 pub fn save_image(image: &DynamicImage, path: &str) {
     let mut path = path.to_string();

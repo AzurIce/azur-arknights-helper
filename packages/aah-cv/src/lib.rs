@@ -43,6 +43,33 @@ pub fn match_template<'a>(
     matcher.wait_for_result().unwrap()
 }
 
+pub struct Match {
+    pub location: (u32, u32),
+    pub value: f32,
+}
+
+pub fn find_matches(input: &Image<'_>, threshold: f32) -> Vec<Match> {
+    let mut matches = Vec::new();
+
+    let input_width = input.width;
+    let input_height = input.height;
+
+    for y in 0..input_height {
+        for x in 0..input_width {
+            let idx = (y * input.width) + x;
+            let value = input.data[idx as usize];
+            if value < threshold {
+                matches.push(Match {
+                    location: (x, y),
+                    value,
+                });
+            }
+        }
+    }
+
+    matches
+}
+
 /// Finds the smallest and largest values and their locations in an image.
 pub fn find_extremes(input: &Image<'_>) -> Extremes<f32> {
     let mut min_value = f32::MAX;

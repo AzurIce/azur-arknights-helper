@@ -203,7 +203,7 @@ pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> 
     //     writer.serialize_array2(&res).unwrap();
     // }
 
-    res.map(|&x| x as f32)
+    res
 }
 
 pub fn find_extremes(input: &Array2<f32>) -> Extremes<f32> {

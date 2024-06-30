@@ -39,11 +39,12 @@ impl Level {
         na::Vector3::new(x + pos_adj.x, y + pos_adj.y, z + pos_adj.z)
     }
 
+    /// 获取 [`Level`] 中 `y`, `x` 处的 [`Tile`]
     pub fn get_tile(&self, y: usize, x: usize) -> &Tile {
         self.tiles.get(y).unwrap().get(x).unwrap()
     }
 
-    // 计算 `tile_pos` 中心点在世界坐标中的位置
+    /// 计算 `tile_pos` 中心点在世界坐标中的位置
     pub fn tile_world_pos(&self, y: u32, x: u32) -> na::Vector3<f32> {
         let tile = self.get_tile(y as usize, x as usize);
         let z = match tile.height_type {
