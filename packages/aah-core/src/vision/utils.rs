@@ -39,6 +39,7 @@ pub fn draw_box(
     height: u32,
     rgba_u8: [u8; 4],
 ) {
+    // println!("draw box on: {}x{}, box: ({},{}) {}x{}", image.width(), image.height(), x, y, width, height);
     for dx in 0..width {
         let px = x + dx as i32;
         let py1 = y;

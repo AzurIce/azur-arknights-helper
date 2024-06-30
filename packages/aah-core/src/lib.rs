@@ -18,43 +18,6 @@ pub mod controller;
 pub mod task;
 pub mod vision;
 
-#[cfg(test)]
-mod tests {
-    use std::path::Path;
-
-    use super::*;
-
-    fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(path: P, name: S) {
-        let path = path.as_ref();
-        let name = name.as_ref();
-
-        let target_path = path.join(name);
-        println!("saving screenshot to {:?}", target_path);
-
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
-
-        aah.update_screen().unwrap();
-        let screen = aah.get_screen().unwrap();
-        screen
-            .save_with_format(target_path, image::ImageFormat::Png)
-            .unwrap();
-    }
-
-    #[test]
-    fn foo() {
-        // let aah = Mutex::new(AAH::connect("127.0.0.1:16384", "../../resources").unwrap());
-        let dir = "../../resources/templates/MUMU-1920x1080";
-        // save_screenshot(dir, "start.png");
-        // save_screenshot(dir, "wakeup.png");
-        // save_screenshot(dir, "notice.png");
-        // save_screenshot(dir, "main.png");
-        // save_screenshot(dir, "confirm.png");
-        save_screenshot(dir, "operation-start.png");
-        // let dir = "../aah-resource/assets";
-        // save_screenshot(dir, "LS-6_1.png");
-    }
-}
-
 /// AAH 的实例
 pub struct AAH {
     pub res_dir: PathBuf,
@@ -143,5 +106,42 @@ impl AAH {
     pub fn get_tasks(&self) -> Vec<BuiltinTask> {
         // TODO
         vec![]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+
+    fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(path: P, name: S) {
+        let path = path.as_ref();
+        let name = name.as_ref();
+
+        let target_path = path.join(name);
+        println!("saving screenshot to {:?}", target_path);
+
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+
+        aah.update_screen().unwrap();
+        let screen = aah.get_screen().unwrap();
+        screen
+            .save_with_format(target_path, image::ImageFormat::Png)
+            .unwrap();
+    }
+
+    #[test]
+    fn foo() {
+        // let aah = Mutex::new(AAH::connect("127.0.0.1:16384", "../../resources").unwrap());
+        let dir = "../../resources/templates/MUMU-1920x1080";
+        // save_screenshot(dir, "start.png");
+        // save_screenshot(dir, "wakeup.png");
+        // save_screenshot(dir, "notice.png");
+        // save_screenshot(dir, "main.png");
+        // save_screenshot(dir, "confirm.png");
+        save_screenshot(dir, "operation-start.png");
+        // let dir = "../aah-resource/assets";
+        // save_screenshot(dir, "LS-6_1.png");
     }
 }

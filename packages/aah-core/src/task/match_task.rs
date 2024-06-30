@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     controller::DEFAULT_HEIGHT,
-    vision::analyzer::{template_match::TemplateMatchAnalyzer, Analyzer},
+    vision::analyzer::{best_match::BestMatchAnalyzer, Analyzer},
     AAH,
 };
 
@@ -25,7 +25,7 @@ impl Task for MatchTask {
 
         let res = match self {
             Self::Template(template_filename) => {
-                let mut analyzer = TemplateMatchAnalyzer::new(template_filename.to_string());
+                let mut analyzer = BestMatchAnalyzer::new(template_filename.to_string());
                 analyzer.analyze(aah).unwrap().rect
             }
             Self::Ocr(text) => {

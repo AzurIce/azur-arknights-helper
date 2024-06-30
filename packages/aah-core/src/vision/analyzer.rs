@@ -1,11 +1,12 @@
-use crate::{adb::Device, controller::Controller, AAH};
+use crate::AAH;
 
 pub mod depot;
 // pub mod squad;
 pub mod deploy;
-pub mod template_match;
-pub mod multi_template_match;
+pub mod best_match;
+pub mod multi_match;
 
+/// [`Analyzer`] 接收图像，返回分析结果 [`Analyzer::Output`]
 pub trait Analyzer {
     type Output;
     fn analyze(&mut self, aah: &AAH) -> Result<Self::Output, String>;

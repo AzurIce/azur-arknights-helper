@@ -69,6 +69,8 @@ impl MultiMatcher {
 
 #[cfg(test)]
 mod test {
+    use image::math::Rect;
+
     use crate::vision::{
         matcher::{
             multi_matcher::MultiMatcher,
@@ -89,6 +91,7 @@ mod test {
         }
     }
 
+    /// deploy available recognize
     fn test_device_multi_match<S: AsRef<str>>(device: Device, image_filename: S) {
         let image_filename = image_filename.as_ref();
 
@@ -105,6 +108,7 @@ mod test {
         .unwrap();
         println!("{} matches", res.len());
 
+        let mut cnt = 0;
         for rect in &res {
             let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.width);
             let avg_hsv_v = average_hsv_v(&cropped);
@@ -121,6 +125,23 @@ mod test {
                 rect.width,
                 rect.height,
                 color,
+            );
+
+            let rect = Rect {
+                x: rect.x - 80,
+                y: rect.y + 10,
+                width: 140,
+                height: 170,
+            };
+            image.crop_imm(rect.x, rect.y, rect.width, rect.height).save(format!("./assets/output/{}.png", cnt)).unwrap();
+            cnt += 1;
+            draw_box(
+                &mut res_image,
+                rect.x as i32,
+                rect.y as i32,
+                rect.width,
+                rect.height,
+                [255, 127, 90, 255],
             )
         }
         res_image

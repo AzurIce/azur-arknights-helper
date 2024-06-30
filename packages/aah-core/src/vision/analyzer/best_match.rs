@@ -5,22 +5,22 @@ use crate::{controller::DEFAULT_HEIGHT, vision::matcher::best_matcher::BestMatch
 use super::Analyzer;
 
 #[derive(Debug)]
-pub struct TemplateMatchAnalyzerOutput {
+pub struct BestMatchAnalyzerOutput {
     pub rect: Rect,
 }
 
-pub struct TemplateMatchAnalyzer {
+pub struct BestMatchAnalyzer {
     template_filename: String,
 }
 
-impl TemplateMatchAnalyzer {
+impl BestMatchAnalyzer {
     pub fn new(template_filename: String) -> Self {
         Self { template_filename }
     }
 }
 
-impl Analyzer for TemplateMatchAnalyzer {
-    type Output = TemplateMatchAnalyzerOutput;
+impl Analyzer for BestMatchAnalyzer {
+    type Output = BestMatchAnalyzerOutput;
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
         // Make sure that we are in the operation-start page
         println!(
