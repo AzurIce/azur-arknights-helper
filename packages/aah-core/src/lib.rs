@@ -9,7 +9,10 @@ use std::{
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{minitouch, Controller};
 use task::builtins::BuiltinTask;
-use vision::analyzer::{deploy::{DeployAnalyzer, DeployAnalyzerOutput}, Analyzer};
+use vision::analyzer::{
+    deploy::{DeployAnalyzer, DeployAnalyzerOutput},
+    Analyzer,
+};
 
 use crate::task::Task;
 
@@ -110,9 +113,9 @@ impl AAH {
         analyzer.analyze(self)
     }
 
-    pub fn get_tasks(&self) -> Vec<BuiltinTask> {
-        // TODO
-        vec![]
+    /// 获取所有任务名称
+    pub fn get_tasks(&self) -> Vec<String> {
+        self.task_config.0.keys().map(|s| s.to_string()).collect()
     }
 }
 
@@ -121,6 +124,12 @@ mod tests {
     use std::path::Path;
 
     use super::*;
+
+    #[test]
+    fn test_get_tasks() {
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        println!("{:?}", aah.get_tasks());
+    }
 
     fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(path: P, name: S) {
         let path = path.as_ref();
