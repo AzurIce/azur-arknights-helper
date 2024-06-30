@@ -1,4 +1,13 @@
 use image::{DynamicImage, GenericImage, Luma, Rgba};
+use serde::Serialize;
+
+#[derive(Debug, Serialize, Clone)]
+pub struct Rect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
 
 pub fn rgb_to_hsv_v(pixel: &Rgba<u8>) -> u8 {
     let r = pixel[0];

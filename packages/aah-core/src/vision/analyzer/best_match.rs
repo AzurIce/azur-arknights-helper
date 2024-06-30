@@ -1,10 +1,10 @@
-use image::math::Rect;
+use serde::Serialize;
 
-use crate::{controller::DEFAULT_HEIGHT, vision::matcher::best_matcher::BestMatcher, AAH};
+use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::best_matcher::BestMatcher, utils::Rect}, AAH};
 
 use super::Analyzer;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct BestMatchAnalyzerOutput {
     pub rect: Rect,
 }

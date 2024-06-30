@@ -1,9 +1,8 @@
-use image::math::Rect;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     controller::DEFAULT_HEIGHT,
-    vision::analyzer::{best_match::BestMatchAnalyzer, Analyzer},
+    vision::{analyzer::{best_match::BestMatchAnalyzer, Analyzer}, utils::Rect},
     AAH,
 };
 

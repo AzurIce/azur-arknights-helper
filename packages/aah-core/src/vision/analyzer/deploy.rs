@@ -1,14 +1,15 @@
-use image::{math::Rect, DynamicImage};
+use image::{DynamicImage};
+use serde::Serialize;
 
 use crate::{
-    vision::utils::{average_hsv_v, draw_box},
+    vision::utils::{average_hsv_v, draw_box, Rect},
     AAH,
 };
 
 use super::{multi_match::MultiMatchAnalyzer, Analyzer};
 
 #[allow(unused)]
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 /// 部署卡片
 ///
 /// - `rect`: 位置信息
@@ -24,9 +25,9 @@ pub struct DeployCard {
 ///
 /// - `deploy_card`: 所有部署卡片信息
 pub struct DeployAnalyzerOutput {
-    screen: DynamicImage,
-    deploy_cards: Vec<DeployCard>,
-    res_screen: DynamicImage,
+    pub screen: DynamicImage,
+    pub deploy_cards: Vec<DeployCard>,
+    pub res_screen: DynamicImage,
 }
 
 pub struct DeployAnalyzer;
@@ -64,7 +65,7 @@ impl Analyzer for DeployAnalyzer {
             } else {
                 [255, 0, 0, 255]
             };
-            let rect = deploy_card.rect;
+            let rect = deploy_card.rect.clone();
 
             draw_box(
                 &mut res_screen,

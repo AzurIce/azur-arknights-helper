@@ -2,9 +2,9 @@ use std::time::Instant;
 
 use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
 use color_print::cprintln;
-use image::{math::Rect, ImageBuffer, Luma};
+use image::{ImageBuffer, Luma};
 
-use crate::vision::matcher::{SSE_THRESHOLD, THRESHOLD};
+use crate::vision::{matcher::{SSE_THRESHOLD, THRESHOLD}, utils::Rect};
 
 /// 匹配器，目前只实现了模板匹配
 pub enum BestMatcher {

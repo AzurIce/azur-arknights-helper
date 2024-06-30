@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use image::{math::Rect, DynamicImage};
+use image::DynamicImage;
 
-use crate::adb::MyError;
+use crate::{adb::MyError, vision::utils::Rect};
 
 // pub mod adb_input_controller;
 pub mod minitouch;

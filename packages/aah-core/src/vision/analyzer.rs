@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 use crate::AAH;
 
 pub mod depot;
