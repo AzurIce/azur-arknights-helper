@@ -26,7 +26,7 @@ impl Task for MatchTask {
         let res = match self {
             Self::Template(template_filename) => {
                 let mut analyzer = BestMatchAnalyzer::new(template_filename.to_string());
-                analyzer.analyze(aah).unwrap().rect
+                analyzer.analyze(aah)?.rect
             }
             Self::Ocr(text) => {
                 return Err("not implemented".to_string());

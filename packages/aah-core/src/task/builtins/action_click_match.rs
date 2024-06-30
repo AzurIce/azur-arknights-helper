@@ -9,6 +9,38 @@ use crate::{
     AAH,
 };
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ActionClickMatch {
+    match_task: MatchTask,
+    wrapper: Option<GenericTaskWrapper>,
+}
+
+impl ActionClickMatch {
+    pub fn new(match_task: MatchTask, wrapper: Option<GenericTaskWrapper>) -> Self {
+        Self {
+            match_task,
+            wrapper,
+        }
+    }
+}
+
+impl Task for ActionClickMatch {
+    type Err = String;
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
+        let task = || {
+            aah.controller
+                .click_in_rect(self.match_task.run(&aah)?)
+                .map_err(|err| format!("controller error: {:?}", err))
+        };
+
+        if let Some(wrapper) = &self.wrapper {
+            wrapper.run(task)
+        } else {
+            task()
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::task::{match_task::MatchTask, wrapper::GenericTaskWrapper};
@@ -38,38 +70,6 @@ mod test {
             println!("{:?}", task);
             let task = toml::from_str::<ActionClickMatch>(&task).unwrap();
             println!("{:?}", task);
-        }
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ActionClickMatch {
-    match_task: MatchTask,
-    wrapper: Option<GenericTaskWrapper>,
-}
-
-impl ActionClickMatch {
-    pub fn new(match_task: MatchTask, wrapper: Option<GenericTaskWrapper>) -> Self {
-        Self {
-            match_task,
-            wrapper,
-        }
-    }
-}
-
-impl Task for ActionClickMatch {
-    type Err = String;
-    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
-        let task = || {
-            aah.controller
-                .click_in_rect(self.match_task.run(&aah)?)
-                .map_err(|err| format!("controller error: {:?}", err))
-        };
-
-        if let Some(wrapper) = &self.wrapper {
-            wrapper.run(task)
-        } else {
-            task()
         }
     }
 }

@@ -10,7 +10,7 @@ pub mod minitouch;
 
 /// 默认宽高
 pub const DEFAULT_WIDTH: u32 = 1920;
-pub const DEFAULT_HEIGHT: u32 = 1280;
+pub const DEFAULT_HEIGHT: u32 = 1080;
 
 pub struct ScreenPos {
     x: f32,
