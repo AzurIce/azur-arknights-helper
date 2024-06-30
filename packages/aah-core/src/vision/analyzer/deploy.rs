@@ -1,27 +1,32 @@
-use image::math::Rect;
+use image::{math::Rect, DynamicImage};
 
-use crate::{vision::utils::average_hsv_v, AAH};
+use crate::{
+    vision::utils::{average_hsv_v, draw_box},
+    AAH,
+};
 
 use super::{multi_match::MultiMatchAnalyzer, Analyzer};
 
 #[allow(unused)]
 #[derive(Debug)]
 /// 部署卡片
-/// 
+///
 /// - `rect`: 位置信息
 /// - `available`: 是否可用
 pub struct DeployCard {
-    rect: Rect,
-    available: bool,
+    pub rect: Rect,
+    pub available: bool,
 }
 
 #[allow(unused)]
 #[derive(Debug)]
 /// [`DeployAnalyzer`] 的输出
-/// 
+///
 /// - `deploy_card`: 所有部署卡片信息
 pub struct DeployAnalyzerOutput {
+    screen: DynamicImage,
     deploy_cards: Vec<DeployCard>,
+    res_screen: DynamicImage,
 }
 
 pub struct DeployAnalyzer;
@@ -30,27 +35,51 @@ impl Analyzer for DeployAnalyzer {
     type Output = DeployAnalyzerOutput;
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
         // Make sure that we are in the operation-start page
-        let res =
-            MultiMatchAnalyzer::new("battle_deploy-card-cost1.png".to_string(), None, None)
-                .analyze(core)?;
+        let res = MultiMatchAnalyzer::new("battle_deploy-card-cost1.png".to_string(), None, None)
+            .analyze(core)?;
 
-        let deploy_cards = res.rects.into_iter().map(|rect| {
-            let cropped = res.screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
-            let avg_hsv_v = average_hsv_v(&cropped);
-            let available = avg_hsv_v > 100;
+        let deploy_cards: Vec<DeployCard> = res
+            .rects
+            .into_iter()
+            .map(|rect| {
+                let cropped = res.screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
+                let avg_hsv_v = average_hsv_v(&cropped);
+                let available = avg_hsv_v > 100;
 
-            let rect = Rect {
-                x: rect.x - 45,
-                y: rect.y + 6,
-                width: 75,
-                height: 120,
+                let rect = Rect {
+                    x: rect.x - 45,
+                    y: rect.y + 6,
+                    width: 75,
+                    height: 120,
+                };
+
+                DeployCard { rect, available }
+            })
+            .collect();
+
+        let mut res_screen = res.screen.clone();
+        for deploy_card in &deploy_cards {
+            let color = if deploy_card.available {
+                [0, 255, 0, 255]
+            } else {
+                [255, 0, 0, 255]
             };
+            let rect = deploy_card.rect;
 
-            DeployCard { rect, available }
-        }).collect();
+            draw_box(
+                &mut res_screen,
+                rect.x as i32,
+                rect.y as i32,
+                rect.width,
+                rect.height,
+                color,
+            );
+        }
 
         Ok(DeployAnalyzerOutput {
-            deploy_cards
+            screen: res.screen,
+            deploy_cards,
+            res_screen,
         })
     }
 }

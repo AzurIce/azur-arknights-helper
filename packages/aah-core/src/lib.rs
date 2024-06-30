@@ -9,6 +9,7 @@ use std::{
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{minitouch, Controller};
 use task::builtins::BuiltinTask;
+use vision::analyzer::{deploy::{DeployAnalyzer, DeployAnalyzerOutput}, Analyzer};
 
 use crate::task::Task;
 
@@ -101,6 +102,12 @@ impl AAH {
         let path = self.res_dir.join("templates").join(name);
         let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
         Ok(image)
+    }
+
+    /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
+    pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
+        let mut analyzer = DeployAnalyzer;
+        analyzer.analyze(self)
     }
 
     pub fn get_tasks(&self) -> Vec<BuiltinTask> {
