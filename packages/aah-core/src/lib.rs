@@ -98,11 +98,22 @@ impl AAH {
         }
     }
 
+    /// 重新加载 resources 中的配置
+    pub fn reload_resources(&mut self) -> Result<(), String> {
+        let task_config = TaskConfig::load(&self.res_dir)
+            .map_err(|err| format!("task config not found: {err}"))?;
+        let navigate_config = NavigateConfig::load(&self.res_dir)
+            .map_err(|err| format!("navigate config not found: {err}"))?;
+        self.task_config = task_config;
+        self.navigate_config = navigate_config;
+        Ok(())
+    }
+
     /// 从 `{res_path}/resources/templates/1920x1080` 目录中根据文件名称获取模板
     /// - `name` 为完整文件名
     pub fn get_template<S: AsRef<str>>(&self, name: S) -> Result<image::DynamicImage, String> {
         let name = name.as_ref();
-        let path = self.res_dir.join("templates").join(name);
+        let path = self.res_dir.join("templates").join("1920x1080").join(name);
         let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
         Ok(image)
     }
