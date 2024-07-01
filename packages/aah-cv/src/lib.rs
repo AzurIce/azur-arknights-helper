@@ -6,6 +6,7 @@
 // #![allow(dead_code)]
 // #![allow(unused_variables)]
 
+pub mod ccoeff_normed;
 pub mod convolve;
 pub mod fft;
 pub mod gpu;
@@ -13,6 +14,7 @@ pub mod template_matching;
 pub mod types;
 pub mod utils;
 
+use ccoeff_normed::CcoeffNormedMatcher;
 use gpu::Context;
 use image::{ImageBuffer, Luma};
 use imageproc::template_matching::Extremes;
@@ -76,6 +78,15 @@ mod test {
     }
 }
 
+pub fn ccoeff_normed(
+    input: &ImageBuffer<Luma<f32>, Vec<f32>>,
+    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
+) -> ImageBuffer<Luma<f32>, Vec<f32>> {
+    let matcher = CcoeffNormedMatcher::new(&input, &template, true);
+    let res = matcher.run();
+    res
+}
+
 pub fn ccoeff<'a>(
     input: &ImageBuffer<Luma<f32>, Vec<f32>>,
     template: &ImageBuffer<Luma<f32>, Vec<f32>>,
@@ -86,14 +97,23 @@ pub fn ccoeff<'a>(
     let m: Image = (&mask).into();
     let t: Image = (template).into();
 
+    let avg_core = ImageBuffer::from_pixel(
+        template.width(),
+        template.height(),
+        Luma([1.0 / (template.width() * template.height()) as f32]),
+    );
+    let avg_i = ccorr(input, &avg_core, true);
+    let ic = i.clone() - avg_i;
+
     // T' * M where T' = M * (T - 1/sum(M)*sum(M*T))
     let tc = t.clone() - (t.clone() * m.clone()).sum() / m.sum();
 
     let ccorr_i_tcm = ccorr(i.clone(), tc.clone() * m.clone(), true);
     let ccorr_i_m = ccorr(i.clone(), m.clone(), true);
 
-    // CCorr(I', T') = CCorr(I, T'*M) - sum(T'*M)/sum(M)*CCorr(I, M)
-    let res = ccorr_i_tcm - (tc.clone() * m.clone()).sum() / m.sum() * ccorr_i_m.clone();
+    // // CCorr(I', T') = CCorr(I, T'*M) - sum(T'*M)/sum(M)*CCorr(I, M)
+    // let res = ccorr_i_tcm - (tc.clone() * m.clone()).sum() / m.sum() * ccorr_i_m.clone();
+    let res = ccorr(ic, tc.clone(), true);
 
     if normed {
         // norm(T')
@@ -117,11 +137,15 @@ pub fn ccoeff<'a>(
     }
 }
 
-pub fn ccorr<'a>(input: Image<'a>, template: Image<'a>, padding: bool) -> Image<'static> {
+pub fn ccorr<'a>(
+    input: impl Into<Image<'a>>,
+    template: impl Into<Image<'a>>,
+    padding: bool,
+) -> Image<'static> {
     let mut matcher = TemplateMatcher::new();
     matcher.match_template(
-        input,
-        template,
+        input.into(),
+        template.into(),
         MatchTemplateMethod::CrossCorrelation,
         padding,
     );

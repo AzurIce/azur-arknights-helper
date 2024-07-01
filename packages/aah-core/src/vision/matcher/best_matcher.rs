@@ -1,10 +1,13 @@
-use std::time::Instant;
+use std::{cmp::Ordering, time::Instant};
 
-use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
+use aah_cv::{ccoeff_normed, find_extremes, match_template, MatchTemplateMethod};
 use color_print::cprintln;
 use image::{ImageBuffer, Luma};
 
-use crate::vision::{matcher::{SSE_THRESHOLD, THRESHOLD}, utils::Rect};
+use crate::vision::{
+    matcher::{CCOEFF_THRESHOLD, SSE_THRESHOLD, THRESHOLD},
+    utils::Rect,
+};
 
 /// 匹配器，目前只实现了模板匹配
 pub enum BestMatcher {
@@ -30,13 +33,20 @@ impl BestMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::CCOEFF_NORMED;
+                let method = MatchTemplateMethod::SumOfSquaredErrors;
                 cprintln!("[BestMatcher::TemplateMatcher]: image: {}x{}, template: {}x{}, method: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
+                // let res = ccoeff_normed(image, template);
+                // let res = imageproc::template_matching::match_template_parallel(
+                //     &image_u8,
+                //     &template_u8,
+                //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
+                // );
                 // cprintln!("finding_extremes...");
+                // let extrems = find_extremes(&(&res).into());
                 let extrems = find_extremes(&res);
                 cprintln!(
                     "[BestMatcher::TemplateMatcher]: cost: {}s, {:?}",
@@ -58,7 +68,7 @@ impl BestMatcher {
                         }
                     }
                     MatchTemplateMethod::CCOEFF => {
-                        if extrems.max_value <= threshold.unwrap_or(THRESHOLD) {
+                        if extrems.max_value <= threshold.unwrap_or(CCOEFF_THRESHOLD) {
                             cprintln!("[BestMatcher::TemplateMatcher]: <red>failed</red>");
                             return None;
                         }
@@ -69,7 +79,7 @@ impl BestMatcher {
                             return None;
                         }
                     }
-                    _ => ()
+                    _ => (),
                 };
 
                 cprintln!("[BestMatcher::TemplateMatcher]: <green>success!</green>");
@@ -78,7 +88,7 @@ impl BestMatcher {
                     MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
                     MatchTemplateMethod::CCOEFF => extrems.max_value_location,
                     MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
-                    _ => panic!("not implemented")
+                    _ => panic!("not implemented"),
                 };
                 Some(Rect {
                     x,
@@ -86,7 +96,7 @@ impl BestMatcher {
                     width: template.width(),
                     height: template.height(),
                 })
-            } 
+            }
         }
     }
 }
@@ -118,6 +128,13 @@ mod test {
 
         test_device_best_match(device, "notice.png", "close.png");
         test_device_best_match(device, "mission.png", "back.png");
+
+        // fail
+        test_device_best_match(device, "start.png", "main_base.png");
+        test_device_best_match(device, "start.png", "main_mission.png");
+        test_device_best_match(device, "start.png", "main_operator.png");
+        test_device_best_match(device, "start.png", "main_squads.png");
+        test_device_best_match(device, "start.png", "main_recruit.png");
     }
 
     fn test_device_best_match<S: AsRef<str>>(
@@ -127,7 +144,10 @@ mod test {
     ) {
         let image_filename = image_filename.as_ref();
         let template_filename = template_filename.as_ref();
-        println!("== testing {} with {} ==", template_filename, image_filename);
+        println!(
+            "== testing {} with {} ==",
+            template_filename, image_filename
+        );
 
         let image = get_device_image(device, image_filename).unwrap();
         let template = get_device_template_prepared(device, template_filename).unwrap();
