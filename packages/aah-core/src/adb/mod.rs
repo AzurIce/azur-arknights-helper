@@ -9,6 +9,7 @@ use std::{
     time::Duration,
 };
 
+use command::local_service::ShellCommand;
 use image::{codecs::png::PngDecoder, DynamicImage};
 use log::{error, info};
 
@@ -228,6 +229,23 @@ impl Device {
             host: Mutex::new(host),
             serial,
         }
+    }
+
+    pub fn serial(&self) -> String {
+        self.serial.clone()
+    }
+
+    pub fn get_abi(&self) -> Result<String, String> {
+        let mut device_adb_stream = AdbTcpStream::connect_device(&self.serial)?;
+        let res = device_adb_stream
+            .execute_command(ShellCommand::new("getprop ro.product.cpu.abi".to_string()));
+        res.map(|s| s.strip_suffix("\n").unwrap_or(&s).to_string())
+    }
+    pub fn get_sdk(&self) -> Result<String, String> {
+        let mut device_adb_stream = AdbTcpStream::connect_device(&self.serial)?;
+        let res = device_adb_stream
+            .execute_command(ShellCommand::new("getprop ro.build.version.sdk".to_string()));
+        res.map(|s| s.strip_suffix("\n").unwrap_or(&s).to_string())
     }
 
     pub fn connect_adb_tcp_stream(&self) -> Result<AdbTcpStream, MyError> {

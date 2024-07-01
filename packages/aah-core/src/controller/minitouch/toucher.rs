@@ -10,57 +10,6 @@ use crate::{
 };
 use log::{error, info};
 
-#[cfg(test)]
-mod test {
-    use crate::controller::{minitouch::MiniTouchController, Controller};
-
-    use super::*;
-
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-        env::set_current_dir(Path::new("../../../../")).unwrap();
-    }
-
-    #[test]
-    fn test_controller() {
-        init();
-        let controller =
-            MiniTouchController::connect("127.0.0.1:16384").expect("failed to connect to device");
-        controller.screencap().expect("failed to cap the screen");
-    }
-
-    use std::{env, path::Path};
-
-    #[test]
-    fn test() {
-        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
-        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
-        // let s2 = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
-    }
-
-    #[test]
-    fn test_minitoucher() {
-        init();
-        let mut toucher = MiniToucher::new("127.0.0.1:16384".to_string());
-        toucher.click(1000, 1000).unwrap();
-    }
-
-    #[test]
-    fn test_slowly_swipe() {
-        init();
-        let mut toucher = MiniToucher::new("127.0.0.1:16384".to_string());
-        toucher
-            .swipe(
-                (2560, 720),
-                (-100, 720),
-                Duration::from_millis(200),
-                2.0,
-                0.0,
-            )
-            .unwrap();
-    }
-}
-
 pub enum Direction {
     Up,
     Down,
@@ -305,5 +254,56 @@ impl Toucher for MiniToucher {
         self.commit()?;
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::controller::{minitouch::MiniTouchController, Controller};
+
+    use super::*;
+
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+        env::set_current_dir(Path::new("../../../../")).unwrap();
+    }
+
+    #[test]
+    fn test_controller() {
+        init();
+        let controller =
+            MiniTouchController::connect("127.0.0.1:16384").expect("failed to connect to device");
+        controller.screencap().expect("failed to cap the screen");
+    }
+
+    use std::{env, path::Path};
+
+    #[test]
+    fn test() {
+        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+        // let s2 = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
+    }
+
+    #[test]
+    fn test_minitoucher() {
+        init();
+        let mut toucher = MiniToucher::new("127.0.0.1:16384".to_string());
+        toucher.click(1000, 1000).unwrap();
+    }
+
+    #[test]
+    fn test_slowly_swipe() {
+        init();
+        let mut toucher = MiniToucher::new("127.0.0.1:16384".to_string());
+        toucher
+            .swipe(
+                (2560, 720),
+                (-100, 720),
+                Duration::from_millis(200),
+                2.0,
+                0.0,
+            )
+            .unwrap();
     }
 }
