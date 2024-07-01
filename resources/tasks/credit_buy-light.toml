@@ -1,0 +1,6 @@
+[Multi]
+fail_fast = false
+tasks = [
+    { ActionClickMatch = { match_task = { type = "Template", template = "buy-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "credit-light.png" }, wrapper = { retry = 1 } } },
+]
