@@ -45,7 +45,7 @@ impl AahController {
             minicap_stdin: None,
             img: Arc::new(Mutex::new(None)),
         };
-        let screen = controller.screencap()?;
+        let screen = controller.adb_screencap()?;
         println!(
             "[AahController]: device screen: {}x{}",
             screen.width(),
@@ -275,6 +275,10 @@ impl AahController {
         // self.minicap_stdin = Some(child_in);
         info!("minicap initialized");
         Ok(())
+    }
+
+    fn adb_screencap(&self) -> Result<image::DynamicImage, MyError> {
+        self.inner.screencap()
     }
 }
 
