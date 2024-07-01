@@ -30,7 +30,7 @@ impl BestMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::CCOEFF;
+                let method = MatchTemplateMethod::CCOEFF_NORMED;
                 cprintln!("[BestMatcher::TemplateMatcher]: image: {}x{}, template: {}x{}, method: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
@@ -63,6 +63,12 @@ impl BestMatcher {
                             return None;
                         }
                     }
+                    MatchTemplateMethod::CCOEFF_NORMED => {
+                        if extrems.max_value <= threshold.unwrap_or(THRESHOLD) {
+                            cprintln!("[BestMatcher::TemplateMatcher]: <red>failed</red>");
+                            return None;
+                        }
+                    }
                     _ => ()
                 };
 
@@ -71,6 +77,7 @@ impl BestMatcher {
                     MatchTemplateMethod::SumOfSquaredErrors => extrems.min_value_location,
                     MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
                     MatchTemplateMethod::CCOEFF => extrems.max_value_location,
+                    MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
                     _ => panic!("not implemented")
                 };
                 Some(Rect {
