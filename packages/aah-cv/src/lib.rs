@@ -13,8 +13,15 @@ pub mod matching;
 pub mod template_matching;
 pub mod utils;
 
+use image::{ImageBuffer, Luma};
 use imageproc::template_matching::Extremes;
-use std::{borrow::Cow, mem::size_of};
+use template_matching::square_sum_arr2;
+use std::{
+    borrow::Cow,
+    mem::size_of,
+    ops::{Add, Mul},
+};
+use utils::{image_mean, square_sum};
 use wgpu::util::DeviceExt;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -22,6 +29,8 @@ pub enum MatchTemplateMethod {
     SumOfAbsoluteErrors,
     SumOfSquaredErrors,
     CrossCorrelation,
+    CCOEFF,
+    CCOEFF_NORMED,
 }
 
 /// Slides a template over the input and scores the match at each point using the requested method.
@@ -34,12 +43,51 @@ pub enum MatchTemplateMethod {
 /// ```
 /// You can use  [find_extremes] to find minimum and maximum values, and their locations in the result image.
 pub fn match_template<'a>(
-    input: impl Into<Image<'a>>,
-    template: impl Into<Image<'a>>,
+    input: &ImageBuffer<Luma<f32>, Vec<f32>>,
+    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
     method: MatchTemplateMethod,
 ) -> Image<'static> {
+    match method {
+        MatchTemplateMethod::CCOEFF => ccoeff(input, template, false),
+        MatchTemplateMethod::CCOEFF_NORMED => {
+            ccoeff(input, template, true)
+        },
+        _ => {
+            let mut matcher = TemplateMatcher::new();
+            matcher.match_template(input.into(), template.into(), MatchTemplateMethod::CCOEFF);
+            matcher.wait_for_result().unwrap()
+        }
+    }
+}
+
+pub fn ccoeff<'a>(
+    input: &ImageBuffer<Luma<f32>, Vec<f32>>,
+    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
+    normed: bool
+) -> Image<'static> {
+    let mut tc = template.clone();
+    let mean_t = image_mean(&template);
+    tc.enumerate_pixels_mut().for_each(|(_, _, pixel)| {
+        pixel[0] -= mean_t;
+    });
+
+    let mask = ImageBuffer::from_pixel(template.width(), template.height(), Luma([0.0f32]));
+    let ccorr_i_tc = ccorr(input.into(), (&tc).into());
+    let ccorr_i_m = ccorr(input.into(), (&mask).into());
+    let mean_tc = image_mean(&tc);
+
+    let mut res = ccorr_i_tc + ccorr_i_m * (-mean_tc);
+
+    if normed {
+        let norm_templ = square_sum(&template).sqrt();
+    }
+
+    res
+}
+
+pub fn ccorr<'a>(input: Image<'a>, template: Image<'a>) -> Image<'static> {
     let mut matcher = TemplateMatcher::new();
-    matcher.match_template(input, template, method);
+    matcher.match_template(input, template, MatchTemplateMethod::CrossCorrelation);
     matcher.wait_for_result().unwrap()
 }
 
@@ -123,6 +171,42 @@ pub struct Image<'a> {
     pub data: Cow<'a, [f32]>,
     pub width: u32,
     pub height: u32,
+}
+
+impl Mul<f32> for Image<'_> {
+    type Output = Image<'static>;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        let data = self
+            .data
+            .iter()
+            .map(|v| v * rhs)
+            .collect::<Vec<f32>>()
+            .into();
+
+        Image {
+            data,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
+impl<'a> Add for Image<'a> {
+    type Output = Image<'a>;
+
+    fn add(self, other: Image<'a>) -> Self::Output {
+        let mut data = Vec::with_capacity(self.data.len());
+        for (a, b) in self.data.iter().zip(other.data.iter()) {
+            data.push(a + b);
+        }
+
+        Image {
+            data: Cow::Owned(data),
+            width: self.width,
+            height: self.height,
+        }
+    }
 }
 
 impl<'a> Image<'a> {
@@ -338,17 +422,14 @@ impl TemplateMatcher {
     /// To get the result of the matching, call [wait_for_result].
     pub fn match_template<'a>(
         &mut self,
-        input: impl Into<Image<'a>>,
-        template: impl Into<Image<'a>>,
+        input: Image<'a>,
+        template: Image<'a>,
         method: MatchTemplateMethod,
     ) {
         if self.matching_ongoing {
             // Discard previous result if not collected.
             self.wait_for_result();
         }
-
-        let input = input.into();
-        let template = template.into();
 
         if self.last_pipeline.is_none() || self.last_method != Some(method) {
             self.last_method = Some(method);
@@ -357,6 +438,7 @@ impl TemplateMatcher {
                 MatchTemplateMethod::SumOfAbsoluteErrors => "main_sae",
                 MatchTemplateMethod::SumOfSquaredErrors => "main_sse",
                 MatchTemplateMethod::CrossCorrelation => "main_cc",
+                _ => panic!("not implemented yet"),
             };
 
             self.last_pipeline = Some(self.device.create_compute_pipeline(

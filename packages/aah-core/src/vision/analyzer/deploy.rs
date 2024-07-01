@@ -1,4 +1,4 @@
-use image::{DynamicImage};
+use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{

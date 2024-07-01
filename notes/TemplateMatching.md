@@ -1,3 +1,19 @@
+## MAA
+
+https://github.com/MaaAssistantArknights/MaaAssistantArknights/blob/dev/src/MaaCore/Vision/Matcher.cpp#L48
+
+简单地调用
+
+```cpp
+cv::matchTemplate(image, templ, matched, cv::TM_CCOEFF_NORMED);
+```
+
+
+
+
+
+
+
 图像匹配时将模板图像大小根据截图图像进行缩放，然后在截图图像上匹配。
 
 

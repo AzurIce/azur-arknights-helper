@@ -7,7 +7,7 @@ use image::DynamicImage;
 use rten_tensor::{NdTensorBase, NdTensorView};
 // use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
 
-const THRESHOLD: f32 = 100.0;
+const THRESHOLD: f32 = 30.0;
 const SSE_THRESHOLD: f32 = 40.0;
 
 pub fn convert_image_to_ten(

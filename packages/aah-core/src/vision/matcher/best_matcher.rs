@@ -30,13 +30,13 @@ impl BestMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrors;
+                let method = MatchTemplateMethod::CCOEFF;
                 cprintln!("[BestMatcher::TemplateMatcher]: image: {}x{}, template: {}x{}, method: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
-                cprintln!("finding_extremes...");
+                // cprintln!("finding_extremes...");
                 let extrems = find_extremes(&res);
                 cprintln!(
                     "[BestMatcher::TemplateMatcher]: cost: {}s, {:?}",
@@ -57,6 +57,12 @@ impl BestMatcher {
                             return None;
                         }
                     }
+                    MatchTemplateMethod::CCOEFF => {
+                        if extrems.max_value <= threshold.unwrap_or(THRESHOLD) {
+                            cprintln!("[BestMatcher::TemplateMatcher]: <red>failed</red>");
+                            return None;
+                        }
+                    }
                     _ => ()
                 };
 
@@ -64,6 +70,7 @@ impl BestMatcher {
                 let (x, y) = match method {
                     MatchTemplateMethod::SumOfSquaredErrors => extrems.min_value_location,
                     MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
+                    MatchTemplateMethod::CCOEFF => extrems.max_value_location,
                     _ => panic!("not implemented")
                 };
                 Some(Rect {
@@ -72,40 +79,7 @@ impl BestMatcher {
                     width: template.width(),
                     height: template.height(),
                 })
-            } // TODO: implement OcrMatcher
-              // Self::Ocr {
-              //     image,
-              //     text,
-              //     engine,
-              // } => {
-              //     let ocr = || -> Result<Rect, Box<dyn Error>> {
-              //         let ocr_input = engine.prepare_input(image.view())?;
-
-              //         // Phase 1: Detect text words
-              //         let word_rects = engine.detect_words(&ocr_input)?;
-              //         for rect in &word_rects {
-              //             println!("{:?}", rect);
-              //         }
-
-              //         // Phase 2: Perform layout analysis
-              //         let line_rects = engine.find_text_lines(&ocr_input, &word_rects);
-
-              //         // Phase 3: Recognize text
-              //         let line_texts = engine.recognize_text(&ocr_input, &line_rects)?;
-
-              //         for line in line_texts
-              //             .iter()
-              //             .flatten()
-              //             // Filter likely spurious detections. With future model improvements
-              //             // this should become unnecessary.
-              //             .filter(|l| l.to_string().len() > 1)
-              //         {
-              //             println!("{}", line);
-              //         }
-              //         todo!()
-              //     };
-              //     ocr().ok()
-              // }
+            } 
         }
     }
 }
@@ -146,6 +120,7 @@ mod test {
     ) {
         let image_filename = image_filename.as_ref();
         let template_filename = template_filename.as_ref();
+        println!("== testing {} with {} ==", template_filename, image_filename);
 
         let image = get_device_image(device, image_filename).unwrap();
         let template = get_device_template_prepared(device, template_filename).unwrap();

@@ -1,139 +1,15 @@
 use std::{
-    error::Error,
     iter::Sum,
     ops::{Add, AddAssign, Mul, Sub, SubAssign},
     time::Instant,
 };
 
-use fftconvolve::{fftcorrelate, Mode};
 use imageproc::template_matching::Extremes;
-use ndarray::{
-    Array, Array1, Array2, ArrayBase, AssignElem, Axis, Data, DataMut, Dimension, OwnedRepr, Slice,
-};
-use rustfft::{
-    num_complex::Complex,
-    num_traits::{FromPrimitive, Zero},
-    FftNum,
-};
+use ndarray::{Array2, AssignElem};
 
 use crate::convolve::gpu_convolve_block;
 
-#[cfg(test)]
-mod test {
-    use std::{path::Path, time::Instant};
 
-    use fft2d::slice::fft_2d;
-    use image::{GrayImage, Luma};
-    use ndarray::Array2;
-    use nshare::ToNdarray2;
-    use rustfft::{num_complex::Complex, FftPlanner};
-
-    #[test]
-    fn test_fft() {
-        let x = (1..=3).collect::<Vec<u8>>();
-        println!("Original: {:?}", x);
-        let mut x = x
-            .into_iter()
-            .map(|x| Complex::new(x as f64, 0.0))
-            .collect::<Vec<_>>();
-        println!("Original to Complex: {:?}", x);
-
-        let mut planner = FftPlanner::new();
-        let fft = planner.plan_fft_forward(3);
-        let inv_fft = planner.plan_fft_inverse(3);
-
-        fft.process(&mut x);
-        println!("fft: {:?}", x);
-
-        inv_fft.process(&mut x);
-        println!("inv_fft: {:?}", x)
-    }
-
-    // #[test]
-    // fn test_image_fft() {
-    //     let t = Instant::now();
-    //     let image = GrayImage::from_fn(2560, 1440, |_, _| Luma([128])).into_ndarray2();
-    //     // let image = GrayImage::from_fn(1440, 2560, |_, _| Luma([128])).into_ndarray2();
-    //     let image = image.map(|&x| x as f64);
-    //     // println!("origin: {:?}", image);
-    //     let mut x = image
-    //         .iter()
-    //         .map(|&x| Complex::new(x, 0.0))
-    //         .collect::<Vec<Complex<f64>>>();
-
-    //     fft_2d(image.dim().0, image.dim().1, &mut x);
-    //     // println!("fft (len = {}): {:?}", x.len(), x);
-
-    //     // let image = GrayImage::from_fn(512, 512, |_, _| Luma([128])).into_ndarray2();
-    //     // let image = image.map(|&x| x as f64);
-    //     // println!("origin: {:?}", image);
-    //     // let mut x = image
-    //     //     .iter()
-    //     //     .map(|&x| Complex::new(x, 0.0))
-    //     //     .collect::<Vec<Complex<f64>>>();
-
-    //     // fft_2d(image.dim().0, image.dim().1, &mut x);
-    //     // println!("fft (len = {}): {:?}", x.len(), x);
-    //     println!("{:?}", t.elapsed());
-    // }
-
-    // fn test_template_match_with_image_and_template(image: &str, template: &str) {
-    //     println!("matching {} {}...", image, template);
-    //     let image = image::open(Path::new("./test").join(image)).unwrap();
-    //     let template = image::open(Path::new("./test").join(template)).unwrap();
-    //     println!(
-    //         "image: {}x{}, template: {}x{}",
-    //         image.width(),
-    //         image.height(),
-    //         template.width(),
-    //         template.height()
-    //     );
-
-    //     let image_luma32f = image.to_luma32f();
-    //     let template_luma32f = template.to_luma32f();
-    //     // let image_luma8 = image.to_luma8();
-    //     // let template_luma8 = template.to_luma8();
-
-    //     let start = Instant::now();
-    //     let res = super::match_template(
-    //         &image_luma32f.into_ndarray2(),
-    //         &template_luma32f.into_ndarray2(),
-    //     );
-    //     let res = super::find_extremes(&res.map(|&x| x as f32));
-    //     println!(
-    //         "aah-cv: {:?}, cost: {}s",
-    //         res,
-    //         start.elapsed().as_secs_f32()
-    //     );
-    // }
-
-    #[test]
-    fn test_template_match() {
-        // test_template_match_with_image_and_template("image.png", "template.png");
-        // test_template_match_with_image_and_template("main.png", "EnterMissionMistCity.png");
-        // test_template_match_with_image_and_template("start.png", "start_btn.png");
-    }
-
-    use super::*;
-
-    #[test]
-    fn test_integral() {
-        let mat = Array2::ones((5, 5));
-        let integral: ArrayBase<OwnedRepr<_>, ndarray::prelude::Dim<[usize; 2]>> =
-            integral_arr2(&mat);
-        println!("{:?}", integral);
-        assert_eq!(
-            integral,
-            Array2::from_shape_fn((5, 5), |(y, x)| { (x as f32 + 1.0) * (y as f32 + 1.0) })
-        );
-        let res = subsum_from_integral::<f32>(&integral, 2, 2, 3, 3);
-        assert_eq!(res, 9.0);
-        let res = subsum_from_integral(&integral, 0, 2, 2, 2);
-        assert_eq!(res, 4.0);
-        let res = subsum_from_integral(&integral, 0, 0, 2, 2);
-        assert_eq!(res, 4.0);
-    }
-}
 
 pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
     // let start = Instant::now();
@@ -197,12 +73,6 @@ pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> 
     }
     println!("normalize cost: {}ms", start.elapsed().as_millis());
 
-    // {
-    //     let file = File::create("res.csv").unwrap();
-    //     let mut writer = WriterBuilder::new().has_headers(false).from_writer(file);
-    //     writer.serialize_array2(&res).unwrap();
-    // }
-
     res
 }
 
@@ -235,6 +105,7 @@ pub fn find_extremes(input: &Array2<f32>) -> Extremes<f32> {
     }
 }
 
+/// Calculate the prefix sum of the mat
 pub fn integral_arr2<T: AddAssign + SubAssign + Copy>(mat: &Array2<T>) -> Array2<T> {
     let (y_len, x_len) = mat.dim();
 
@@ -263,6 +134,7 @@ pub fn integral_arr2<T: AddAssign + SubAssign + Copy>(mat: &Array2<T>) -> Array2
     res
 }
 
+/// Calculate the sum of the sub-matrix from (x, y) with width and height through the integral matrix
 pub fn subsum_from_integral<T: Add<T, Output = T> + Sub<T, Output = T> + Copy>(
     integral_mat: &Array2<T>,
     x: usize,
@@ -293,6 +165,31 @@ pub fn subsum_from_integral<T: Add<T, Output = T> + Sub<T, Output = T> + Copy>(
     }
 }
 
+/// Calculate the sum of the square of the elements in the matrix
 pub fn square_sum_arr2<T: Mul<T, Output = T> + Sum + Copy>(mat: &Array2<T>) -> T {
     mat.iter().map(|&p| p * p).sum()
+}
+
+#[cfg(test)]
+mod test {
+    use ndarray::{Array2, ArrayBase, OwnedRepr};
+    use super::*;
+
+    #[test]
+    fn test_integral() {
+        let mat = Array2::ones((5, 5));
+        let integral: ArrayBase<OwnedRepr<_>, ndarray::prelude::Dim<[usize; 2]>> =
+            integral_arr2(&mat);
+        println!("{:?}", integral);
+        assert_eq!(
+            integral,
+            Array2::from_shape_fn((5, 5), |(y, x)| { (x as f32 + 1.0) * (y as f32 + 1.0) })
+        );
+        let res = subsum_from_integral::<f32>(&integral, 2, 2, 3, 3);
+        assert_eq!(res, 9.0);
+        let res = subsum_from_integral(&integral, 0, 2, 2, 2);
+        assert_eq!(res, 4.0);
+        let res = subsum_from_integral(&integral, 0, 0, 2, 2);
+        assert_eq!(res, 4.0);
+    }
 }

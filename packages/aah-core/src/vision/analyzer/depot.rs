@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use crate::{controller::Controller, AAH};
+use crate::AAH;
 use ndarray::{Array1, Array2, Axis};
 
 use super::Analyzer;
@@ -8,7 +8,6 @@ use super::Analyzer;
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{controller::minitouch::MiniTouchController, vision::analyzer::Analyzer};
 
     #[test]
     fn test_depot_analyzer() {
@@ -39,7 +38,8 @@ impl Analyzer for DepotAnalyzer {
         let x_period = 312;
         let y_period = 380;
 
-        let mut screen = aah.controller
+        let mut screen = aah
+            .controller
             .screencap_scaled()
             .map_err(|err| format!("{:?}", err))?;
 

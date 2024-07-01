@@ -23,6 +23,7 @@ var<uniform> uniforms: Uniforms;
 
 @compute
 @workgroup_size(16, 16, 1)
+// Sum of Absolute Error
 fn main_sae(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
     var y = global_id.y;
@@ -45,9 +46,9 @@ fn main_sae(@builtin(global_invocation_id) global_id: vec3<u32>) {
             var input_val = input_buf[input_idx];
             var template_val = template_buf[template_idx];
 
-            var diff = abs(input_val - template_val);
+            var abdiff = abs(input_val - template_val);
 
-            total_sum += diff;
+            total_sum += abdiff;
         }
     }
 
@@ -57,6 +58,7 @@ fn main_sae(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute
 @workgroup_size(16, 16, 1)
+// Sum of Squared Error
 fn main_sse(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
     var y = global_id.y;
@@ -91,6 +93,7 @@ fn main_sse(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
 @compute
 @workgroup_size(16, 16, 1)
+// Cross Correleation
 fn main_cc(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
     var y = global_id.y;
