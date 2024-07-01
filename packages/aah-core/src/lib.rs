@@ -7,7 +7,7 @@ use std::{
 };
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
-use controller::{minitouch, Controller};
+use controller::{aah_controller::AahController, minitouch, Controller};
 use task::builtins::BuiltinTask;
 use vision::analyzer::{
     deploy::{DeployAnalyzer, DeployAnalyzerOutput},
@@ -49,7 +49,7 @@ impl AAH {
         let navigate_config = NavigateConfig::load(&res_dir)
             .map_err(|err| format!("navigate config not found: {err}"))?;
         // let controller = Box::new(AdbInputController::connect(serial)?);
-        let controller = Box::new(minitouch::MiniTouchController::connect(serial)?);
+        let controller = Box::new(AahController::connect(serial, &res_dir)?);
         Ok(Self {
             res_dir,
             controller,

@@ -198,7 +198,7 @@ impl AahController {
             let mut q: Vec<u8> = Vec::new();
             let mut state = State::Head;
             let mut img_len = 0;
-            let mut cnt = 0;
+            // let mut cnt = 0;
             let mut buf = [0u8; 20480];
             loop {
                 match connection.read(&mut buf) {
@@ -257,9 +257,9 @@ impl AahController {
                                     let img_data = q.drain(0..img_len);
                                     let img_data = img_data.as_slice();
                                     let decoded = image::load_from_memory(img_data).unwrap();
-                                    println!("recieved frame {}", cnt);
-                                    decoded.save(format!("./output{cnt}.png")).unwrap();
-                                    cnt += 1;
+                                    // println!("recieved frame {}", cnt);
+                                    // decoded.save(format!("./output{cnt}.png")).unwrap();
+                                    // cnt += 1;
                                     *img.lock().unwrap() = Some(decoded);
                                     state = State::ImgLen;
                                 }
@@ -312,7 +312,8 @@ impl Controller for AahController {
         Ok(())
     }
     fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        self.inner.screencap()
+        // self.inner.screencap()
+        self.img.lock().unwrap().clone().ok_or(MyError::S("no image".to_string()))
     }
 
     fn press_home(&self) -> Result<(), MyError> {
