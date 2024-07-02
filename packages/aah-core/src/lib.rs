@@ -7,8 +7,7 @@ use std::{
 };
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
-use controller::{aah_controller::AahController, minitouch, Controller};
-use task::builtins::BuiltinTask;
+use controller::{aah_controller::AahController, Controller};
 use vision::analyzer::{
     deploy::{DeployAnalyzer, DeployAnalyzerOutput},
     Analyzer,
@@ -76,18 +75,7 @@ impl AAH {
         Ok(())
     }
 
-    // 更新屏幕缓存
-    // pub fn update_screen(&mut self) -> Result<(), String> {
-    //     let screen = self
-    //         .controller
-    //         .screencap()
-    //         .map_err(|err| format!("{err}"))?;
-    //     self.screen_cache = Some(screen.clone());
-    //     Ok(())
-    // }
-
-    /// 获取缓存中的屏幕内容
-    /// 如果没有缓存，就通过 [`AAH::update_screen`] 更新，然后再返回
+    /// Capture a screen, and return decoded image
     pub fn get_screen(&mut self) -> Result<image::DynamicImage, String> {
         self.controller.screencap().map_err(|err| format!("{err}"))
         // match &self.screen_cache {
@@ -97,6 +85,11 @@ impl AAH {
         //         Ok(self.screen_cache.as_ref().unwrap().clone())
         //     }
         // }
+    }
+
+    /// Capture a screen, and return raw data in Png format
+    pub fn get_raw_screen(&mut self) -> Result<Vec<u8>, String> {
+        self.controller.raw_screencap().map_err(|err| format!("{err}"))
     }
 
     /// 重新加载 resources 中的配置
