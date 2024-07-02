@@ -257,14 +257,19 @@ impl Device {
     //     Ok((screen.width(), screen.height()))
     // }
 
-    pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
+    pub fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
+        // let bytes = self
+        //     .execute_command_by_process("exec-out screencap -p")
+        //     .expect("failed to screencap");
         let mut adb_tcp_stream = self.connect_adb_tcp_stream()?;
         let bytes = adb_tcp_stream
             .execute_command(local_service::ScreenCap::new())
             .expect("failed to screencap");
-        // let bytes = self
-        //     .execute_command_by_process("exec-out screencap -p")
-        //     .expect("failed to screencap");
+        Ok(bytes)
+    }
+
+    pub fn screencap(&self) -> Result<image::DynamicImage, MyError> {
+        let bytes = self.raw_screencap()?;
 
         let decoder = PngDecoder::new(Cursor::new(bytes))
             .map_err(|err| MyError::ImageDecodeError(format!("{:?}", err)))?;

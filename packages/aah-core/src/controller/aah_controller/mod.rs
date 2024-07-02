@@ -104,6 +104,9 @@ impl Controller for AahController {
         )?;
         Ok(())
     }
+    fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
+        self.inner.raw_screencap()
+    }
     fn screencap(&self) -> Result<image::DynamicImage, MyError> {
         self.inner.screencap()
         // cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");

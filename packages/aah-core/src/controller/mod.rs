@@ -98,6 +98,8 @@ pub trait Controller {
         )
     }
 
+    fn raw_screencap(&self) -> Result<Vec<u8>, MyError>;
+
     fn screencap(&self) -> Result<image::DynamicImage, MyError>;
 
     fn screencap_scaled(&self) -> Result<image::DynamicImage, MyError> {
