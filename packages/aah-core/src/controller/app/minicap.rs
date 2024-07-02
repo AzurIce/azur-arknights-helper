@@ -212,7 +212,7 @@ impl App for Minicap {
                             let t = Instant::now();
                             let decoded = image::load_from_memory(&bytes).unwrap();
                             *screen_cache.lock().unwrap() = Some(decoded);
-                            cprintln!("<dim>[Minicap]: updated screen_cache, cost{:?}...</dim>", t.elapsed());
+                            cprintln!("<dim>[Minicap]: updated screen_cache, cost: {:?}</dim>", t.elapsed());
                         }
                     }
                 }
@@ -224,9 +224,9 @@ impl App for Minicap {
             .output()
             .expect("failed to forward minicap tcp port");
 
-        println!("<dim>[Minicap]: connecting to minicap tcp...</dim>");
+        cprintln!("<dim>[Minicap]: connecting to minicap tcp...</dim>");
         let mut connection = TcpStream::connect("localhost:1313").unwrap();
-        println!("<dim>[Minicap]: connected</dim>");
+        cprintln!("<dim>[Minicap]: connected</dim>");
 
         thread::spawn(move || {
             println!("<dim>[Minicap]: tcp thread started...</dim>");
