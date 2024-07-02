@@ -23,7 +23,7 @@ pub struct AahController {
     height: u32,
     res_dir: PathBuf,
 
-    minicap: Minicap,
+    // minicap: Minicap,
     // minitouch: Arc<Mutex<MiniTouch>>,
 }
 
@@ -48,7 +48,7 @@ impl AahController {
             screen.height()
         );
 
-        let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
+        // let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
         // let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
         // let minitouch = Arc::new(Mutex::new(minitouch));
 
@@ -57,7 +57,7 @@ impl AahController {
             width,
             height,
             res_dir,
-            minicap,
+            // minicap,
             // minitouch,
         };
 
@@ -105,14 +105,15 @@ impl Controller for AahController {
         Ok(())
     }
     fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");
-        match self.minicap.get_screen() {
-            Ok(screen) => Ok(screen),
-            Err(err) => {
-                cprintln!("<blue>[AahController]</blue>: failed to get screen through minicap: {err}, use adb instead...");
-                self.inner.screencap()
-            }
-        }
+        self.inner.screencap()
+        // cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");
+        // match self.minicap.get_screen() {
+        //     Ok(screen) => Ok(screen),
+        //     Err(err) => {
+        //         cprintln!("<blue>[AahController]</blue>: failed to get screen through minicap: {err}, use adb instead...");
+        //         self.inner.screencap()
+        //     }
+        // }
     }
 
     fn press_home(&self) -> Result<(), MyError> {
