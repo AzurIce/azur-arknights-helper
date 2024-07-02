@@ -31,8 +31,8 @@ pub struct AAH {
     pub task_config: TaskConfig,
     /// 由 `navigates.toml` 加载的导航配置
     pub navigate_config: NavigateConfig,
-    /// 屏幕内容的缓存
-    pub screen_cache: Option<image::DynamicImage>,
+    // /// 屏幕内容的缓存
+    // pub screen_cache: Option<image::DynamicImage>,
 }
 
 impl AAH {
@@ -55,7 +55,7 @@ impl AAH {
             controller,
             task_config,
             navigate_config,
-            screen_cache: None,
+            // screen_cache: None,
         })
     }
 
@@ -77,25 +77,26 @@ impl AAH {
     }
 
     // 更新屏幕缓存
-    pub fn update_screen(&mut self) -> Result<(), String> {
-        let screen = self
-            .controller
-            .screencap()
-            .map_err(|err| format!("{err}"))?;
-        self.screen_cache = Some(screen.clone());
-        Ok(())
-    }
+    // pub fn update_screen(&mut self) -> Result<(), String> {
+    //     let screen = self
+    //         .controller
+    //         .screencap()
+    //         .map_err(|err| format!("{err}"))?;
+    //     self.screen_cache = Some(screen.clone());
+    //     Ok(())
+    // }
 
     /// 获取缓存中的屏幕内容
     /// 如果没有缓存，就通过 [`AAH::update_screen`] 更新，然后再返回
     pub fn get_screen(&mut self) -> Result<image::DynamicImage, String> {
-        match &self.screen_cache {
-            Some(cache) => Ok(cache.clone()),
-            None => {
-                self.update_screen()?;
-                Ok(self.screen_cache.as_ref().unwrap().clone())
-            }
-        }
+        self.controller.screencap().map_err(|err| format!("{err}"))
+        // match &self.screen_cache {
+        //     Some(cache) => Ok(cache.clone()),
+        //     None => {
+        //         self.update_screen()?;
+        //         Ok(self.screen_cache.as_ref().unwrap().clone())
+        //     }
+        // }
     }
 
     /// 重新加载 resources 中的配置
@@ -151,7 +152,7 @@ mod tests {
 
         let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
 
-        aah.update_screen().unwrap();
+        // aah.update_screen().unwrap();
         let screen = aah.get_screen().unwrap();
         screen
             .save_with_format(target_path, image::ImageFormat::Png)

@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use color_print::cprintln;
 use log::{error, info};
 
 use crate::{
@@ -34,15 +35,15 @@ impl AahController {
         let res_dir = res_dir.as_ref().to_path_buf();
         let device_serial = device_serial.as_ref();
 
-        println!("[AahController]: connecting to {device_serial}...");
+        cprintln!("<blue>[AahController]</blue>: connecting to {device_serial}...");
         let device = adb::connect(device_serial)?;
-        println!("[AahController]: connected");
+        cprintln!("<blue>[AahController]</blue>: connected");
 
         let screen = device.screencap()?;
         let width = screen.width();
         let height = screen.height();
-        println!(
-            "[AahController]: device screen: {}x{}",
+        cprintln!(
+            "<blue>[AahController]</blue>: device screen: {}x{}",
             screen.width(),
             screen.height()
         );
@@ -73,7 +74,7 @@ impl Controller for AahController {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));
         }
-        info!("[Controller]: clicking ({}, {}) using minitouch", x, y);
+        cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
         self.minitouch
             .lock()
             .unwrap()
@@ -85,8 +86,8 @@ impl Controller for AahController {
     }
 
     fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError> {
-        info!(
-            "[Controller]: swiping from {:?} to {:?} for {:?}",
+        cprintln!(
+            "<blue>[AahController]</blue>: swiping from {:?} to {:?} for {:?}",
             start, end, duration
         );
         self.inner.execute_command_by_process(
@@ -103,10 +104,14 @@ impl Controller for AahController {
         Ok(())
     }
     fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        info!("[Controller]: screencapping using minitouch...");
-        self.minicap
-            .get_screen()
-            .map_err(|err| MyError::S(format!("{err}")))
+        cprintln!("<blue>[AahController]</blue>: screencapping using minitouch...");
+        match self.minicap.get_screen() {
+            Ok(screen) => Ok(screen),
+            Err(err) => {
+                cprintln!("<blue>[AahController]</blue>: failed to get screen through minicap: {err}, use adb instead...");
+                self.inner.screencap()
+            }
+        }
     }
 
     fn press_home(&self) -> Result<(), MyError> {
