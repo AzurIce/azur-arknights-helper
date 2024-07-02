@@ -1,0 +1,14 @@
+[Multi]
+fail_fast = false
+tasks = [
+    { ActionClickMatch = { match_task = { type = "Template", template = "recruitment-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "start_recruitment-light.png" }, wrapper = { delay = 2, retry = 2 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "confirm-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "start_recruitment-light.png" }, wrapper = { delay = 1, retry = 2 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "confirm-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "start_recruitment-light.png" }, wrapper = { delay = 1, retry = 2 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "confirm-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "start_recruitment-light.png" }, wrapper = { delay = 1, retry = 2 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "confirm-light.png" }, wrapper = { retry = 1 } } },
+    { ActionClickMatch = { match_task = { type = "Template", template = "back.png" }, wrapper = { retry = 1 } } },
+]
