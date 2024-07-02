@@ -74,7 +74,8 @@ impl Controller for AahController {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));
         }
-        cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
+        // cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
+        cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
         // self.minitouch
         //     .lock()
         //     .unwrap()
@@ -104,7 +105,7 @@ impl Controller for AahController {
         Ok(())
     }
     fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        cprintln!("<blue>[AahController]</blue>: screencapping using minitouch...");
+        cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");
         match self.minicap.get_screen() {
             Ok(screen) => Ok(screen),
             Err(err) => {

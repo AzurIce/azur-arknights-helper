@@ -53,7 +53,7 @@ impl Task for ActionClick {
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
             aah.controller
-                .click_scaled(self.x, self.y)
+                .click(self.x, self.y)
                 .map_err(|err| format!("controller error: {:?}", err))
         };
 

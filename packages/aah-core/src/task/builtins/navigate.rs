@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use serde::{Deserialize, Serialize};
 
 use crate::{task::Task, AAH};
@@ -11,6 +13,7 @@ pub enum Navigate {
 impl Task for Navigate {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
+        thread::sleep(Duration::from_secs_f32(0.5)); // TODO: get this elegant (refactor the structure)
         let name = match self {
             Navigate::NavigateIn(name) => name,
             Navigate::NavigateOut(name) => name,
