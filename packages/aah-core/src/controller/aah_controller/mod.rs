@@ -24,7 +24,7 @@ pub struct AahController {
     res_dir: PathBuf,
 
     minicap: Minicap,
-    minitouch: Arc<Mutex<MiniTouch>>,
+    // minitouch: Arc<Mutex<MiniTouch>>,
 }
 
 impl AahController {
@@ -49,8 +49,8 @@ impl AahController {
         );
 
         let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = Arc::new(Mutex::new(minitouch));
+        // let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
+        // let minitouch = Arc::new(Mutex::new(minitouch));
 
         let controller = Self {
             inner: device,
@@ -58,7 +58,7 @@ impl AahController {
             height,
             res_dir,
             minicap,
-            minitouch,
+            // minitouch,
         };
 
         Ok(controller)
@@ -75,13 +75,13 @@ impl Controller for AahController {
             return Err(MyError::S("coord out of screen".to_string()));
         }
         cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
-        self.minitouch
-            .lock()
-            .unwrap()
-            .click(x, y)
-            .map_err(|err| MyError::S(err))?;
-        // self.inner
-        //     .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
+        // self.minitouch
+        //     .lock()
+        //     .unwrap()
+        //     .click(x, y)
+        //     .map_err(|err| MyError::S(err))?;
+        self.inner
+            .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
         Ok(())
     }
 

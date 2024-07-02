@@ -5,7 +5,7 @@ use std::{
     sync::{
         mpsc::channel, Arc, Mutex
     },
-    thread,
+    thread::{self, sleep},
     time::Duration,
 };
 
@@ -120,6 +120,7 @@ impl App for MiniTouch {
             .stderr(Stdio::piped())
             .spawn()
             .map_err(|err| format!("{:?}", err))?;
+        sleep(Duration::from_secs_f32(0.5));
 
         let child_in = minitouch_child
             .stdin
@@ -139,6 +140,7 @@ impl App for MiniTouch {
             let state = _minitouch_state;
             let evt_rx = evt_rx;
             loop {
+                thread::sleep(Duration::from_millis(50));
                 if let Ok(evt) = evt_rx.try_recv() {
                     match evt {
                         Evt::Info {
@@ -168,13 +170,15 @@ impl App for MiniTouch {
             }
         });
 
-        let oneshot = channel::<()>();
+        let (oneshot_tx, oneshot_rx) = channel::<()>();
         // read info
         let mut reader = std::io::BufReader::new(child_err);
         thread::spawn(move || {
             let evt_tx = evt_tx;
             let cmd_rx = cmd_rx;
+            let oneshot_tx = oneshot_tx;
             loop {
+                thread::sleep(Duration::from_millis(50));
                 if let Ok(cmd) = cmd_rx.try_recv() {
                     match cmd {
                         Cmd::Stop => break,
@@ -184,12 +188,12 @@ impl App for MiniTouch {
                 let mut buf = String::new();
                 match reader.read_line(&mut buf) {
                     Err(err) => {
-                        error!("{}", err)
+                        cprintln!("[Minicap]: read error: {}", err)
                     }
                     Ok(sz) => {
                         if sz == 0 {
-                            info!("readed Ok(0)");
-                            break;
+                            // println!("readed Ok(0)");
+                            continue;
                         }
                         buf = buf
                             .replace("\r\n", "\n")
@@ -220,7 +224,7 @@ impl App for MiniTouch {
                                     max_pressure,
                                 })
                                 .unwrap();
-                            oneshot.0.send(()).unwrap();
+                            oneshot_tx.send(()).unwrap();
                         } else if buf.starts_with('$') {
                             break;
                         }
@@ -229,7 +233,7 @@ impl App for MiniTouch {
                 }
             }
         });
-        oneshot.1.recv().unwrap();
+        oneshot_rx.recv().unwrap();
         cprintln!("<dim>[Minitouch]: minitouch initialized</dim>");
         Ok(MiniTouch {
             minitouch_stdin: child_in,
@@ -358,8 +362,8 @@ mod test {
         init();
         let device = connect("127.0.0.1:16384").unwrap();
         let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
-        toucher.click(1000, 1000).unwrap();
-        thread::sleep(Duration::from_secs_f32(1.0))
+        toucher.click(822, 762).unwrap();
+        thread::sleep(Duration::from_secs_f32(3.0))
     }
 
     #[test]
