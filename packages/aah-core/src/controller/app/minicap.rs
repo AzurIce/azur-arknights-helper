@@ -78,7 +78,10 @@ impl App for Minicap {
         let abi = device.get_abi()?;
         cprintln!("<dim>[Minicap]: abi: {abi}</dim>");
         let bin_path = res_dir.join("minicap").join(&abi).join("minicap");
-        cprintln!("<dim>[Minicap]: pushing minicap from {:?}...</dim>", bin_path);
+        cprintln!(
+            "<dim>[Minicap]: pushing minicap from {:?}...</dim>",
+            bin_path
+        );
 
         let res = execute_adb_command(
             &device.serial(),
@@ -208,20 +211,24 @@ impl App for Minicap {
                             );
                         }
                         Evt::NewFrame(bytes) => {
-                            cprintln!("<dim>[Minicap]: new frame({} bytes), decoding...</dim>", bytes.len());
+                            cprintln!(
+                                "<dim>[Minicap]: new frame({} bytes), decoding...</dim>",
+                                bytes.len()
+                            );
                             let t = Instant::now();
                             let decoded = image::load_from_memory(&bytes).unwrap();
                             *screen_cache.lock().unwrap() = Some(decoded);
-                            cprintln!("<dim>[Minicap]: updated screen_cache, cost: {:?}</dim>", t.elapsed());
+                            cprintln!(
+                                "<dim>[Minicap]: updated screen_cache, cost: {:?}</dim>",
+                                t.elapsed()
+                            );
                         }
                     }
                 }
             }
         });
 
-        Command::new("adb")
-            .args(vec!["forward", "tcp:1313", "localabstract:minicap"])
-            .output()
+        execute_adb_command(&device.serial(), "forward tcp:1313 localabstract:minicap")
             .expect("failed to forward minicap tcp port");
 
         cprintln!("<dim>[Minicap]: connecting to minicap tcp...</dim>");
