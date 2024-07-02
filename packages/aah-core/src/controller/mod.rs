@@ -7,6 +7,7 @@ use crate::{adb::MyError, vision::utils::Rect};
 // pub mod adb_input_controller;
 pub mod minitouch;
 pub mod aah_controller;
+pub mod app;
 // pub use adb_input_controller::AdbInputController;
 
 /// 默认宽高
