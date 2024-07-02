@@ -3,11 +3,12 @@ use std::{
     net::TcpStream,
     path::Path,
     process::{Command, Stdio},
-    sync::{mpsc, Arc, Mutex},
+    sync::{Arc, Mutex},
     thread::{self, sleep},
     time::{Duration, Instant},
 };
 
+use color_print::cprintln;
 use image::DynamicImage;
 use log::info;
 
@@ -15,14 +16,24 @@ use crate::adb::{command::local_service::ShellCommand, utils::execute_adb_comman
 
 use super::App;
 
-#[derive(Default)]
 pub struct Minicap {
     screen_cache: Arc<Mutex<Option<DynamicImage>>>,
+    cmd_tx: crossbeam_channel::Sender<Cmd>,
+}
+
+impl Drop for Minicap {
+    fn drop(&mut self) {
+        self.cmd_tx.send(Cmd::Stop).unwrap();
+    }
 }
 
 impl Minicap {
-    pub fn get_screen(&self) -> Result<DynamicImage, String>{
-        self.screen_cache.lock().unwrap().clone().ok_or("no screen".to_string())
+    pub fn get_screen(&self) -> Result<DynamicImage, String> {
+        self.screen_cache
+            .lock()
+            .unwrap()
+            .clone()
+            .ok_or("no screen".to_string())
     }
 }
 
@@ -45,7 +56,7 @@ enum Cmd {
 
 impl App for Minicap {
     fn check(device: &crate::adb::Device) -> Result<(), String> {
-        println!("[Minicap]: checking minicap...");
+        cprintln!("<dim>[Minicap]: checking minicap...</dim>");
         let mut device_adb_stream = device
             .connect_adb_tcp_stream()
             .map_err(|err| format!("minicap failed to connect AdbTcpStream: {err}"))?;
@@ -65,9 +76,9 @@ impl App for Minicap {
         let res_dir = res_dir.as_ref();
 
         let abi = device.get_abi()?;
-        println!("{abi}");
+        cprintln!("<dim>[Minicap]: abi: {abi}</dim>");
         let bin_path = res_dir.join("minicap").join(&abi).join("minicap");
-        println!("pushing minicap from {:?}...", bin_path);
+        cprintln!("<dim>[Minicap]: pushing minicap from {:?}...</dim>", bin_path);
 
         let res = execute_adb_command(
             &device.serial(),
@@ -78,6 +89,7 @@ impl App for Minicap {
         info!("{:?}", res);
 
         let sdk = device.get_sdk()?;
+        cprintln!("<dim>[Minicap]: sdk: {sdk}</dim>");
         // minicap-shared/android-$SDK/$ABI/minicap.so
         let lib_path = res_dir
             .join("minicap-shared")
@@ -101,7 +113,7 @@ impl App for Minicap {
         execute_adb_command(&device.serial(), "shell killall minicap").unwrap();
         sleep(Duration::from_secs_f32(0.5)); // 得 sleep 一会儿
 
-        println!("[Minicap]: spawing minicap...");
+        cprintln!("<dim>[Minicap]: spawing minicap...</dim>");
         let mut minicap_child = Command::new("adb")
             .args(vec![
                 "-s",
@@ -133,20 +145,38 @@ impl App for Minicap {
             .take()
             .ok_or("cannot get stdout of minicap".to_string())?;
 
-        let (evt_tx, evt_rx) = mpsc::channel::<Evt>();
-        let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();
+        let (evt_tx, evt_rx) = crossbeam_channel::bounded::<Evt>(3);
+        let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<Cmd>();
         let screen_cache = Arc::new(Mutex::new(None));
 
         let _screen_cache = screen_cache.clone();
         let _serial = device.serial();
         thread::spawn(move || {
+            let mut reader = BufReader::new(child_out);
+            let mut buf = String::new();
+            cprintln!("<dim>[Minicap]: stdout thread started...</dim>");
+            loop {
+                match reader.read_line(&mut buf) {
+                    Ok(sz) => {
+                        if sz == 0 {
+                            continue;
+                        }
+                        cprintln!("<dim>[Minicap]: {buf}</dim>");
+                    }
+                    Err(err) => {
+                        cprintln!("<dim>[Minicap]: err: {err}</dim>");
+                        break;
+                    }
+                }
+            }
+            cprintln!("<dim>[Minicap]: exit stdout thread</dim>");
+        });
+        thread::spawn(move || {
             let cmd_rx = cmd_rx;
             let evt_rx = evt_rx;
             let screen_cache = _screen_cache;
 
-            let mut reader = BufReader::new(child_out);
-            let mut buf = String::new();
-            println!("stdout thread started...");
+            cprintln!("<dim>[Minicap]: thread started...</dim>");
             loop {
                 if let Ok(cmd) = cmd_rx.try_recv() {
                     match cmd {
@@ -167,8 +197,8 @@ impl App for Minicap {
                             flag,
                         } => {
                             // println!("header_data: {:?}", header_data);
-                            println!(
-                                "header: {}x{}@{}x{}/{} {}",
+                            cprintln!(
+                                "<dim>[Minicap]: header: {}x{}@{}x{}/{} {}</dim>",
                                 real_width,
                                 real_height,
                                 virtual_width,
@@ -178,28 +208,15 @@ impl App for Minicap {
                             );
                         }
                         Evt::NewFrame(bytes) => {
-                            println!("new frame({} bytes), decoding...", bytes.len());
+                            cprintln!("<dim>[Minicap]: new frame({} bytes), decoding...</dim>", bytes.len());
                             let t = Instant::now();
                             let decoded = image::load_from_memory(&bytes).unwrap();
                             *screen_cache.lock().unwrap() = Some(decoded);
-                            println!("updated screen_cache, cost{:?}...", t.elapsed());
+                            cprintln!("<dim>[Minicap]: updated screen_cache, cost{:?}...</dim>", t.elapsed());
                         }
-                    }
-                }
-                match reader.read_line(&mut buf) {
-                    Ok(sz) => {
-                        if sz == 0 {
-                            continue;
-                        }
-                        println!("output: {buf}");
-                    }
-                    Err(err) => {
-                        println!("err: {err}");
-                        break;
                     }
                 }
             }
-            println!("exit stdout thread");
         });
 
         Command::new("adb")
@@ -207,12 +224,12 @@ impl App for Minicap {
             .output()
             .expect("failed to forward minicap tcp port");
 
-        println!("connecting to minicap tcp...");
+        println!("<dim>[Minicap]: connecting to minicap tcp...</dim>");
         let mut connection = TcpStream::connect("localhost:1313").unwrap();
-        println!("connected");
+        println!("<dim>[Minicap]: connected</dim>");
 
         thread::spawn(move || {
-            println!("tcp thread started...");
+            println!("<dim>[Minicap]: tcp thread started...</dim>");
             let evt_tx = evt_tx;
 
             enum State {
@@ -227,7 +244,7 @@ impl App for Minicap {
             loop {
                 match connection.read(&mut buf) {
                     Err(err) => {
-                        println!("error: {:?}", err);
+                        println!("<dim>[Minicap]: tcp read error: {:?}</dim>", err);
                         break;
                     }
                     Ok(sz) => {
@@ -273,7 +290,7 @@ impl App for Minicap {
                                     let len = len.as_slice();
                                     img_len = u32::from_le_bytes([len[0], len[1], len[2], len[3]])
                                         as usize;
-                                    println!("img_len: {}", img_len);
+                                    // println!("img_len: {}", img_len);
                                     state = State::Img
                                 }
                             }
@@ -281,12 +298,13 @@ impl App for Minicap {
                                 if q.len() >= img_len {
                                     let img_data = q.drain(0..img_len);
                                     // let img_data = img_data.as_slice();
-                                    evt_tx.send(Evt::NewFrame(img_data.collect())).unwrap();
-                                    // let decoded = image::load_from_memory(img_data).unwrap();
-                                    // println!("recieved frame {}", cnt);
-                                    // decoded.save(format!("./output{cnt}.png")).unwrap();
-                                    // cnt += 1;
-                                    // *img.lock().unwrap() = Some(decoded);
+                                    if let Err(err) =
+                                        evt_tx.try_send(Evt::NewFrame(img_data.collect()))
+                                    {
+                                        if err.is_disconnected() {
+                                            break;
+                                        }
+                                    }
                                     state = State::ImgLen;
                                 }
                             }
@@ -298,7 +316,10 @@ impl App for Minicap {
 
         // read info
         // self.minicap_stdin = Some(child_in);
-        info!("minicap initialized");
-        Ok(Minicap { screen_cache })
+        cprintln!("<dim>[Minicap]: minicap initialized</dim>");
+        Ok(Minicap {
+            screen_cache,
+            cmd_tx,
+        })
     }
 }

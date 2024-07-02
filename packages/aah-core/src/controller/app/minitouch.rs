@@ -3,13 +3,13 @@ use std::{
     path::Path,
     process::{ChildStdin, Command, Stdio},
     sync::{
-        mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
+        mpsc::channel, Arc, Mutex
     },
     thread,
     time::Duration,
 };
 
+use color_print::cprintln;
 use log::{error, info};
 
 use crate::{
@@ -34,7 +34,6 @@ enum Evt {
         max_y: u32,
         max_pressure: u32,
     },
-    Ready,
 }
 
 enum Cmd {
@@ -47,7 +46,13 @@ pub struct MiniTouch {
     minitouch_stdin: ChildStdin,
     state: Arc<Mutex<MiniTouchState>>,
 
-    cmd_tx: Sender<Cmd>,
+    cmd_tx: crossbeam_channel::Sender<Cmd>,
+}
+
+impl Drop for MiniTouch {
+    fn drop(&mut self) {
+        self.cmd_tx.send(Cmd::Stop).unwrap();
+    }
 }
 
 #[derive(Default)]
@@ -71,7 +76,7 @@ impl App for MiniTouch {
             ))
             .map_err(|err| format!("minitouch test failed: {err}"))?;
 
-        println!("[Minitouch]: test output: {res}");
+        cprintln!("<dim>[Minitouch]: test output: {res}</dim>");
         if res.starts_with("Usage") {
             Ok(())
         } else {
@@ -101,7 +106,7 @@ impl App for MiniTouch {
     {
         Self::prepare(device, res_dir)?;
 
-        info!("spawning minitouch...");
+        cprintln!("<dim>[Minitouch]: spawning minitouch...</dim>");
         let mut minitouch_child = Command::new("adb")
             .args(vec![
                 "-s",
@@ -125,8 +130,8 @@ impl App for MiniTouch {
             .take()
             .ok_or("cannot get stdout of minitouch".to_string())?;
 
-        let (evt_tx, evt_rx) = mpsc::channel::<Evt>();
-        let (cmd_tx, cmd_rx) = mpsc::channel::<Cmd>();
+        let (evt_tx, evt_rx) = crossbeam_channel::unbounded::<Evt>();
+        let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<Cmd>();
         let minitouch_state = Arc::new(Mutex::new(MiniTouchState::default()));
 
         let _minitouch_state = minitouch_state.clone();
@@ -143,6 +148,14 @@ impl App for MiniTouch {
                             max_y,
                             max_pressure,
                         } => {
+                            cprintln!(
+                                "<dim>[Minitouch]: flip: {}, {} {}x{} {}",
+                                flip_xy,
+                                max_contact,
+                                max_x,
+                                max_y,
+                                max_pressure,
+                            );
                             let mut state = state.lock().unwrap();
                             state.flip_xy = flip_xy;
                             state.max_contact = max_contact;
@@ -150,15 +163,14 @@ impl App for MiniTouch {
                             state.max_y = max_y;
                             state.max_pressure = max_pressure;
                         }
-                        _ => (),
                     }
                 }
             }
         });
 
+        let oneshot = channel::<()>();
         // read info
         let mut reader = std::io::BufReader::new(child_err);
-        info!("start reading info...");
         thread::spawn(move || {
             let evt_tx = evt_tx;
             let cmd_rx = cmd_rx;
@@ -208,6 +220,7 @@ impl App for MiniTouch {
                                     max_pressure,
                                 })
                                 .unwrap();
+                            oneshot.0.send(()).unwrap();
                         } else if buf.starts_with('$') {
                             break;
                         }
@@ -216,7 +229,8 @@ impl App for MiniTouch {
                 }
             }
         });
-        info!("minitouch initialized");
+        oneshot.1.recv().unwrap();
+        cprintln!("<dim>[Minitouch]: minitouch initialized</dim>");
         Ok(MiniTouch {
             minitouch_stdin: child_in,
             state: minitouch_state,
@@ -228,7 +242,7 @@ impl App for MiniTouch {
 /// A Toucher based n [MiniTouch](https://github.com/DeviceFarmer/minitouch)
 impl MiniTouch {
     fn write_command(&mut self, command: &str) -> Result<(), String> {
-        info!("writing command: {}", command);
+        // println!("writing command: {:?}", command);
         let mut command = command.to_string();
         if !command.ends_with('\n') {
             command.push('\n');
@@ -337,24 +351,6 @@ mod test {
 
     fn init() {
         let _ = env_logger::builder().is_test(true).try_init();
-        env::set_current_dir(Path::new("../../../../")).unwrap();
-    }
-
-    #[test]
-    fn test_controller() {
-        init();
-        let controller =
-            MiniTouchController::connect("127.0.0.1:16384").expect("failed to connect to device");
-        controller.screencap().expect("failed to cap the screen");
-    }
-
-    use std::{env, path::Path};
-
-    #[test]
-    fn test() {
-        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
-        // let s = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
-        // let s2 = AdbTcpStream::connect_device("127.0.0.1:16384").unwrap();
     }
 
     #[test]
@@ -363,6 +359,7 @@ mod test {
         let device = connect("127.0.0.1:16384").unwrap();
         let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
         toucher.click(1000, 1000).unwrap();
+        thread::sleep(Duration::from_secs_f32(1.0))
     }
 
     #[test]
@@ -372,12 +369,13 @@ mod test {
         let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
         toucher
             .swipe(
-                (2560, 720),
+                (1280, 720),
                 (-100, 720),
                 Duration::from_millis(200),
                 2.0,
                 0.0,
             )
             .unwrap();
+        thread::sleep(Duration::from_secs_f32(2.0))
     }
 }
