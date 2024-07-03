@@ -1,26 +1,26 @@
 use serde::Serialize;
 
-use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::best_matcher::BestMatcher, utils::Rect}, AAH};
+use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::single_matcher::SingleMatcher, utils::Rect}, AAH};
 
 use super::Analyzer;
 
 #[derive(Debug, Serialize)]
-pub struct BestMatchAnalyzerOutput {
+pub struct SingleMatchAnalyzerOutput {
     pub rect: Rect,
 }
 
-pub struct BestMatchAnalyzer {
+pub struct SingleMatchAnalyzer {
     template_filename: String,
 }
 
-impl BestMatchAnalyzer {
+impl SingleMatchAnalyzer {
     pub fn new(template_filename: String) -> Self {
         Self { template_filename }
     }
 }
 
-impl Analyzer for BestMatchAnalyzer {
-    type Output = BestMatchAnalyzerOutput;
+impl Analyzer for SingleMatchAnalyzer {
+    type Output = SingleMatchAnalyzerOutput;
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
         // Make sure that we are in the operation-start page
         println!(
@@ -61,7 +61,7 @@ impl Analyzer for BestMatchAnalyzer {
             template
         };
 
-        let res = BestMatcher::Template {
+        let res = SingleMatcher::Template {
             image,
             template,
             threshold: None,

@@ -5,7 +5,7 @@ use crate::AAH;
 pub mod depot;
 // pub mod squad;
 pub mod deploy;
-pub mod best_match;
+pub mod single_match;
 pub mod multi_match;
 
 /// [`Analyzer`] 接收图像，返回分析结果 [`Analyzer::Output`]

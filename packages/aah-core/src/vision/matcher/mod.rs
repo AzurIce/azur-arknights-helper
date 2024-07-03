@@ -1,4 +1,4 @@
-pub mod best_matcher;
+pub mod single_matcher;
 pub mod multi_matcher;
 
 use std::error::Error;

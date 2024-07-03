@@ -126,7 +126,7 @@ impl AAH {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{path::Path, thread::sleep, time::Duration};
 
     use super::*;
 
@@ -136,14 +136,12 @@ mod tests {
         println!("{:?}", aah.get_tasks());
     }
 
-    fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(path: P, name: S) {
+    fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(aah: &mut AAH, path: P, name: S) {
         let path = path.as_ref();
         let name = name.as_ref();
 
         let target_path = path.join(name);
         println!("saving screenshot to {:?}", target_path);
-
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
 
         // aah.update_screen().unwrap();
         let screen = aah.get_screen().unwrap();
@@ -154,7 +152,7 @@ mod tests {
 
     #[test]
     fn foo() {
-        // let aah = Mutex::new(AAH::connect("127.0.0.1:16384", "../../resources").unwrap());
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");
@@ -162,7 +160,11 @@ mod tests {
         // save_screenshot(dir, "main.png");
         // save_screenshot(dir, "confirm.png");
         // save_screenshot(dir, "operation-start.png");
-        save_screenshot(dir, "formation.png");
+        let dir = "/Volumes/Data/Dev/AahAI/dataset/1-4/img";
+        for i in 0..40 {
+            save_screenshot(&mut aah, dir, format!("{i}.png"));
+            sleep(Duration::from_secs_f32(0.2))
+        }
         // let dir = "../aah-resource/assets";
         // save_screenshot(dir, "LS-6_1.png");
     }

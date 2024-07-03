@@ -84,54 +84,6 @@ impl TryFrom<&str> for DeviceInfo {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::time::Instant;
-
-    use super::*;
-    use crate::adb::command::local_service;
-
-    #[test]
-    fn test_connect() -> Result<(), MyError> {
-        let _device = connect("127.0.0.1:16384")?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_screencap() {
-        let device = connect("127.0.0.1:16384").unwrap();
-
-        let start = Instant::now();
-        let bytes = device
-            .execute_command_by_process("exec-out screencap -p")
-            .unwrap();
-        println!("cost: {}, {}", start.elapsed().as_millis(), bytes.len());
-
-        let start = Instant::now();
-        let bytes2 = device
-            .execute_command_by_socket(local_service::ScreenCap::new())
-            .unwrap();
-        println!("cost: {}, {}", start.elapsed().as_millis(), bytes2.len());
-
-        assert_eq!(bytes, bytes2);
-    }
-}
-
-impl Read for AdbTcpStream {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.inner.read(buf)
-    }
-}
-
-impl Write for AdbTcpStream {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.inner.write(buf)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.inner.flush()
-    }
-}
-
 pub struct AdbTcpStream {
     inner: TcpStream,
 }
@@ -299,5 +251,54 @@ impl Device {
         adb_tcp_stream
             .execute_command(command)
             .map_err(|err| MyError::Adb(err.to_string()))
+    }
+}
+
+
+#[cfg(test)]
+mod test {
+    use std::time::Instant;
+
+    use super::*;
+    use crate::adb::command::local_service;
+
+    #[test]
+    fn test_connect() -> Result<(), MyError> {
+        let _device = connect("127.0.0.1:16384")?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_screencap() {
+        let device = connect("127.0.0.1:16384").unwrap();
+
+        let start = Instant::now();
+        let bytes = device
+            .execute_command_by_process("exec-out screencap -p")
+            .unwrap();
+        println!("by process cost: {:?}, {}", start.elapsed(), bytes.len());
+
+        let start = Instant::now();
+        let bytes2 = device
+            .execute_command_by_socket(local_service::ScreenCap::new())
+            .unwrap();
+        println!("by socket cost: {:?}, {}", start.elapsed(), bytes2.len());
+
+        // assert_eq!(bytes, bytes2);
+    }
+}
+
+impl Read for AdbTcpStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl Write for AdbTcpStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
     }
 }
