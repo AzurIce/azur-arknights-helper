@@ -14,6 +14,12 @@ pub enum MatchTask {
     Template(String), // template_filename
     Ocr(String),      // text
 }
+
+#[cfg(test)]
+mod test {
+    
+}
+
 // TODO: add optional roi field
 
 impl Task for MatchTask {

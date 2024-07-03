@@ -7,6 +7,7 @@ name = "aah-core"
 version = "0.1.0"
 dependencies = [
  "aah-cv",
+ "aah-resource",
  "color-print",
  "crossbeam-channel",
  "env_logger",
@@ -17,6 +18,7 @@ dependencies = [
  "ndarray",
  "nshare",
  "rand 0.8.5",
+ "regex",
  "reqwest",
  "rten",
  "rten-tensor",
