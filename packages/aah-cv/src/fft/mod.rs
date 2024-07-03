@@ -457,6 +457,7 @@ mod test {
     #[test]
     pub fn test_gpu_fft() {
         test_gpu_fft_with_size(65536);
+        // test_gpu_fft_with_size(1280 * 720);
     }
 }
 

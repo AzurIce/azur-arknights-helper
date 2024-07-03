@@ -10,7 +10,7 @@ use crate::vision::{
 };
 
 /// 匹配器，目前只实现了模板匹配
-pub enum BestMatcher {
+pub enum SingleMatcher {
     Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
@@ -23,7 +23,7 @@ pub enum BestMatcher {
     // },
 }
 
-impl BestMatcher {
+impl SingleMatcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> Option<Rect> {
         let log_tag = cformat!("[BestMatcher::TemplateMatcher]: ");
@@ -128,12 +128,12 @@ mod test {
 
     use crate::vision::matcher::test::{get_device_image, get_device_template_prepared, Device};
 
-    use super::BestMatcher;
+    use super::SingleMatcher;
 
     #[test]
     fn test_devices() {
         test_device_match(Device::MUMU);
-        // test_device(Device::P40Pro);
+        // test_device_match(Device::P40Pro);
     }
 
     fn test_device_match(device: Device) {
@@ -148,7 +148,7 @@ mod test {
         test_device_best_match(device, "main.png", "main_squads.png");
         test_device_best_match(device, "main.png", "main_recruit.png");
 
-        test_device_best_match(device, "notice.png", "close.png");
+        test_device_best_match(device, "notice.png", "notice_close.png");
         test_device_best_match(device, "mission.png", "back.png");
 
         // fail
@@ -173,7 +173,7 @@ mod test {
 
         let image = get_device_image(device, image_filename).unwrap();
         let template = get_device_template_prepared(device, template_filename).unwrap();
-        let res = BestMatcher::Template {
+        let res = SingleMatcher::Template {
             image: image.to_luma32f(),
             template: template.to_luma32f(),
             threshold: None,

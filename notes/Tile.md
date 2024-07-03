@@ -117,3 +117,21 @@ inline matrix4x4 camera_matrix_from_trans(
 }
 ```
 
+
+
+
+
+```cpp
+inline auto get_retreat_screen_pos(const Level& level)
+{
+    const vec3d relative_pos = { -rel_pos_x, +rel_pos_y, rel_pos_z };
+    return world_to_screen(level, relative_pos, true);
+}
+
+inline auto get_skill_screen_pos(const Level& level)
+{
+    const vec3d relative_pos = { +rel_pos_x, -rel_pos_y, rel_pos_z };
+    return world_to_screen(level, relative_pos, true);
+}
+```
+

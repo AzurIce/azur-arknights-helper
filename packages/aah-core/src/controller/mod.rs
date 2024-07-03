@@ -31,10 +31,9 @@ struct RawScreenPos {
 //     }
 // }
 
-/// [`Controller`] 承担着设备操作相关的事情，如点击、滑动、截图
-/// 实现了两种 [`Controller`]：
-/// - [`AdbInputController`] 使用 adb input 命令
-/// - [`MiniTouchController`] 使用 minitouch
+/// [`Controller`] 承担着设备操作相关的事情，如触控、截图
+/// 所有 [`Controller`]：
+/// - [`AdbInputController`] 基于 adb 命令进行触控与截图
 pub trait Controller {
     fn screen_size(&self) -> (u32, u32);
     /// A scale factor from the device's resolution to 1920x1080

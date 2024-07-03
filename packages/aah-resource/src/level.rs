@@ -1,7 +1,7 @@
 use std::{fs, path::Path};
 
 use crate::utils::{camera_euler_angles_xyz, world_to_screen};
-use nalgebra as na;
+use nalgebra::{self as na, Vector3};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
@@ -83,7 +83,7 @@ impl Level {
         )
     }
 
-    /// 计算 `tile_pos` 中心点在屏幕中的位置
+    /// 计算 `(y, x)` 地块中心点在屏幕中的位置
     pub fn calc_tile_screen_pos(&self, y: u32, x: u32, side: bool) -> (f32, f32) {
         let width = 1920.0;
         let height = 1080.0;
@@ -91,6 +91,31 @@ impl Level {
         let camera_euler = camera_euler_angles_xyz(side);
         let world_pos = self.tile_world_pos(y, x);
         world_to_screen(camera_pos, camera_euler, world_pos, width, height)
+    }
+
+    const REL_POS: Vector3<f32> =
+        Vector3::new(1.3143386840820312, 1.314337134361267, -0.3967874050140381);
+
+    /// 计算干员的撤退按钮在屏幕中的位置
+    pub fn get_retreat_screen_pos(&self) {
+        let width = 1920.0;
+        let height = 1080.0;
+        let camera_pos = self.camera_pos(true, width, height);
+        let camera_euler = camera_euler_angles_xyz(true);
+
+        let pos = Vector3::new(-Self::REL_POS.x, Self::REL_POS.y, Self::REL_POS.z);
+        world_to_screen(camera_pos, camera_euler, pos, width, height);
+    }
+
+    /// 计算干员的技能按钮在屏幕中的位置
+    pub fn get_skill_screen_pos(&self) {
+        let width = 1920.0;
+        let height = 1080.0;
+        let camera_pos = self.camera_pos(true, width, height);
+        let camera_euler = camera_euler_angles_xyz(true);
+
+        let pos = Vector3::new(Self::REL_POS.x, -Self::REL_POS.y, Self::REL_POS.z);
+        world_to_screen(camera_pos, camera_euler, pos, width, height);
     }
 }
 
