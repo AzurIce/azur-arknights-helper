@@ -1,6 +1,15 @@
+# Copilot & BattleFormation
+
+
+
+## Copilot
+
+1. NotUsePrts 关闭代理
+2. 
+
+
+
 首先识别 BattleStartAll
-
-
 
 ```json
 "BattleStartAll": {

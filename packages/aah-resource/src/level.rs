@@ -1,7 +1,32 @@
+use std::{fs, path::Path};
+
 use crate::utils::{camera_euler_angles_xyz, world_to_screen};
 use nalgebra as na;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+
+/// get the level data through level code
+pub fn get_level<S: AsRef<str>, P: AsRef<Path>>(code: S, level_filepath: P) -> Option<Level> {
+    let code = code.as_ref();
+    let levels = fs::read_to_string(level_filepath).unwrap();
+    let levels = serde_json::from_str::<serde_json::Value>(&levels).unwrap();
+    let level = levels
+        .as_array()
+        .unwrap()
+        .into_iter()
+        .find(|level| {
+            level
+                .as_object()
+                .unwrap()
+                .get("code")
+                .unwrap()
+                .as_str()
+                .unwrap()
+                == code
+        })
+        .and_then(|v| serde_json::from_value(v.clone()).ok());
+    level
+}
 
 pub struct TilePos {
     pub y: u32,
@@ -166,7 +191,7 @@ mod test {
                     tile_screen_pos.1.round() as u32,
                 );
                 if x < image.width() && y < image.height() {
-                  image.put_pixel(x, y, Rgba([0, 255, 0, 255]))
+                    image.put_pixel(x, y, Rgba([0, 255, 0, 255]))
                 }
             }
         }
@@ -192,7 +217,12 @@ mod test {
         }
     }
 
-    fn crop_direction_box(image: &DynamicImage, level: &Level, y: u32, x: u32) -> image::DynamicImage {
+    fn crop_direction_box(
+        image: &DynamicImage,
+        level: &Level,
+        y: u32,
+        x: u32,
+    ) -> image::DynamicImage {
         let tile_screen_pos = level.calc_tile_screen_pos(y, x, false);
         let (x, y) = (
             tile_screen_pos.0.round() as u32 - 48,
@@ -205,24 +235,56 @@ mod test {
     fn cut() {
         let level = serde_json::from_str::<Level>(&LS_6).unwrap();
         let image = image::open("./assets/LS-6_0.png").unwrap();
-        crop_direction_box(&image, &level, 2, 3).save("./assets/output/LS-6_0_left0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_0_right0.png").unwrap();
-        crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_0_left1.png").unwrap();
-        crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_0_up0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 5).save("./assets/output/LS-6_0_right1.png").unwrap();
-        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_0_right2.png").unwrap();
-        crop_direction_box(&image, &level, 5, 5).save("./assets/output/LS-6_0_right3.png").unwrap();
-        crop_direction_box(&image, &level, 4, 6).save("./assets/output/LS-6_0_left2.png").unwrap();
+        crop_direction_box(&image, &level, 2, 3)
+            .save("./assets/output/LS-6_0_left0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 3, 3)
+            .save("./assets/output/LS-6_0_right0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 3)
+            .save("./assets/output/LS-6_0_left1.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 5, 3)
+            .save("./assets/output/LS-6_0_up0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 3, 5)
+            .save("./assets/output/LS-6_0_right1.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 5)
+            .save("./assets/output/LS-6_0_right2.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 5, 5)
+            .save("./assets/output/LS-6_0_right3.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 6)
+            .save("./assets/output/LS-6_0_left2.png")
+            .unwrap();
 
         let image = image::open("./assets/LS-6_1.png").unwrap();
-        crop_direction_box(&image, &level, 2, 3).save("./assets/output/LS-6_1_left0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 3).save("./assets/output/LS-6_1_right0.png").unwrap();
-        crop_direction_box(&image, &level, 4, 3).save("./assets/output/LS-6_1_left1.png").unwrap();
-        crop_direction_box(&image, &level, 5, 3).save("./assets/output/LS-6_1_up0.png").unwrap();
-        crop_direction_box(&image, &level, 3, 5).save("./assets/output/LS-6_1_right1.png").unwrap();
-        crop_direction_box(&image, &level, 4, 5).save("./assets/output/LS-6_1_right2.png").unwrap();
-        crop_direction_box(&image, &level, 5, 5).save("./assets/output/LS-6_1_right3.png").unwrap();
-        crop_direction_box(&image, &level, 4, 6).save("./assets/output/LS-6_1_left2.png").unwrap();
+        crop_direction_box(&image, &level, 2, 3)
+            .save("./assets/output/LS-6_1_left0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 3, 3)
+            .save("./assets/output/LS-6_1_right0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 3)
+            .save("./assets/output/LS-6_1_left1.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 5, 3)
+            .save("./assets/output/LS-6_1_up0.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 3, 5)
+            .save("./assets/output/LS-6_1_right1.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 5)
+            .save("./assets/output/LS-6_1_right2.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 5, 5)
+            .save("./assets/output/LS-6_1_right3.png")
+            .unwrap();
+        crop_direction_box(&image, &level, 4, 6)
+            .save("./assets/output/LS-6_1_left2.png")
+            .unwrap();
     }
 
     #[test]

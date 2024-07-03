@@ -162,7 +162,7 @@ mod tests {
         // save_screenshot(dir, "main.png");
         // save_screenshot(dir, "confirm.png");
         // save_screenshot(dir, "operation-start.png");
-        save_screenshot(dir, "qiandao.png");
+        save_screenshot(dir, "formation.png");
         // let dir = "../aah-resource/assets";
         // save_screenshot(dir, "LS-6_1.png");
     }

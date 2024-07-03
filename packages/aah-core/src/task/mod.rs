@@ -3,6 +3,7 @@ use crate::AAH;
 pub mod builtins;
 pub mod match_task;
 pub mod wrapper;
+pub mod copilot;
 
 pub trait Task {
     type Res = ();
