@@ -86,9 +86,11 @@ impl App for MiniTouch {
         )
         .map_err(|err| format!("minitouch push failed: {:?}", err))?;
         println!("{:?}", String::from_utf8(res));
+        sleep(Duration::from_millis(200));
         let res = execute_adb_command(&device.serial(), "chmod +x /data/local/tmp/minitouch")
             .map_err(|err| format!("minitouch push failed: {:?}", err))?;
         println!("{:?}", String::from_utf8(res));
+        sleep(Duration::from_millis(200));
         Ok(())
     }
 
