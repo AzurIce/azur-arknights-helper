@@ -91,7 +91,7 @@ mod test {
 
     #[test]
     fn foo() {
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let task = task();
         task.run(&aah).unwrap();
     }

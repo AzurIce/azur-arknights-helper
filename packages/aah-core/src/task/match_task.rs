@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    vision::{analyzer::{single_match::SingleMatchAnalyzer, Analyzer}, utils::Rect},
+    vision::{
+        analyzer::{single_match::SingleMatchAnalyzer, Analyzer},
+        utils::Rect,
+    },
     AAH,
 };
 
@@ -15,9 +18,7 @@ pub enum MatchTask {
 }
 
 #[cfg(test)]
-mod test {
-    
-}
+mod test {}
 
 // TODO: add optional roi field
 
@@ -31,8 +32,13 @@ impl Task for MatchTask {
             Self::Template(template_filename) => {
                 let mut analyzer = SingleMatchAnalyzer::new(template_filename.to_string());
                 let output = analyzer.analyze(aah)?;
-                aah.emit_task_evt(TaskEvt::Log(format!("[SingleMatchAnalyzer]: {:?}", output.res.rect)));
+
+                aah.emit_task_evt(TaskEvt::Log(format!(
+                    "[SingleMatchAnalyzer]: {:?}",
+                    output.res.rect
+                )));
                 aah.emit_task_evt(TaskEvt::AnnotatedImg(*output.annotated_screen));
+
                 output.res.rect
             }
             Self::Ocr(text) => {
@@ -49,7 +55,8 @@ impl Task for MatchTask {
                 //     return Err("".to_string());
                 // }
             }
-        }.ok_or("match failed".to_string());
+        }
+        .ok_or("match failed".to_string());
 
         res
     }

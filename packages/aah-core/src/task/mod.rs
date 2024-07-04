@@ -3,9 +3,9 @@ use image::DynamicImage;
 use crate::AAH;
 
 pub mod builtins;
+pub mod copilot;
 pub mod match_task;
 pub mod wrapper;
-pub mod copilot;
 
 pub trait Task {
     type Res = ();
@@ -14,10 +14,10 @@ pub trait Task {
 }
 
 /// 任务事件
-/// 
+///
 /// - `Log(String)`: log 信息
 /// - `Img(DynamicImage)`: 标记过的图片
 pub enum TaskEvt {
     Log(String),
-    AnnotatedImg(DynamicImage)
+    AnnotatedImg(DynamicImage),
 }

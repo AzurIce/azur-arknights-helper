@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        Task, 
+        Task,
     },
     AAH,
 };

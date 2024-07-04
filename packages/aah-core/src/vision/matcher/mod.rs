@@ -1,5 +1,5 @@
-pub mod single_matcher;
 pub mod multi_matcher;
+pub mod single_matcher;
 
 use std::error::Error;
 

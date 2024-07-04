@@ -195,8 +195,9 @@ impl Device {
     }
     pub fn get_sdk(&self) -> Result<String, String> {
         let mut device_adb_stream = AdbTcpStream::connect_device(&self.serial)?;
-        let res = device_adb_stream
-            .execute_command(ShellCommand::new("getprop ro.build.version.sdk".to_string()));
+        let res = device_adb_stream.execute_command(ShellCommand::new(
+            "getprop ro.build.version.sdk".to_string(),
+        ));
         res.map(|s| s.strip_suffix("\n").unwrap_or(&s).to_string())
     }
 
@@ -253,7 +254,6 @@ impl Device {
             .map_err(|err| MyError::Adb(err.to_string()))
     }
 }
-
 
 #[cfg(test)]
 mod test {

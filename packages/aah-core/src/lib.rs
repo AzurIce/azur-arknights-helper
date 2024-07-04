@@ -66,10 +66,7 @@ impl AAH {
     /// 运行名为 `name` 的任务
     ///
     /// - `name`: 任务名称
-    pub fn run_task<S: AsRef<str>>(
-        &self,
-        name: S,
-    ) -> Result<(), String> {
+    pub fn run_task<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
         let task = self
@@ -143,14 +140,19 @@ impl AAH {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::Path, sync::{Mutex, OnceLock}, thread::sleep, time::Duration};
+    use std::{
+        path::Path,
+        sync::{Mutex, OnceLock},
+        thread::sleep,
+        time::Duration,
+    };
 
     use super::*;
 
     #[test]
     fn test_get_tasks() {
-        let s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        // let s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         println!("{:?}", aah.get_tasks());
     }
 
@@ -170,7 +172,7 @@ mod tests {
 
     #[test]
     fn foo() {
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");

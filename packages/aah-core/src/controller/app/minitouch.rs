@@ -2,9 +2,7 @@ use std::{
     io::{BufRead, Write},
     path::Path,
     process::{ChildStdin, Command, Stdio},
-    sync::{
-        mpsc::channel, Arc, Mutex
-    },
+    sync::{mpsc::channel, Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };

@@ -30,7 +30,7 @@ pub fn average_hsv_v(image: &DynamicImage) -> u8 {
 
 pub fn binarize_image(image: &DynamicImage, threshold: u8) -> DynamicImage {
     let mut image = image.to_luma8();
-    for (x, y, pixel) in image.enumerate_pixels_mut() {
+    for (_, _, pixel) in image.enumerate_pixels_mut() {
         let Luma([gray]) = *pixel;
 
         let binary_value = if gray >= threshold { 255u8 } else { 0u8 };

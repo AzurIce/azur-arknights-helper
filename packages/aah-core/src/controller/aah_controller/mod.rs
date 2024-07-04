@@ -22,7 +22,6 @@ pub struct AahController {
     width: u32,
     height: u32,
     res_dir: PathBuf,
-
     // minicap: Minicap,
     // minitouch: Arc<Mutex<MiniTouch>>,
 }
@@ -89,7 +88,9 @@ impl Controller for AahController {
     fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError> {
         cprintln!(
             "<blue>[AahController]</blue>: swiping from {:?} to {:?} for {:?}",
-            start, end, duration
+            start,
+            end,
+            duration
         );
         self.inner.execute_command_by_process(
             format!(
