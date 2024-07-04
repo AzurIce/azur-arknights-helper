@@ -3,11 +3,13 @@
 
 use std::{
     error::Error,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, sync::Mutex,
 };
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
+use ocrs::{OcrEngine, OcrEngineParams};
+use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
     deploy::{DeployAnalyzer, DeployAnalyzerOutput},
@@ -34,6 +36,23 @@ pub struct AAH {
     // /// 屏幕内容的缓存
     // pub screen_cache: Option<image::DynamicImage>,
     on_task_evt: Box<dyn Fn(TaskEvt) + Sync + Send>,
+    ocr_engine: OcrEngine,
+}
+
+pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
+    let res_dir = res_dir.as_ref();
+    let detection_model_path = res_dir.join("models").join("ocrs").join("text-detection.rten");
+    let rec_model_path = res_dir.join("models").join("ocrs").join("text-recognition.rten");
+
+    let detection_model = Model::load_file(detection_model_path).unwrap();
+    let recognition_model = Model::load_file(rec_model_path).unwrap();
+
+    let engine = OcrEngine::new(OcrEngineParams {
+        detection_model: Some(detection_model),
+        recognition_model: Some(recognition_model),
+        ..Default::default()
+    }).unwrap();
+    engine
 }
 
 impl AAH {
@@ -53,6 +72,8 @@ impl AAH {
             .map_err(|err| format!("navigate config not found: {err}"))?;
         // let controller = Box::new(AdbInputController::connect(serial)?);
         let controller = Box::new(AahController::connect(serial, &res_dir)?);
+
+        let ocr_engine = init_ocr_engine(&res_dir);
         Ok(Self {
             res_dir,
             controller,
@@ -60,6 +81,7 @@ impl AAH {
             navigate_config,
             on_task_evt: Box::new(on_task_evt),
             // screen_cache: None,
+            ocr_engine
         })
     }
 
@@ -151,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_get_tasks() {
-        // let s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
+        static s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
         let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         println!("{:?}", aah.get_tasks());
     }
