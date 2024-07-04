@@ -23,7 +23,7 @@ pub struct AahController {
     height: u32,
     res_dir: PathBuf,
     // minicap: Minicap,
-    // minitouch: Arc<Mutex<MiniTouch>>,
+    minitouch: Arc<Mutex<MiniTouch>>,
 }
 
 impl AahController {
@@ -48,8 +48,8 @@ impl AahController {
         );
 
         // let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        // let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        // let minitouch = Arc::new(Mutex::new(minitouch));
+        let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
+        let minitouch = Arc::new(Mutex::new(minitouch));
 
         let controller = Self {
             inner: device,
@@ -57,7 +57,7 @@ impl AahController {
             height,
             res_dir,
             // minicap,
-            // minitouch,
+            minitouch,
         };
 
         Ok(controller)
@@ -92,17 +92,29 @@ impl Controller for AahController {
             end,
             duration
         );
-        self.inner.execute_command_by_process(
-            format!(
-                "shell input swipe {} {} {} {} {}",
-                start.0,
-                start.1,
-                end.0,
-                end.1,
-                duration.as_millis()
+        self.minitouch
+            .lock()
+            .unwrap()
+            .swipe(
+                start,
+                end,
+                duration,
+                2.0,
+                0.0,
             )
-            .as_str(),
-        )?;
+            .unwrap();
+
+        // self.inner.execute_command_by_process(
+        //     format!(
+        //         "shell input swipe {} {} {} {} {}",
+        //         start.0,
+        //         start.1,
+        //         end.0,
+        //         end.1,
+        //         duration.as_millis()
+        //     )
+        //     .as_str(),
+        // )?;
         Ok(())
     }
     fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
@@ -137,12 +149,23 @@ impl Controller for AahController {
 mod test {
     use std::{io::Read, net::TcpStream, thread::sleep, time::Duration};
 
+    use crate::controller::Controller;
+
     use super::AahController;
 
     #[test]
     fn test_minicaper() {
         let controller = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
         sleep(Duration::from_secs(4));
+    }
+
+    #[test]
+    fn test_swipe() {
+        let controller = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
+        controller
+            .swipe((640, 360), (100, 360), Duration::from_secs_f32(0.7))
+            .unwrap();
+        sleep(Duration::from_secs(10));
     }
 
     #[test]

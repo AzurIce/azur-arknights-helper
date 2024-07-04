@@ -9,6 +9,7 @@ use std::{
 
 use color_print::cprintln;
 use log::{error, info};
+use rten::ops::MaxPool;
 
 use crate::{
     adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
@@ -24,16 +25,6 @@ pub enum Direction {
     Right,
 }
 
-enum Evt {
-    Info {
-        flip_xy: bool,
-        max_contact: u32,
-        max_x: u32,
-        max_y: u32,
-        max_pressure: u32,
-    },
-}
-
 enum Cmd {
     Stop,
 }
@@ -42,7 +33,7 @@ enum Cmd {
 /// If disconnected during using, it should be reconstructed
 pub struct MiniTouch {
     minitouch_stdin: ChildStdin,
-    state: Arc<Mutex<MiniTouchState>>,
+    state: MiniTouchState,
 
     cmd_tx: crossbeam_channel::Sender<Cmd>,
 }
@@ -124,57 +115,79 @@ impl App for MiniTouch {
             .stdin
             .take()
             .ok_or("cannot get stdin of minitouch".to_string())?;
-        let child_err = minitouch_child
+        let child_out = minitouch_child
             .stderr
             .take()
             .ok_or("cannot get stdout of minitouch".to_string())?;
 
-        let (evt_tx, evt_rx) = crossbeam_channel::unbounded::<Evt>();
         let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<Cmd>();
-        let minitouch_state = Arc::new(Mutex::new(MiniTouchState::default()));
 
-        let _minitouch_state = minitouch_state.clone();
-        thread::spawn(move || {
-            let state = _minitouch_state;
-            let evt_rx = evt_rx;
-            loop {
-                thread::sleep(Duration::from_millis(50));
-                if let Ok(evt) = evt_rx.try_recv() {
-                    match evt {
-                        Evt::Info {
+        let mut minitouch_state = MiniTouchState::default();
+        // read info
+        let mut reader = std::io::BufReader::new(child_out);
+        loop {
+            let mut buf = String::new();
+            match reader.read_line(&mut buf) {
+                Err(err) => {
+                    cprintln!("<dim>[Minicap]: read error: {}</dim>", err);
+                    return Err("failed to read minitouch info".to_string())
+                }
+                Ok(sz) => {
+                    if sz == 0 {
+                        // println!("readed Ok(0)");
+                        continue;
+                    }
+                    buf = buf
+                        .replace("\r\n", "\n")
+                        .strip_suffix("\n")
+                        .unwrap()
+                        .to_string();
+                    info!("readed info: {}", buf);
+                    if buf.starts_with('^') {
+                        let params = &buf.split(' ').skip(1).collect::<Vec<&str>>();
+                        let max_contact = u32::from_str_radix(params[0], 10).unwrap();
+                        let max_size1 = u32::from_str_radix(params[1], 10).unwrap();
+                        let max_size2 = u32::from_str_radix(params[2], 10).unwrap();
+                        let max_pressure = u32::from_str_radix(params[3], 10).unwrap();
+
+                        let mut flip_xy = false;
+                        let (max_x, max_y) = if max_size1 > max_size2 {
+                            (max_size1, max_size2)
+                        } else {
+                            flip_xy = true;
+                            (max_size2, max_size1)
+                        };
+
+                        minitouch_state = MiniTouchState {
                             flip_xy,
                             max_contact,
                             max_x,
                             max_y,
                             max_pressure,
-                        } => {
-                            cprintln!(
-                                "<dim>[Minitouch]: flip: {}, {} {}x{} {}",
-                                flip_xy,
-                                max_contact,
-                                max_x,
-                                max_y,
-                                max_pressure,
-                            );
-                            let mut state = state.lock().unwrap();
-                            state.flip_xy = flip_xy;
-                            state.max_contact = max_contact;
-                            state.max_x = max_x;
-                            state.max_y = max_y;
-                            state.max_pressure = max_pressure;
-                        }
+                        };
+                        // minitouch_state.flip_xy = flip_xy;
+                        // minitouch_state.max_contact = max_contact;
+                        // minitouch_state.max_x = max_x;
+                        // minitouch_state.max_y = max_y;
+                        // minitouch_state.max_pressure = max_pressure;
+                        cprintln!(
+                            "<dim>[MiniTouch]: flip: {}, {} {}x{} {}</dim>",
+                            flip_xy,
+                            max_contact,
+                            max_x,
+                            max_y,
+                            max_pressure
+                        );
+                    } else if buf.starts_with('$') {
+                        break;
                     }
                 }
             }
-        });
+        }
 
-        let (oneshot_tx, oneshot_rx) = channel::<()>();
-        // read info
-        let mut reader = std::io::BufReader::new(child_err);
         thread::spawn(move || {
-            let evt_tx = evt_tx;
             let cmd_rx = cmd_rx;
-            let oneshot_tx = oneshot_tx;
+
             loop {
                 thread::sleep(Duration::from_millis(50));
                 if let Ok(cmd) = cmd_rx.try_recv() {
@@ -182,56 +195,8 @@ impl App for MiniTouch {
                         Cmd::Stop => break,
                     };
                 }
-
-                let mut buf = String::new();
-                match reader.read_line(&mut buf) {
-                    Err(err) => {
-                        cprintln!("[Minicap]: read error: {}", err)
-                    }
-                    Ok(sz) => {
-                        if sz == 0 {
-                            // println!("readed Ok(0)");
-                            continue;
-                        }
-                        buf = buf
-                            .replace("\r\n", "\n")
-                            .strip_suffix("\n")
-                            .unwrap()
-                            .to_string();
-                        info!("readed info: {}", buf);
-                        if buf.starts_with('^') {
-                            let params = &buf.split(' ').skip(1).collect::<Vec<&str>>();
-                            let max_contact = u32::from_str_radix(params[0], 10).unwrap();
-                            let max_size1 = u32::from_str_radix(params[1], 10).unwrap();
-                            let max_size2 = u32::from_str_radix(params[2], 10).unwrap();
-                            let max_pressure = u32::from_str_radix(params[3], 10).unwrap();
-
-                            let mut flip_xy = false;
-                            let (max_x, max_y) = if max_size1 > max_size2 {
-                                (max_size1, max_size2)
-                            } else {
-                                flip_xy = true;
-                                (max_size2, max_size1)
-                            };
-                            evt_tx
-                                .send(Evt::Info {
-                                    flip_xy,
-                                    max_contact,
-                                    max_x,
-                                    max_y,
-                                    max_pressure,
-                                })
-                                .unwrap();
-                            oneshot_tx.send(()).unwrap();
-                        } else if buf.starts_with('$') {
-                            break;
-                        }
-                        buf.clear();
-                    }
-                }
             }
         });
-        oneshot_rx.recv().unwrap();
         cprintln!("<dim>[Minitouch]: minitouch initialized</dim>");
         Ok(MiniTouch {
             minitouch_stdin: child_in,
@@ -263,7 +228,7 @@ impl MiniTouch {
     }
 
     pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> Result<(), String> {
-        let (x, y) = if self.state.lock().unwrap().flip_xy {
+        let (x, y) = if self.state.flip_xy {
             (y, x)
         } else {
             (x, y)
@@ -272,7 +237,7 @@ impl MiniTouch {
     }
 
     pub fn mv(&mut self, contact: u32, x: i32, y: i32, pressure: u32) -> Result<(), String> {
-        let (x, y) = if self.state.lock().unwrap().flip_xy {
+        let (x, y) = if self.state.flip_xy {
             (y, x)
         } else {
             (x, y)
