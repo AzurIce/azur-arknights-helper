@@ -1,12 +1,22 @@
-use serde::Serialize;
+use std::sync::Arc;
 
-use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::single_matcher::SingleMatcher, utils::Rect}, AAH};
+use image::DynamicImage;
+
+use crate::{
+    controller::DEFAULT_HEIGHT,
+    vision::{
+        matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
+        utils::draw_box,
+    },
+    AAH,
+};
 
 use super::Analyzer;
 
-#[derive(Debug, Serialize)]
 pub struct SingleMatchAnalyzerOutput {
-    pub rect: Rect,
+    pub screen: Box<DynamicImage>,
+    pub res: SingleMatcherResult,
+    pub annotated_screen: Box<DynamicImage>,
 }
 
 pub struct SingleMatchAnalyzer {
@@ -34,41 +44,61 @@ impl Analyzer for SingleMatchAnalyzer {
         //     .controller
         //     .screencap_scaled()
         //     .map_err(|err| format!("{:?}", err))?;
-        let image = core
+
+        // Get image
+        let screen = core
             .controller
             .screencap()
             .map_err(|err| format!("{:?}", err))?;
-
-        let image = image.to_luma32f();
         let template = core
             .get_template(&self.template_filename)
-            .unwrap()
-            .to_luma32f();
+            .unwrap();
 
-        let template = if image.height() != DEFAULT_HEIGHT {
-            let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
+        // Scaling
+        let template = if screen.height() != DEFAULT_HEIGHT {
+            let scale_factor = screen.height() as f32 / DEFAULT_HEIGHT as f32;
 
             let new_width = (template.width() as f32 * scale_factor) as u32;
             let new_height = (template.height() as f32 * scale_factor) as u32;
 
-            image::imageops::resize(
+            DynamicImage::ImageRgba8(image::imageops::resize(
                 &template,
                 new_width,
                 new_height,
                 image::imageops::FilterType::Lanczos3,
-            )
+            ))
         } else {
             template
         };
 
+        // Match
         let res = SingleMatcher::Template {
-            image,
-            template,
+            image: screen.to_luma32f(),
+            template: template.to_luma32f(),
             threshold: None,
         }
-        .result()
-        .ok_or("match failed".to_string())?;
-        Ok(Self::Output { rect: res })
+        .result();
+
+        // Annotated
+        let mut annotated_screen = screen.clone();
+        if let Some(rect) = &res.rect {
+            draw_box(
+                &mut annotated_screen,
+                rect.x as i32,
+                rect.y as i32,
+                rect.width,
+                rect.height,
+                [255, 0, 0, 255],
+            );
+        }
+
+        let screen = Box::new(screen);
+        let annotated_screen = Box::new(annotated_screen);
+        Ok(Self::Output {
+            screen,
+            res,
+            annotated_screen,
+        })
     }
 }
 

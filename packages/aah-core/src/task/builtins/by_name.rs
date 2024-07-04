@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::task::{
     wrapper::{GenericTaskWrapper, TaskWrapper},
-    Task,
+    Task, TaskEvt,
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -20,8 +20,8 @@ impl ByName {
 
 impl Task for ByName {
     type Err = String;
-    fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
-        let exec = || aah.run_task(&self.name);
+    fn run(&self, aah: &crate::AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err> {
+        let exec = || aah.run_task(&self.name, &on_task_evt);
         if let Some(wrapper) = &self.wrapper {
             wrapper.run(exec)
         } else {
@@ -37,6 +37,6 @@ mod test {
     #[test]
     fn test_name_task() {
         let aah = AAH::connect("127.0.0.1:16384", "../resources").unwrap();
-        aah.run_task("wakeup").unwrap();
+        aah.run_task("wakeup", |_| {}).unwrap();
     }
 }

@@ -4,7 +4,7 @@ use crate::{
     task::{
         match_task::MatchTask,
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        Task,
+        Task, TaskEvt,
     },
     AAH,
 };
@@ -26,10 +26,10 @@ impl ActionClickMatch {
 
 impl Task for ActionClickMatch {
     type Err = String;
-    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err> {
         let task = || {
             aah.controller
-                .click_in_rect(self.match_task.run(&aah)?)
+                .click_in_rect(self.match_task.run(&aah, &on_task_evt)?)
                 .map_err(|err| format!("controller error: {:?}", err))
         };
 

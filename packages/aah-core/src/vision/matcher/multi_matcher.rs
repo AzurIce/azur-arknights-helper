@@ -2,7 +2,7 @@ use std::time::Instant;
 
 use aah_cv::{find_matches, match_template, MatchTemplateMethod};
 use color_print::cprintln;
-use image::{math::Rect, ImageBuffer, Luma};
+use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
 
 use crate::vision::matcher::SSE_THRESHOLD;
 
@@ -14,9 +14,18 @@ pub enum MultiMatcher {
     },
 }
 
+/// [`MultiMatcher`] 的结果
+///
+/// - `rects`: 匹配出的矩形框
+/// - `matched_img`: 匹配图
+pub struct MultiMatcherResult {
+    pub rects: Vec<Rect>,
+    pub matched_img: Box<DynamicImage>,
+}
+
 impl MultiMatcher {
     /// 执行匹配并获取结果
-    pub fn result(&self) -> Option<Vec<Rect>> {
+    pub fn result(&self) -> MultiMatcherResult {
         match self {
             Self::Template {
                 image,
@@ -30,6 +39,31 @@ impl MultiMatcher {
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
+
+                // Normalize
+                let min = res
+                    .data
+                    .iter()
+                    .min_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let max = res
+                    .data
+                    .iter()
+                    .max_by(|a, b| a.partial_cmp(b).unwrap())
+                    .unwrap();
+                let data = res
+                    .data
+                    .iter()
+                    .map(|x| (x - min) / (max - min))
+                    .collect::<Vec<f32>>();
+
+                let matched_img = ImageBuffer::from_vec(
+                    res.width,
+                    res.height,
+                    data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
+                )
+                .unwrap();
+                let matched_img = DynamicImage::ImageLuma8(matched_img);
                 cprintln!("finding_extremes...");
 
                 let matches = find_matches(
@@ -38,7 +72,7 @@ impl MultiMatcher {
                     template.height(),
                     threshold.unwrap_or(SSE_THRESHOLD),
                 );
-                let matches: Vec<Rect> = matches
+                let rects: Vec<Rect> = matches
                     .into_iter()
                     .map(|m| Rect {
                         x: m.location.0,
@@ -52,16 +86,18 @@ impl MultiMatcher {
                     start_time.elapsed().as_secs_f32(),
                 );
 
-                if matches.len() == 0 {
-                    cprintln!("[Matcher::TemplateMatcher]: <red>failed</red>");
-                    return None;
-                }
+                let image = ImageBuffer::from_vec(
+                    image.width(),
+                    image.height(),
+                    image.as_raw().iter().map(|x| (x * 255.0) as u8).collect(),
+                )
+                .unwrap();
+                let image = DynamicImage::ImageLuma8(image);
 
-                cprintln!(
-                    "[MultiMatcher::TemplateMatcher]: <green>{} matches</green>",
-                    matches.len()
-                );
-                Some(matches)
+                return MultiMatcherResult {
+                    rects,
+                    matched_img: Box::new(matched_img),
+                };
             } // TODO: implement OcrMatcher
         }
     }
@@ -104,12 +140,11 @@ mod test {
             template: template.to_luma32f(),
             threshold: None,
         }
-        .result()
-        .unwrap();
-        println!("{} matches", res.len());
+        .result();
+        println!("{} matches", res.rects.len());
 
         let mut cnt = 0;
-        for rect in &res {
+        for rect in &res.rects {
             let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.width);
             let avg_hsv_v = average_hsv_v(&cropped);
             // println!("{avg_hsv_v}");
@@ -133,7 +168,10 @@ mod test {
                 width: 140,
                 height: 170,
             };
-            image.crop_imm(rect.x, rect.y, rect.width, rect.height).save(format!("./assets/output/{}.png", cnt)).unwrap();
+            image
+                .crop_imm(rect.x, rect.y, rect.width, rect.height)
+                .save(format!("./assets/output/{}.png", cnt))
+                .unwrap();
             cnt += 1;
             draw_box(
                 &mut res_image,

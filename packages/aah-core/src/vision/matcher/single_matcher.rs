@@ -2,12 +2,21 @@ use std::{cmp::Ordering, time::Instant};
 
 use aah_cv::{ccoeff_normed, find_extremes, match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
-use image::{ImageBuffer, Luma};
+use image::{DynamicImage, ImageBuffer, Luma};
 
 use crate::vision::{
     matcher::{CCOEFF_THRESHOLD, SSE_THRESHOLD, THRESHOLD},
     utils::Rect,
 };
+
+/// [`SingleMatcher`] 的结果
+///
+/// - `rect`: 匹配出的矩形框
+/// - `matched_img`: 匹配图
+pub struct SingleMatcherResult {
+    pub rect: Option<Rect>,
+    pub matched_img: Box<DynamicImage>,
+}
 
 /// 匹配器，目前只实现了模板匹配
 pub enum SingleMatcher {
@@ -25,7 +34,7 @@ pub enum SingleMatcher {
 
 impl SingleMatcher {
     /// 执行匹配并获取结果
-    pub fn result(&self) -> Option<Rect> {
+    pub fn result(&self) -> SingleMatcherResult {
         let log_tag = cformat!("[BestMatcher::TemplateMatcher]: ");
         match self {
             Self::Template {
@@ -35,40 +44,44 @@ impl SingleMatcher {
             } => {
                 // let down_scaled_template = template;
                 let method = MatchTemplateMethod::SumOfSquaredErrors;
-                cprintln!("<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>", image.width(), image.height(), template.width(), template.height(), method);
+                cprintln!(
+                    "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
+                    image.width(),
+                    image.height(),
+                    template.width(),
+                    template.height(),
+                    method
+                );
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
                 let res = match_template(image, template, method);
 
-                let data = res.data.to_vec();
-                let min = data
+                // Normalize
+                let min = res
+                    .data
                     .iter()
                     .min_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
-                let max = data
+                let max = res
+                    .data
                     .iter()
                     .max_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
-                let res_image: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_vec(
+                let data = res
+                    .data
+                    .iter()
+                    .map(|x| (x - min) / (max - min))
+                    .collect::<Vec<f32>>();
+
+                let matched_img = ImageBuffer::from_vec(
                     res.width,
                     res.height,
-                    res.data
-                        .to_vec()
-                        .into_iter()
-                        .map(|x| ((x - min) / (max - min) * 255.0) as u8)
-                        .collect(),
+                    data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
                 )
                 .unwrap();
-                res_image.save("./match_result.png").unwrap();
-                // let res = ccoeff_normed(image, template);
-                // let res = imageproc::template_matching::match_template_parallel(
-                //     &image_u8,
-                //     &template_u8,
-                //     imageproc::template_matching::MatchTemplateMethod::CrossCorrelationNormalized,
-                // );
-                // cprintln!("finding_extremes...");
-                // let extrems = find_extremes(&(&res).into());
+                let matched_img = DynamicImage::ImageLuma8(matched_img);
+
                 let extrems = find_extremes(&res);
                 cprintln!(
                     "<dim>{log_tag}cost: {}s, {:?}</dim>",
@@ -76,48 +89,46 @@ impl SingleMatcher {
                     extrems
                 );
 
-                match method {
+                let success = match method {
                     MatchTemplateMethod::SumOfSquaredErrors => {
-                        if extrems.min_value >= threshold.unwrap_or(SSE_THRESHOLD) {
-                            cprintln!("{log_tag}<red>failed</red>");
-                            return None;
-                        }
+                        extrems.min_value >= threshold.unwrap_or(SSE_THRESHOLD)
                     }
                     MatchTemplateMethod::CrossCorrelation => {
-                        if extrems.max_value <= threshold.unwrap_or(THRESHOLD) {
-                            cprintln!("{log_tag}<red>failed</red>");
-                            return None;
-                        }
+                        extrems.max_value <= threshold.unwrap_or(THRESHOLD)
                     }
                     MatchTemplateMethod::CCOEFF => {
-                        if extrems.max_value <= threshold.unwrap_or(CCOEFF_THRESHOLD) {
-                            cprintln!("{log_tag}<red>failed</red>");
-                            return None;
-                        }
+                        extrems.max_value <= threshold.unwrap_or(CCOEFF_THRESHOLD)
                     }
                     MatchTemplateMethod::CCOEFF_NORMED => {
-                        if extrems.max_value <= threshold.unwrap_or(THRESHOLD) {
-                            cprintln!("{log_tag}<red>failed</red>");
-                            return None;
-                        }
+                        extrems.max_value <= threshold.unwrap_or(THRESHOLD)
                     }
-                    _ => (),
-                };
-
-                cprintln!("{log_tag}<green>success!</green>");
-                let (x, y) = match method {
-                    MatchTemplateMethod::SumOfSquaredErrors => extrems.min_value_location,
-                    MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
-                    MatchTemplateMethod::CCOEFF => extrems.max_value_location,
-                    MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
                     _ => panic!("not implemented"),
                 };
-                Some(Rect {
-                    x,
-                    y,
-                    width: template.width(),
-                    height: template.height(),
-                })
+
+                let rect = if !success {
+                    cprintln!("{log_tag}<red>failed</red>");
+                    None
+                } else {
+                    cprintln!("{log_tag}<green>success!</green>");
+                    let (x, y) = match method {
+                        MatchTemplateMethod::SumOfSquaredErrors => extrems.min_value_location,
+                        MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
+                        MatchTemplateMethod::CCOEFF => extrems.max_value_location,
+                        MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
+                        _ => panic!("not implemented"),
+                    };
+                    Some(Rect {
+                        x,
+                        y,
+                        width: template.width(),
+                        height: template.height(),
+                    })
+                };
+
+                SingleMatcherResult {
+                    rect,
+                    matched_img: Box::new(matched_img),
+                }
             }
         }
     }
@@ -179,6 +190,6 @@ mod test {
             threshold: None,
         }
         .result();
-        println!("{:?}", res);
+        println!("{:?}", res.rect);
     }
 }
