@@ -126,7 +126,7 @@ mod test {
 
     #[test]
     fn test_multi_template_match_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer =
             MultiMatchAnalyzer::new("battle_deploy-card-cost0".to_string(), Some(127), None);
         let output = analyzer.analyze(&mut core).unwrap();

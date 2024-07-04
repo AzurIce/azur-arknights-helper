@@ -1,6 +1,6 @@
-use std::{cmp::Ordering, time::Instant};
+use std::time::Instant;
 
-use aah_cv::{ccoeff_normed, find_extremes, match_template, MatchTemplateMethod};
+use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
 use image::{DynamicImage, ImageBuffer, Luma};
 

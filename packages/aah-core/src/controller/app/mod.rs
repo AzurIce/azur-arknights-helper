@@ -1,5 +1,5 @@
-pub mod minitouch;
 pub mod minicap;
+pub mod minitouch;
 
 use std::path::Path;
 
@@ -16,5 +16,7 @@ pub trait App {
         Ok(())
     }
 
-    fn init<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<Self, String> where Self: Sized;
+    fn init<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<Self, String>
+    where
+        Self: Sized;
 }

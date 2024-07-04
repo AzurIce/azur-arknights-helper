@@ -36,8 +36,12 @@ mod test {
 
     #[test]
     fn test_ccoeff_normed_matcher() {
-        let input = image::open("../../resources/templates/MUMU-1920x1080/start.png").unwrap().to_luma32f();
-        let template = image::open("../../resources/templates/1920x1080/main_recruit.png").unwrap().to_luma32f();
+        let input = image::open("../../resources/templates/MUMU-1920x1080/start.png")
+            .unwrap()
+            .to_luma32f();
+        let template = image::open("../../resources/templates/1920x1080/main_recruit.png")
+            .unwrap()
+            .to_luma32f();
         // let input = rgb_to_luma(&input);
         // let template = rgb_to_luma(&template);
 
@@ -45,8 +49,16 @@ mod test {
         // let template = ImageBuffer::from_fn(2, 2, |x, y| Luma([x as f32 + y as f32]));
         let matcher = CcoeffNormedMatcher::new(&input, &template, true);
         let res = matcher.run();
-        let max = res.as_raw().iter().max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap();
-        let min = res.as_raw().iter().min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal)).unwrap();
+        let max = res
+            .as_raw()
+            .iter()
+            .max_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+            .unwrap();
+        let min = res
+            .as_raw()
+            .iter()
+            .min_by(|a, b| a.partial_cmp(b).unwrap_or(Ordering::Equal))
+            .unwrap();
         let res = ImageBuffer::from_fn(res.width(), res.height(), |x, y| {
             Luma([((res.get_pixel(x, y).0[0] - min) / (max - min) * 255.0) as u8])
         });
@@ -176,7 +188,8 @@ impl CcoeffNormedMatcher {
             template.height(),
             template
                 .as_raw()
-                .iter().zip(template_avg.data.iter())
+                .iter()
+                .zip(template_avg.data.iter())
                 .map(|(a, b)| a - b)
                 .collect(),
         )

@@ -86,14 +86,6 @@ impl MultiMatcher {
                     start_time.elapsed().as_secs_f32(),
                 );
 
-                let image = ImageBuffer::from_vec(
-                    image.width(),
-                    image.height(),
-                    image.as_raw().iter().map(|x| (x * 255.0) as u8).collect(),
-                )
-                .unwrap();
-                let image = DynamicImage::ImageLuma8(image);
-
                 return MultiMatcherResult {
                     rects,
                     matched_img: Box::new(matched_img),

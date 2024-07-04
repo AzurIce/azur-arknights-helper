@@ -9,8 +9,6 @@ use ndarray::{Array2, AssignElem};
 
 use crate::convolve::gpu_convolve_block;
 
-
-
 pub fn match_template(image: &Array2<f32>, kernel: &Array2<f32>) -> Array2<f32> {
     // let start = Instant::now();
     // let image = image.map(|&x| x as f64);
@@ -172,8 +170,8 @@ pub fn square_sum_arr2<T: Mul<T, Output = T> + Sum + Copy>(mat: &Array2<T>) -> T
 
 #[cfg(test)]
 mod test {
-    use ndarray::{Array2, ArrayBase, OwnedRepr};
     use super::*;
+    use ndarray::{Array2, ArrayBase, OwnedRepr};
 
     #[test]
     fn test_integral() {

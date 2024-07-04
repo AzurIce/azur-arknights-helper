@@ -48,9 +48,7 @@ impl Analyzer for SingleMatchAnalyzer {
             .controller
             .screencap()
             .map_err(|err| format!("{:?}", err))?;
-        let template = core
-            .get_template(&self.template_filename)
-            .unwrap();
+        let template = core.get_template(&self.template_filename).unwrap();
 
         // Scaling
         let template = if screen.height() != DEFAULT_HEIGHT {

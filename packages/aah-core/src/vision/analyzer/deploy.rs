@@ -22,7 +22,9 @@ pub struct DeployCard {
 #[allow(unused)]
 /// [`DeployAnalyzer`] 的输出
 ///
+/// - `screen`: 作为输入的原始屏幕截图
 /// - `deploy_card`: 所有部署卡片信息
+/// - `annotated_screen`: 标注了部署卡片位置的屏幕截图
 pub struct DeployAnalyzerOutput {
     pub screen: Box<DynamicImage>,
     pub deploy_cards: Vec<DeployCard>,
@@ -50,8 +52,8 @@ impl Analyzer for DeployAnalyzer {
                 let available = avg_hsv_v > 100;
 
                 let rect = Rect {
-                    x: rect.x - 45,
-                    y: rect.y + 6,
+                    x: rect.x.saturating_add_signed(-45),
+                    y: rect.y.saturating_add(6),
                     width: 75,
                     height: 120,
                 };
@@ -93,7 +95,7 @@ mod test {
 
     #[test]
     fn test_deploy_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer = super::DeployAnalyzer {};
         let output = analyzer.analyze(&mut core).unwrap();
         println!("{:?}", output.deploy_cards);
