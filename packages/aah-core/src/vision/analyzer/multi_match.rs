@@ -1,13 +1,22 @@
-use image::{math::Rect, DynamicImage};
+use std::sync::Arc;
 
-use crate::{controller::DEFAULT_HEIGHT, vision::{matcher::multi_matcher::MultiMatcher, utils::binarize_image}, AAH};
+use image::DynamicImage;
+
+use crate::{
+    controller::DEFAULT_HEIGHT,
+    vision::{
+        matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
+        utils::{binarize_image, draw_box},
+    },
+    AAH,
+};
 
 use super::Analyzer;
 
-#[derive(Debug)]
 pub struct MultiMatchAnalyzerOutput {
-    pub screen: DynamicImage,
-    pub rects: Vec<Rect>,
+    pub screen: Box<DynamicImage>,
+    pub res: MultiMatcherResult,
+    pub annotated_screen: Box<DynamicImage>,
 }
 
 pub struct MultiMatchAnalyzer {
@@ -45,13 +54,15 @@ impl Analyzer for MultiMatchAnalyzer {
         //     .controller
         //     .screencap_scaled()
         //     .map_err(|err| format!("{:?}", err))?;
+
+        // Get image
         let screen = core
             .controller
             .screencap()
             .map_err(|err| format!("{:?}", err))?;
-
         let template = core.get_template(&self.template_filename).unwrap();
 
+        // Scaling
         let template = if screen.height() != DEFAULT_HEIGHT {
             let scale_factor = screen.height() as f32 / DEFAULT_HEIGHT as f32;
 
@@ -68,21 +79,43 @@ impl Analyzer for MultiMatchAnalyzer {
             template
         };
 
-        let mut image = screen.clone();
-        let mut template = template;
-        if let Some(threshold) = self.binarize_threshold {
-            image = binarize_image(&image, threshold);
-            template = binarize_image(&template, threshold);
-        }
+        // Binarize
+        let (image, template) = match self.binarize_threshold {
+            Some(threshold) => (
+                binarize_image(&screen, threshold),
+                binarize_image(&template, threshold),
+            ),
+            None => (screen.clone(), template),
+        };
 
-        let rects = MultiMatcher::Template {
+        // Match
+        let res = MultiMatcher::Template {
             image: image.to_luma32f(),
             template: template.to_luma32f(),
             threshold: self.threshold,
         }
-        .result()
-        .ok_or("match failed".to_string())?;
-        Ok(Self::Output { screen, rects })
+        .result();
+
+        // Annotate
+        let mut annotated_screen = screen.clone();
+        for rect in &res.rects {
+            draw_box(
+                &mut annotated_screen,
+                rect.x as i32,
+                rect.y as i32,
+                rect.width,
+                rect.height,
+                [255, 0, 0, 255],
+            );
+        }
+
+        let screen = Box::new(screen);
+        let annotated_screen = Box::new(annotated_screen);
+        Ok(Self::Output {
+            screen,
+            res,
+            annotated_screen,
+        })
     }
 }
 
@@ -96,12 +129,9 @@ mod test {
     #[test]
     fn test_multi_template_match_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
-        let mut analyzer = MultiMatchAnalyzer::new(
-            "battle_deploy-card-cost0".to_string(),
-            Some(127),
-            None,
-        );
+        let mut analyzer =
+            MultiMatchAnalyzer::new("battle_deploy-card-cost0".to_string(), Some(127), None);
         let output = analyzer.analyze(&mut core).unwrap();
-        println!("{:?}", output);
+        println!("{:?}", output.res.rects);
     }
 }

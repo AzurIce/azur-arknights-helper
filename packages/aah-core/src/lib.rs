@@ -8,6 +8,7 @@ use std::{
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
+use task::TaskEvt;
 use vision::analyzer::{
     deploy::{DeployAnalyzer, DeployAnalyzerOutput},
     Analyzer,
@@ -59,7 +60,14 @@ impl AAH {
     }
 
     /// 运行名为 `name` 的任务
-    pub fn run_task<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
+    /// 
+    /// - `name`: 任务名称
+    /// - `on_task_evt`: 任务事件回调, 有关任务事件见 [`task::TaskEvt`]
+    pub fn run_task<S: AsRef<str>>(
+        &self,
+        name: S,
+        on_task_evt: impl Fn(TaskEvt),
+    ) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
         let task = self
@@ -70,7 +78,7 @@ impl AAH {
             .clone();
         println!("executing {:?}", task);
 
-        task.run(self)?;
+        task.run(self, on_task_evt)?;
 
         Ok(())
     }
@@ -89,7 +97,9 @@ impl AAH {
 
     /// Capture a screen, and return raw data in Png format
     pub fn get_raw_screen(&mut self) -> Result<Vec<u8>, String> {
-        self.controller.raw_screencap().map_err(|err| format!("{err}"))
+        self.controller
+            .raw_screencap()
+            .map_err(|err| format!("{err}"))
     }
 
     /// 重新加载 resources 中的配置
@@ -161,7 +171,7 @@ mod tests {
         // save_screenshot(dir, "confirm.png");
         // save_screenshot(dir, "operation-start.png");
         let dir = "/Volumes/Data/Dev/AahAI/dataset/1-4/img";
-        for i in 0..40 {
+        for i in 0..10 {
             save_screenshot(&mut aah, dir, format!("{i}.png"));
             sleep(Duration::from_secs_f32(0.2))
         }

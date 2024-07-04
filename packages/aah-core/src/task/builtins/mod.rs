@@ -23,7 +23,7 @@ use crate::{
     AAH,
 };
 
-use super::Task;
+use super::{Task, TaskEvt};
 
 pub fn test_tasks() -> Vec<(&'static str, BuiltinTask)> {
     vec![
@@ -90,17 +90,17 @@ pub enum BuiltinTask {
 
 impl Task for BuiltinTask {
     type Err = String;
-    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err> {
         match self {
-            BuiltinTask::ByName(task) => task.run(aah),
-            BuiltinTask::Multi(task) => task.run(aah),
-            BuiltinTask::ActionPressEsc(task) => task.run(aah),
-            BuiltinTask::ActionPressHome(task) => task.run(aah),
-            BuiltinTask::ActionClick(task) => task.run(aah),
-            BuiltinTask::ActionSwipe(task) => task.run(aah),
-            BuiltinTask::ActionClickMatch(task) => task.run(aah),
-            BuiltinTask::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah),
-            BuiltinTask::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah),
+            BuiltinTask::ByName(task) => task.run(aah, on_task_evt),
+            BuiltinTask::Multi(task) => task.run(aah, on_task_evt),
+            BuiltinTask::ActionPressEsc(task) => task.run(aah, on_task_evt),
+            BuiltinTask::ActionPressHome(task) => task.run(aah, on_task_evt),
+            BuiltinTask::ActionClick(task) => task.run(aah, on_task_evt),
+            BuiltinTask::ActionSwipe(task) => task.run(aah, on_task_evt),
+            BuiltinTask::ActionClickMatch(task) => task.run(aah, on_task_evt),
+            BuiltinTask::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah, on_task_evt),
+            BuiltinTask::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah, on_task_evt),
         }
     }
 }

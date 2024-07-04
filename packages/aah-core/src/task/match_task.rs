@@ -6,7 +6,7 @@ use crate::{
     AAH,
 };
 
-use super::Task;
+use super::{Task, TaskEvt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "template")]
@@ -25,13 +25,16 @@ mod test {
 impl Task for MatchTask {
     type Res = Rect;
     type Err = String;
-    fn run(&self, aah: &AAH) -> Result<Self::Res, String> {
+    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, String> {
         println!("[MatchTask]: matching {:?}", self);
 
         let res = match self {
             Self::Template(template_filename) => {
                 let mut analyzer = SingleMatchAnalyzer::new(template_filename.to_string());
-                analyzer.analyze(aah)?.rect
+                let output = analyzer.analyze(aah)?;
+                on_task_evt(TaskEvt::Log(format!("[SingleMatchAnalyzer]: {:?}", output.res.rect)));
+                on_task_evt(TaskEvt::AnnotatedImg(*output.annotated_screen));
+                output.res.rect
             }
             Self::Ocr(text) => {
                 return Err("not implemented".to_string());
@@ -47,8 +50,8 @@ impl Task for MatchTask {
                 //     return Err("".to_string());
                 // }
             }
-        };
+        }.ok_or("match failed".to_string());
 
-        Ok(res)
+        res
     }
 }
