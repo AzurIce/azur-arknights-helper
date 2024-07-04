@@ -7,8 +7,6 @@ use super::Analyzer;
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     #[test]
     fn test_depot_analyzer() {
         // let controller = MiniTouchController::connect("127.0.0.1:16384").unwrap();
