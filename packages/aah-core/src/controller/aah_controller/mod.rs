@@ -23,7 +23,7 @@ pub struct AahController {
     height: u32,
     res_dir: PathBuf,
     // minicap: Minicap,
-    minitouch: Arc<Mutex<MiniTouch>>,
+    // minitouch: Arc<Mutex<MiniTouch>>,
 }
 
 impl AahController {
@@ -48,8 +48,8 @@ impl AahController {
         );
 
         // let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = Arc::new(Mutex::new(minitouch));
+        // let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
+        // let minitouch = Arc::new(Mutex::new(minitouch));
 
         let controller = Self {
             inner: device,
@@ -57,7 +57,7 @@ impl AahController {
             height,
             res_dir,
             // minicap,
-            minitouch,
+            // minitouch,
         };
 
         Ok(controller)
@@ -73,15 +73,15 @@ impl Controller for AahController {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));
         }
-        // cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
-        // self.inner
-        //     .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
-        cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
-        self.minitouch
-            .lock()
-            .unwrap()
-            .click(x, y)
-            .map_err(|err| MyError::S(err))?;
+        cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
+        self.inner
+            .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
+        // cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
+        // self.minitouch
+        //     .lock()
+        //     .unwrap()
+        //     .click(x, y)
+        //     .map_err(|err| MyError::S(err))?;
         Ok(())
     }
 
@@ -92,29 +92,29 @@ impl Controller for AahController {
             end,
             duration
         );
-        self.minitouch
-            .lock()
-            .unwrap()
-            .swipe(
-                start,
-                end,
-                duration,
-                2.0,
-                0.0,
-            )
-            .unwrap();
-
-        // self.inner.execute_command_by_process(
-        //     format!(
-        //         "shell input swipe {} {} {} {} {}",
-        //         start.0,
-        //         start.1,
-        //         end.0,
-        //         end.1,
-        //         duration.as_millis()
+        // self.minitouch
+        //     .lock()
+        //     .unwrap()
+        //     .swipe(
+        //         start,
+        //         end,
+        //         duration,
+        //         2.0,
+        //         0.0,
         //     )
-        //     .as_str(),
-        // )?;
+        //     .unwrap();
+
+        self.inner.execute_command_by_process(
+            format!(
+                "shell input swipe {} {} {} {} {}",
+                start.0,
+                start.1,
+                end.0,
+                end.1,
+                duration.as_millis()
+            )
+            .as_str(),
+        )?;
         Ok(())
     }
     fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
