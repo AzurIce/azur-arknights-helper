@@ -80,13 +80,15 @@ impl App for MiniTouch {
             .join("minitouch")
             .join(abi)
             .join("minitouch");
-        let _ = execute_adb_command(
+        let res = execute_adb_command(
             &device.serial(),
             format!("push {} /data/local/tmp", bin_path.to_str().unwrap()).as_str(),
         )
         .map_err(|err| format!("minitouch push failed: {:?}", err))?;
-        let _ = execute_adb_command(&device.serial(), "chmod +x /data/local/tmp/minitouch")
+        println!("{:?}", String::from_utf8(res));
+        let res = execute_adb_command(&device.serial(), "chmod +x /data/local/tmp/minitouch")
             .map_err(|err| format!("minitouch push failed: {:?}", err))?;
+        println!("{:?}", String::from_utf8(res));
         Ok(())
     }
 
