@@ -73,15 +73,15 @@ impl Controller for AahController {
         if x > self.width || y > self.height {
             return Err(MyError::S("coord out of screen".to_string()));
         }
-        // cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
-        cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
-        // self.minitouch
-        //     .lock()
-        //     .unwrap()
-        //     .click(x, y)
-        //     .map_err(|err| MyError::S(err))?;
-        self.inner
-            .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
+        // cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
+        // self.inner
+        //     .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
+        cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
+        self.minitouch
+            .lock()
+            .unwrap()
+            .click(x, y)
+            .map_err(|err| MyError::S(err))?;
         Ok(())
     }
 
