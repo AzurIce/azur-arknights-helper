@@ -10,7 +10,7 @@ pub mod copilot;
 pub trait Task {
     type Res = ();
     type Err = ();
-    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err>;
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err>;
 }
 
 /// 任务事件

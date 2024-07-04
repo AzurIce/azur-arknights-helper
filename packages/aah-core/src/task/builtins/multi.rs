@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    task::{wrapper::GenericTaskWrapper, Task, TaskEvt},
+    task::{wrapper::GenericTaskWrapper, Task},
     AAH,
 };
 
@@ -35,10 +35,10 @@ impl Multi {
 
 impl Task for Multi {
     type Err = String;
-    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let mut res = Ok(());
         for task in &self.tasks {
-            res = task.run(aah, &on_task_evt).map(|_| ());
+            res = task.run(aah).map(|_| ());
             println!("{:?}", res);
             if res.is_err() && self.fail_fast {
                 break;

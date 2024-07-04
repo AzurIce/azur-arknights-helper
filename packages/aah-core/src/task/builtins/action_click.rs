@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     task::{
         wrapper::{GenericTaskWrapper, TaskWrapper},
-        Task, TaskEvt,
+        Task,
     },
     AAH,
 };
@@ -50,7 +50,7 @@ impl ActionClick {
 
 impl Task for ActionClick {
     type Err = String;
-    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, Self::Err> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
             aah.controller
                 .click(self.x, self.y)

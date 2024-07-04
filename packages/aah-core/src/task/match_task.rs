@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    controller::DEFAULT_HEIGHT,
     vision::{analyzer::{single_match::SingleMatchAnalyzer, Analyzer}, utils::Rect},
     AAH,
 };
@@ -25,15 +24,15 @@ mod test {
 impl Task for MatchTask {
     type Res = Rect;
     type Err = String;
-    fn run(&self, aah: &AAH, on_task_evt: impl Fn(TaskEvt)) -> Result<Self::Res, String> {
+    fn run(&self, aah: &AAH) -> Result<Self::Res, String> {
         println!("[MatchTask]: matching {:?}", self);
 
         let res = match self {
             Self::Template(template_filename) => {
                 let mut analyzer = SingleMatchAnalyzer::new(template_filename.to_string());
                 let output = analyzer.analyze(aah)?;
-                on_task_evt(TaskEvt::Log(format!("[SingleMatchAnalyzer]: {:?}", output.res.rect)));
-                on_task_evt(TaskEvt::AnnotatedImg(*output.annotated_screen));
+                aah.emit_task_evt(TaskEvt::Log(format!("[SingleMatchAnalyzer]: {:?}", output.res.rect)));
+                aah.emit_task_evt(TaskEvt::AnnotatedImg(*output.annotated_screen));
                 output.res.rect
             }
             Self::Ocr(text) => {

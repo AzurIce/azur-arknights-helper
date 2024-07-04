@@ -91,16 +91,16 @@ impl SingleMatcher {
 
                 let success = match method {
                     MatchTemplateMethod::SumOfSquaredErrors => {
-                        extrems.min_value >= threshold.unwrap_or(SSE_THRESHOLD)
+                        extrems.min_value <= threshold.unwrap_or(SSE_THRESHOLD)
                     }
                     MatchTemplateMethod::CrossCorrelation => {
-                        extrems.max_value <= threshold.unwrap_or(THRESHOLD)
+                        extrems.max_value >= threshold.unwrap_or(THRESHOLD)
                     }
                     MatchTemplateMethod::CCOEFF => {
-                        extrems.max_value <= threshold.unwrap_or(CCOEFF_THRESHOLD)
+                        extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
                     }
                     MatchTemplateMethod::CCOEFF_NORMED => {
-                        extrems.max_value <= threshold.unwrap_or(THRESHOLD)
+                        extrems.max_value >= threshold.unwrap_or(THRESHOLD)
                     }
                     _ => panic!("not implemented"),
                 };

@@ -33,15 +33,18 @@ pub struct AAH {
     pub navigate_config: NavigateConfig,
     // /// 屏幕内容的缓存
     // pub screen_cache: Option<image::DynamicImage>,
+    on_task_evt: Box<dyn Fn(TaskEvt)>,
 }
 
 impl AAH {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
-    pub fn connect<S: AsRef<str>, P: AsRef<Path>>(
+    /// - `on_task_evt`: 任务事件的回调函数
+    pub fn connect<S: AsRef<str>, P: AsRef<Path>, F: Fn(TaskEvt) + 'static>(
         serial: S,
         res_dir: P,
+        on_task_evt: F,
     ) -> Result<Self, Box<dyn Error>> {
         let res_dir = res_dir.as_ref().to_path_buf();
         let task_config =
@@ -55,18 +58,17 @@ impl AAH {
             controller,
             task_config,
             navigate_config,
+            on_task_evt: Box::new(on_task_evt),
             // screen_cache: None,
         })
     }
 
     /// 运行名为 `name` 的任务
-    /// 
+    ///
     /// - `name`: 任务名称
-    /// - `on_task_evt`: 任务事件回调, 有关任务事件见 [`task::TaskEvt`]
     pub fn run_task<S: AsRef<str>>(
         &self,
         name: S,
-        on_task_evt: impl Fn(TaskEvt),
     ) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
@@ -78,7 +80,7 @@ impl AAH {
             .clone();
         println!("executing {:?}", task);
 
-        task.run(self, on_task_evt)?;
+        task.run(self)?;
 
         Ok(())
     }
@@ -132,6 +134,11 @@ impl AAH {
     pub fn get_tasks(&self) -> Vec<String> {
         self.task_config.0.keys().map(|s| s.to_string()).collect()
     }
+
+    /// 发起事件
+    pub(crate) fn emit_task_evt(&self, evt: TaskEvt) {
+        (self.on_task_evt)(evt)
+    }
 }
 
 #[cfg(test)]
@@ -142,7 +149,7 @@ mod tests {
 
     #[test]
     fn test_get_tasks() {
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
         println!("{:?}", aah.get_tasks());
     }
 
@@ -162,7 +169,7 @@ mod tests {
 
     #[test]
     fn foo() {
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");

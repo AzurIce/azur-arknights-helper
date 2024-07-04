@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use image::DynamicImage;
 
 use crate::{

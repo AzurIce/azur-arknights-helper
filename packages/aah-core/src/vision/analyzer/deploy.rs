@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use image::DynamicImage;
 use serde::Serialize;
 
@@ -95,7 +93,7 @@ mod test {
 
     #[test]
     fn test_deploy_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
         let mut analyzer = super::DeployAnalyzer {};
         let output = analyzer.analyze(&mut core).unwrap();
         println!("{:?}", output.deploy_cards);
