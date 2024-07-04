@@ -33,7 +33,7 @@ pub struct AAH {
     pub navigate_config: NavigateConfig,
     // /// 屏幕内容的缓存
     // pub screen_cache: Option<image::DynamicImage>,
-    on_task_evt: Box<dyn Fn(TaskEvt)>,
+    on_task_evt: Box<dyn Fn(TaskEvt) + Sync + Send>,
 }
 
 impl AAH {
@@ -41,7 +41,7 @@ impl AAH {
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
     /// - `on_task_evt`: 任务事件的回调函数
-    pub fn connect<S: AsRef<str>, P: AsRef<Path>, F: Fn(TaskEvt) + 'static>(
+    pub fn connect<S: AsRef<str>, P: AsRef<Path>, F: Fn(TaskEvt) + Send + Sync + 'static>(
         serial: S,
         res_dir: P,
         on_task_evt: F,
@@ -143,12 +143,13 @@ impl AAH {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::Path, thread::sleep, time::Duration};
+    use std::{path::Path, sync::{Mutex, OnceLock}, thread::sleep, time::Duration};
 
     use super::*;
 
     #[test]
     fn test_get_tasks() {
+        let s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
         let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
         println!("{:?}", aah.get_tasks());
     }
