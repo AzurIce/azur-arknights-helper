@@ -56,7 +56,7 @@ impl Controller for MiniTouchController {
         Ok(())
     }
 
-    fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError> {
+    fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: f32, slope_out: f32) -> Result<(), MyError> {
         info!(
             "[Controller]: swiping from {:?} to {:?} for {:?}",
             start, end, duration

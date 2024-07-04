@@ -71,13 +71,15 @@ pub trait Controller {
         self.click(x as u32, y as u32)
     }
 
-    fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration) -> Result<(), MyError>;
+    fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: f32, slope_out: f32) -> Result<(), MyError>;
 
     fn swipe_scaled(
         &self,
         start_scaled: (u32, u32),
         end_scaled: (i32, i32),
         duration: Duration,
+        slope_in: f32,
+        slope_out: f32,
     ) -> Result<(), MyError> {
         let scale_factor = self.scale_factor();
         let (start, end) = (
@@ -94,6 +96,8 @@ pub trait Controller {
             (start.0 as u32, start.1 as u32),
             (end.0 as i32, end.1 as i32),
             duration,
+            slope_in,
+            slope_out
         )
     }
 

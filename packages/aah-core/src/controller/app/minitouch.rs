@@ -46,7 +46,7 @@ impl Drop for MiniTouch {
 
 #[derive(Default)]
 pub struct MiniTouchState {
-    flip_xy: bool,
+    // flip_xy: bool,
     max_contact: u32,
     max_x: u32, // 横屏的 x!
     max_y: u32,
@@ -129,8 +129,8 @@ impl App for MiniTouch {
             let mut buf = String::new();
             match reader.read_line(&mut buf) {
                 Err(err) => {
-                    cprintln!("<dim>[Minicap]: read error: {}</dim>", err);
-                    return Err("failed to read minitouch info".to_string())
+                    cprintln!("<dim>[Minitouch]: read error: {}</dim>", err);
+                    return Err("failed to read minitouch info".to_string());
                 }
                 Ok(sz) => {
                     if sz == 0 {
@@ -150,16 +150,16 @@ impl App for MiniTouch {
                         let max_size2 = u32::from_str_radix(params[2], 10).unwrap();
                         let max_pressure = u32::from_str_radix(params[3], 10).unwrap();
 
-                        let mut flip_xy = false;
+                        // let mut flip_xy = false;
                         let (max_x, max_y) = if max_size1 > max_size2 {
                             (max_size1, max_size2)
                         } else {
-                            flip_xy = true;
+                            // flip_xy = true;
                             (max_size2, max_size1)
                         };
 
                         minitouch_state = MiniTouchState {
-                            flip_xy,
+                            // flip_xy,
                             max_contact,
                             max_x,
                             max_y,
@@ -171,8 +171,8 @@ impl App for MiniTouch {
                         // minitouch_state.max_y = max_y;
                         // minitouch_state.max_pressure = max_pressure;
                         cprintln!(
-                            "<dim>[MiniTouch]: flip: {}, {} {}x{} {}</dim>",
-                            flip_xy,
+                            "<dim>[MiniTouch]: {} {}x{} {}</dim>",
+                            // flip_xy,
                             max_contact,
                             max_x,
                             max_y,
@@ -228,21 +228,23 @@ impl MiniTouch {
     }
 
     pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> Result<(), String> {
-        let (x, y) = if self.state.flip_xy {
-            (y, x)
-        } else {
-            (x, y)
-        };
-        self.write_command(format!("d {contact} {x} {y} {pressure}").as_str())
+        // let (x, y) = if self.state.flip_xy {
+        //     (y, x)
+        // } else {
+        //     (x, y)
+        // };
+        let y = self.state.max_y.saturating_add_signed(-(y as i32));
+        self.write_command(format!("d {contact} {y} {x} {pressure}").as_str())
     }
 
     pub fn mv(&mut self, contact: u32, x: i32, y: i32, pressure: u32) -> Result<(), String> {
-        let (x, y) = if self.state.flip_xy {
-            (y, x)
-        } else {
-            (x, y)
-        };
-        self.write_command(format!("m {contact} {x} {y} {pressure}").as_str())
+        // let (x, y) = if self.state.flip_xy {
+        //     (y, x)
+        // } else {
+        //     (x, y)
+        // };
+        let y = self.state.max_y as i32 - y;
+        self.write_command(format!("m {contact} {y} {x} {pressure}").as_str())
     }
 
     pub fn up(&mut self, contact: u32) -> Result<(), String> {
@@ -254,7 +256,7 @@ impl MiniTouch {
     }
 }
 
-const SWIPE_DELAY_MS: u32 = 2;
+const SWIPE_DELAY_MS: u32 = 5;
 const CLICK_DELAY_MS: u32 = 50;
 
 impl Toucher for MiniTouch {
@@ -291,7 +293,9 @@ impl Toucher for MiniTouch {
         for t in (SWIPE_DELAY_MS..duration.as_millis() as u32).step_by(SWIPE_DELAY_MS as usize) {
             let progress =
                 cubic_spline(slope_in, slope_out, t as f32 / duration.as_millis() as f32);
-            info!("{}", progress);
+            let progress = progress.min(1.0).max(0.0);
+            // info!("{}", progress);
+            // println!("{progress}");
             let cur_x = lerp(start.0 as f32, end.0 as f32, progress) as i32;
             let cur_y = lerp(start.1 as f32, end.1 as f32, progress) as i32;
             self.mv(0, cur_x as i32, cur_y as i32, 0)?;
@@ -299,7 +303,9 @@ impl Toucher for MiniTouch {
             self.wait(Duration::from_millis(SWIPE_DELAY_MS as u64))?;
         }
 
-        self.wait(Duration::from_millis(500))?;
+        // self.mv(0, end.0, end.1, 0)?;
+        self.wait(Duration::from_millis(600))?;
+        self.commit()?;
         self.up(0)?;
         self.commit()?;
 
@@ -325,6 +331,8 @@ mod test {
         init();
         let device = connect("127.0.0.1:16384").unwrap();
         let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
+        // toucher.click(10, 10).unwrap();
+        // toucher.click(100, 100).unwrap();
         toucher.click(822, 762).unwrap();
         thread::sleep(Duration::from_secs_f32(3.0))
     }
@@ -336,9 +344,9 @@ mod test {
         let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
         toucher
             .swipe(
-                (1280, 720),
-                (-100, 720),
-                Duration::from_millis(200),
+                (1780, 400),
+                (400, 400),
+                Duration::from_millis(400),
                 2.0,
                 0.0,
             )
