@@ -10,7 +10,7 @@ use rten_tensor::{NdTensorBase, NdTensorView};
 
 const THRESHOLD: f32 = 30.0;
 const CCOEFF_THRESHOLD: f32 = 30.0;
-const SSE_THRESHOLD: f32 = 40.0;
+const SSE_THRESHOLD: f32 = 50.0;
 
 pub fn convert_image_to_ten(
     image: DynamicImage,
