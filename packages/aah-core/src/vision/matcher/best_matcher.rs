@@ -28,31 +28,23 @@ impl BestMatcher {
         );
 
         let t = Instant::now();
-        let res = self
-            .images
-            .iter()
-            .map(|img| {
-                // cprintln!(
-                //     "<dim>matching {}x{} with {}x{}...</dim>",
-                //     img.width(),
-                //     img.height(),
-                //     template.width(),
-                //     template.height()
-                // );
-                // let res = ccoeff_normed(&img.to_luma32f(), &template.to_luma32f());
-                let res = self
-                    .matcher
-                    .lock()
-                    .unwrap()
-                    .match_template(&img.to_luma32f(), &template.to_luma32f());
-                let extremes = find_extremes(&res);
-                println!("{:?}", extremes);
-                extremes.max_value
-            })
-            .enumerate()
-            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
-            .unwrap();
+        let (mut max_val, mut max_idx) = (0.0, 0);
+        for (idx, img) in self.images.iter().enumerate() {
+            let res = self
+                .matcher
+                .lock()
+                .unwrap()
+                .match_template(&img.to_luma32f(), &template.to_luma32f());
+            let extremes = find_extremes(&res);
+            if extremes.max_value > max_val {
+                max_val = extremes.max_value;
+                max_idx = idx;
+                if max_val >= 0.99 {
+                    break;
+                }
+            }
+        }
         cprintln!("<dim>cost: {:?}</dim>", t.elapsed());
-        res.0
+        max_idx
     }
 }
