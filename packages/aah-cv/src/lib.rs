@@ -25,7 +25,7 @@ use std::{
 };
 use types::Image;
 use utils::{image_mean, square_sum};
-use wgpu::util::DeviceExt;
+use wgpu::{util::DeviceExt, PipelineCompilationOptions};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MatchTemplateMethod {
@@ -424,6 +424,9 @@ impl TemplateMatcher {
                     layout: Some(&self.pipeline_layout),
                     module: &self.shader,
                     entry_point,
+                    compilation_options: PipelineCompilationOptions {
+                        ..Default::default()
+                    },
                 },
             ));
         }

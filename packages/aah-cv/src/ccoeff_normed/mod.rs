@@ -1,5 +1,5 @@
 use image::{ImageBuffer, Luma};
-use wgpu::{util::DeviceExt, BindGroupDescriptor, ComputePipelineDescriptor};
+use wgpu::{util::DeviceExt, BindGroupDescriptor, ComputePipelineDescriptor, PipelineCompilationOptions};
 
 use crate::{ccorr, gpu::Context};
 
@@ -276,6 +276,7 @@ impl CcoeffNormedMatcher {
                 layout: Some(&pipeline_layout),
                 module: &shader,
                 entry_point: "ccoeff_normed",
+                compilation_options: PipelineCompilationOptions::default()
             });
 
         let staging_buffer = ctx.device.create_buffer(&wgpu::BufferDescriptor {

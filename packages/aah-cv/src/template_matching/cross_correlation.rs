@@ -3,9 +3,7 @@
 use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, Luma};
 use wgpu::{
-    include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
-    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
-    ComputePipelineDescriptor, PipelineLayoutDescriptor,
+    include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipelineDescriptor, PipelineCompilationOptions, PipelineLayoutDescriptor
 };
 
 use crate::gpu::Context;
@@ -115,6 +113,7 @@ impl CrossCorrelationMatcher {
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main",
+                compilation_options: PipelineCompilationOptions::default(),
             });
 
         CrossCorrelationMatcher {
