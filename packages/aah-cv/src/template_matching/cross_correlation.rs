@@ -4,7 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, Luma};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
+    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
     ComputePipelineDescriptor, PipelineLayoutDescriptor,
 };
 
