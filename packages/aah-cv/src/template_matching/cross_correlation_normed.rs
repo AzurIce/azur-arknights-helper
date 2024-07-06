@@ -4,7 +4,7 @@ use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, Luma};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
-    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
+    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
     ComputePipelineDescriptor, PipelineLayoutDescriptor,
 };
 
@@ -20,7 +20,7 @@ pub struct CrossCorrelationNormedMatcher {
     uniform_buffer: wgpu::Buffer,
 
     bind_group_layout: wgpu::BindGroupLayout,
-    pipeline_layout: wgpu::PipelineLayout,
+    // pipeline_layout: wgpu::PipelineLayout,
     bind_group: Option<wgpu::BindGroup>,
     pipeline: wgpu::ComputePipeline,
 }
@@ -91,14 +91,6 @@ impl CrossCorrelationNormedMatcher {
                 ],
             });
 
-        let pipeline_layout = ctx
-            .device
-            .create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: Some("CrossCorrelationMatcher PipelineLayout"),
-                bind_group_layouts: &[&bind_group_layout],
-                push_constant_ranges: &[],
-            });
-
         let uniform_buffer = ctx.device.create_buffer(&BufferDescriptor {
             label: Some("uniform"),
             size: size_of::<Uniforms>() as _,
@@ -109,6 +101,13 @@ impl CrossCorrelationNormedMatcher {
         let shader_module = ctx
             .device
             .create_shader_module(include_wgsl!("./shaders/cross_correlation_normed.wgsl"));
+        let pipeline_layout = ctx
+            .device
+            .create_pipeline_layout(&PipelineLayoutDescriptor {
+                label: Some("CrossCorrelationMatcher PipelineLayout"),
+                bind_group_layouts: &[&bind_group_layout],
+                push_constant_ranges: &[],
+            });
         let pipeline = ctx
             .device
             .create_compute_pipeline(&ComputePipelineDescriptor {
@@ -127,7 +126,7 @@ impl CrossCorrelationNormedMatcher {
             uniform_buffer,
             bind_group_layout,
             bind_group: None,
-            pipeline_layout,
+            // pipeline_layout,
             pipeline,
         }
     }
