@@ -3,9 +3,7 @@
 use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, Luma};
 use wgpu::{
-    include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
-    BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
-    ComputePipelineDescriptor, PipelineLayoutDescriptor,
+    include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipelineDescriptor, PipelineCompilationOptions, PipelineLayoutDescriptor
 };
 
 use crate::gpu::Context;
@@ -115,6 +113,7 @@ impl CrossCorrelationNormedMatcher {
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main",
+                compilation_options: PipelineCompilationOptions::default(),
             });
 
         CrossCorrelationNormedMatcher {
@@ -132,6 +131,10 @@ impl CrossCorrelationNormedMatcher {
     }
 
     fn create_new_bind_group(&self) -> BindGroup {
+        println!("input buffer size: {:?}", self.input_buffer.as_ref().unwrap().size());
+        println!("template buffer size: {:?}", self.template_buffer.as_ref().unwrap().size());
+        println!("result buffer size: {:?}", self.result_buffer.as_ref().unwrap().size());
+        println!("staging buffer size: {:?}", self.staging_buffer.as_ref().unwrap().size());
         self.ctx.device.create_bind_group(&BindGroupDescriptor {
             label: Some("CrossCorrelationNormedMatcher BindGroup"),
             layout: &self.bind_group_layout,
