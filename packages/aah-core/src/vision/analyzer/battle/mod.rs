@@ -11,9 +11,12 @@ use serde::Serialize;
 use super::{single_match::SingleMatchAnalyzer, Analyzer};
 
 #[derive(Debug, Serialize, Clone)]
+/// [`BattleAnalyzer`] 的分析结果：
+/// - `battle_state`: 战斗状态，见 [`BattleState`]
+/// - `deploy_cards`: 部署卡片列表，见 [`DeployCard`]
 pub struct BattleAnalyzerOutput {
-    battle_state: BattleState,
-    deploy_cards: Vec<DeployCard>,
+    pub battle_state: BattleState,
+    pub deploy_cards: Vec<DeployCard>,
 }
 
 pub enum Speed {
