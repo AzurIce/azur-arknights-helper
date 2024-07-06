@@ -106,12 +106,12 @@ impl Analyzer for MultiMatchAnalyzer {
         };
 
         // Binarize
-        let (image, template) = match self.binarize_threshold {
+        let (cropped, template) = match self.binarize_threshold {
             Some(threshold) => (
-                binarize_image(&screen, threshold),
+                binarize_image(&cropped, threshold),
                 binarize_image(&template, threshold),
             ),
-            None => (screen.clone(), template),
+            None => (cropped.clone(), template),
         };
 
         // Match
