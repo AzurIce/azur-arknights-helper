@@ -4,7 +4,7 @@ use crate::{
     controller::DEFAULT_HEIGHT,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
-        utils::draw_box,
+        utils::{draw_box, Rect},
     },
     AAH,
 };
@@ -19,11 +19,27 @@ pub struct SingleMatchAnalyzerOutput {
 
 pub struct SingleMatchAnalyzer {
     template_filename: String,
+    use_cache: bool,
+    roi: [(f32, f32); 2], // topleft and bottomright
 }
 
 impl SingleMatchAnalyzer {
     pub fn new(template_filename: String) -> Self {
-        Self { template_filename }
+        Self {
+            template_filename,
+            use_cache: false,
+            roi: [(0.0, 0.0), (1.0, 1.0)],
+        }
+    }
+
+    pub fn use_cache(mut self) -> Self {
+        self.use_cache = true;
+        self
+    }
+
+    pub fn roi(mut self, tl: (f32, f32), br: (f32, f32)) -> Self {
+        self.roi = [tl, br];
+        self
     }
 }
 
@@ -44,10 +60,24 @@ impl Analyzer for SingleMatchAnalyzer {
         //     .map_err(|err| format!("{:?}", err))?;
 
         // Get image
-        let screen = core
-            .controller
-            .screencap()
-            .map_err(|err| format!("{:?}", err))?;
+        let screen = if self.use_cache {
+            core.screen_cache_or_cap()?.clone()
+        } else {
+            core.screen_cap_and_cache()
+                .map_err(|err| format!("{:?}", err))?
+        };
+        let tl = (
+            self.roi[0].0 * screen.width() as f32,
+            self.roi[0].1 * screen.height() as f32,
+        );
+        let br = (
+            self.roi[1].0 * screen.width() as f32,
+            self.roi[1].1 * screen.height() as f32,
+        );
+        let tl = (tl.0 as u32, tl.1 as u32);
+        let br = (br.0 as u32, br.1 as u32);
+
+        let cropped = screen.crop_imm(tl.0, tl.1, br.0 - tl.0, br.1 - tl.1);
         let template = core.get_template(&self.template_filename).unwrap();
 
         // Scaling
@@ -69,11 +99,19 @@ impl Analyzer for SingleMatchAnalyzer {
 
         // Match
         let res = SingleMatcher::Template {
-            image: screen.to_luma32f(),
+            image: cropped.to_luma32f(), // ! cropped
             template: template.to_luma32f(),
             threshold: None,
         }
         .result();
+        let res = SingleMatcherResult {
+            rect: res.rect.map(|rect| Rect {
+                x: rect.x + tl.0,
+                y: rect.y + tl.1,
+                ..rect
+            }),
+            ..res
+        };
 
         // Annotated
         let mut annotated_screen = screen.clone();
@@ -99,4 +137,15 @@ impl Analyzer for SingleMatchAnalyzer {
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    use crate::AAH;
+    use super::*;
+
+    #[test]
+    fn test_single_match_analyzer() {
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_|{}).unwrap();
+        let mut analyzer = SingleMatchAnalyzer::new("start_start.png".to_string()).roi((0.3, 0.75), (0.6, 1.0));
+        let output = analyzer.analyze(&aah).unwrap();
+        println!("{:?}", output.res.rect);
+    }   
+}

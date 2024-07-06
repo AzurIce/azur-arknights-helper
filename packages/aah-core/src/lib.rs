@@ -3,7 +3,8 @@
 
 use std::{
     error::Error,
-    path::{Path, PathBuf}, sync::Mutex,
+    path::{Path, PathBuf},
+    sync::Mutex,
 };
 
 use config::{navigate::NavigateConfig, task::TaskConfig};
@@ -34,15 +35,21 @@ pub struct AAH {
     /// 由 `navigates.toml` 加载的导航配置
     pub navigate_config: NavigateConfig,
     // /// 屏幕内容的缓存
-    // pub screen_cache: Option<image::DynamicImage>,
+    screen_cache: Mutex<Option<image::DynamicImage>>,
     on_task_evt: Box<dyn Fn(TaskEvt) + Sync + Send>,
     ocr_engine: OcrEngine,
 }
 
 pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
     let res_dir = res_dir.as_ref();
-    let detection_model_path = res_dir.join("models").join("ocrs").join("text-detection.rten");
-    let rec_model_path = res_dir.join("models").join("ocrs").join("text-recognition.rten");
+    let detection_model_path = res_dir
+        .join("models")
+        .join("ocrs")
+        .join("text-detection.rten");
+    let rec_model_path = res_dir
+        .join("models")
+        .join("ocrs")
+        .join("text-recognition.rten");
 
     let detection_model = Model::load_file(detection_model_path).unwrap();
     let recognition_model = Model::load_file(rec_model_path).unwrap();
@@ -51,7 +58,8 @@ pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
         detection_model: Some(detection_model),
         recognition_model: Some(recognition_model),
         ..Default::default()
-    }).unwrap();
+    })
+    .unwrap();
     engine
 }
 
@@ -80,8 +88,8 @@ impl AAH {
             task_config,
             navigate_config,
             on_task_evt: Box::new(on_task_evt),
-            // screen_cache: None,
-            ocr_engine
+            screen_cache: Mutex::new(None),
+            ocr_engine,
         })
     }
 
@@ -102,6 +110,35 @@ impl AAH {
         task.run(self)?;
 
         Ok(())
+    }
+
+    /// Get screen cache or capture one. This is for internal analyzer use
+    fn screen_cache_or_cap(&self) -> Result<image::DynamicImage, String> {
+        let mut screen_cache = self.screen_cache.lock().unwrap();
+        if screen_cache.is_none() {
+            let screen = self
+                .controller
+                .screencap()
+                .map_err(|err| format!("{err}"))?;
+            *screen_cache = Some(screen.clone());
+        }
+        screen_cache
+            .as_ref()
+            .map(|i| i.clone())
+            .ok_or("screen cache is empty".to_string())
+    }
+
+    fn screen_cap_and_cache(&self) -> Result<image::DynamicImage, String> {
+        let mut screen_cache = self.screen_cache.lock().unwrap();
+        let screen = self
+            .controller
+            .screencap()
+            .map_err(|err| format!("{err}"))?;
+        *screen_cache = Some(screen);
+        screen_cache
+            .as_ref()
+            .map(|i| i.clone())
+            .ok_or("screen cache is empty".to_string())
     }
 
     /// Capture a screen, and return decoded image
