@@ -91,8 +91,9 @@ impl Analyzer for DeployAnalyzer {
         let t = Instant::now();
 
         // Make sure that we are in the operation-start page
-        let mut analyzer = MultiMatchAnalyzer::new("battle_deploy-card-cost1.png", None, None)
-            .roi((0.0, 0.75), (1.0, 1.0));
+        let mut analyzer =
+            MultiMatchAnalyzer::new("battle_deploy-card-cost1.png", None, Some(40.0))
+                .roi((0.0, 0.75), (1.0, 1.0));
         if self.use_cache {
             analyzer = analyzer.use_cache()
         }
@@ -118,6 +119,7 @@ impl Analyzer for DeployAnalyzer {
                 };
 
                 let avatar_template = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
+                assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
                 let res = matcher.match_with(avatar_template);
                 let oper_name = self.oper_names.get(res).unwrap().to_string();
 
