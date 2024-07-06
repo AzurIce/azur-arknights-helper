@@ -295,7 +295,7 @@ fn prepare_buffer_init_with_size(
     size: u64,
     usage: wgpu::BufferUsages,
 ) -> bool {
-    let update = buffer.is_none() || buffer.as_ref().unwrap().size() != size;
+    let update = buffer.is_none() || buffer.as_ref().unwrap().size() < size;
     if update {
         *buffer = Some(ctx.device.create_buffer(&BufferDescriptor {
             label: None,
@@ -315,7 +315,7 @@ fn prepare_buffer_init_with_image(
     usage: wgpu::BufferUsages,
 ) -> bool {
     let update = buffer.is_none()
-        || buffer.as_ref().unwrap().size() != (image.as_raw().len() * size_of::<f32>()) as _;
+        || buffer.as_ref().unwrap().size() < (image.as_raw().len() * size_of::<f32>()) as _;
     if update {
         *buffer = Some(
             ctx.device
