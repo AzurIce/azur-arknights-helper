@@ -1,12 +1,18 @@
+use std::time::Instant;
+
+use color_print::{cformat, cprintln};
 use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
-    vision::utils::{average_hsv_v, draw_box, Rect},
+    vision::{
+        analyzer::multi_match::MultiMatchAnalyzer,
+        utils::{average_hsv_v, draw_box, Rect},
+    },
     AAH,
 };
 
-use super::{multi_match::MultiMatchAnalyzer, Analyzer};
+use super::Analyzer;
 
 #[allow(unused)]
 #[derive(Debug, Serialize)]
@@ -31,15 +37,35 @@ pub struct DeployAnalyzerOutput {
     pub annotated_screen: Box<DynamicImage>,
 }
 
-pub struct DeployAnalyzer;
+pub struct DeployAnalyzer {
+    use_cache: bool,
+}
+
+impl DeployAnalyzer {
+    pub fn new() -> Self {
+        Self { use_cache: false }
+    }
+
+    pub fn use_cache(mut self) -> Self {
+        self.use_cache = true;
+        self
+    }
+}
 
 impl Analyzer for DeployAnalyzer {
     type Output = DeployAnalyzerOutput;
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+        let log_tag = cformat!("<strong>[DeployAnalyzer]: </strong>");
+        cprintln!("{log_tag}analyzing deploy...");
+        let t = Instant::now();
+
         // Make sure that we are in the operation-start page
-        let output =
-            MultiMatchAnalyzer::new("battle_deploy-card-cost1.png".to_string(), None, None)
-                .analyze(core)?;
+        let mut analyzer = MultiMatchAnalyzer::new("battle_deploy-card-cost1.png", None, None)
+            .roi((0.0, 0.75), (1.0, 1.0));
+        if self.use_cache {
+            analyzer = analyzer.use_cache()
+        }
+        let output = analyzer.analyze(core)?;
 
         let screen = output.screen;
         let res = output.res;
@@ -49,19 +75,22 @@ impl Analyzer for DeployAnalyzer {
             .map(|rect| {
                 let cropped = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 let avg_hsv_v = average_hsv_v(&cropped);
-                let available = avg_hsv_v > 100;
+                println!("{avg_hsv_v}");
+                let available = avg_hsv_v > 90;
 
                 let rect = Rect {
-                    x: rect.x.saturating_add_signed(-45),
-                    y: rect.y.saturating_add(6),
-                    width: 75,
-                    height: 120,
+                    x: rect.x.saturating_add_signed(-15 - 40),
+                    y: rect.y.saturating_add(60),
+                    width: 80,
+                    height: 100,
                 };
 
                 DeployCard { rect, available }
             })
             .collect();
 
+
+        let annotation_t = Instant::now();
         let mut annotated_screen = output.annotated_screen;
         for deploy_card in &deploy_cards {
             let color = if deploy_card.available {
@@ -80,7 +109,9 @@ impl Analyzer for DeployAnalyzer {
                 color,
             );
         }
+        cprintln!("{log_tag}annotation cost: {:?}...", annotation_t.elapsed());
 
+        cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
         Ok(DeployAnalyzerOutput {
             screen,
             deploy_cards,
@@ -91,13 +122,15 @@ impl Analyzer for DeployAnalyzer {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{vision::analyzer::Analyzer, AAH};
 
     #[test]
     fn test_deploy_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = super::DeployAnalyzer {};
+        let mut analyzer = DeployAnalyzer::new();
         let output = analyzer.analyze(&mut core).unwrap();
+        output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);
     }
 }
