@@ -32,7 +32,7 @@ struct Uniforms {
     image_height: u32,
     template_width: u32,
     template_height: u32,
-    template_sq_sum: f32,
+    // template_sq_sum: f32,
 }
 
 impl CrossCorrelationNormedMatcher {
@@ -164,7 +164,24 @@ impl CrossCorrelationNormedMatcher {
         &mut self,
         image: &ImageBuffer<Luma<f32>, Vec<f32>>,
         template: &ImageBuffer<Luma<f32>, Vec<f32>>,
+        // padding: bool,
     ) -> ImageBuffer<Luma<f32>, Vec<f32>> {
+        // let image = if padding {
+        //     let padded_w = image.width() + template.width() - 1;
+        //     let padded_h = image.height() + template.height() - 1;
+
+        //     ImageBuffer::from_fn(padded_w, padded_h, |x, y| {
+        //         if x < image.width() && y < image.height() {
+        //             *image.get_pixel(x, y)
+        //         } else {
+        //             Luma([0.0])
+        //         }
+        //     })
+        // } else {
+        //     image.clone()
+        // };
+        // let image = &image;
+
         let (result_w, result_h) = (
             image.width() - template.width() + 1,
             image.height() - template.height() + 1,
@@ -200,13 +217,13 @@ impl CrossCorrelationNormedMatcher {
         // update bind_group and uniforms
         if update {
             self.bind_group = Some(self.create_new_bind_group());
-            let template_sq_sum = template.as_raw().iter().map(|x| x * x).sum::<f32>();
+            // let template_sq_sum = template.as_raw().iter().map(|x| x * x).sum::<f32>();
             let uniforms = Uniforms {
                 image_height: image.height(),
                 image_width: image.width(),
                 template_height: template.height(),
                 template_width: template.width(),
-                template_sq_sum,
+                // template_sq_sum,
             };
             self.ctx
                 .queue
