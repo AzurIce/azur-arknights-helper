@@ -1,6 +1,6 @@
 use image::DynamicImage;
 
-use crate::AAH;
+use crate::{vision::analyzer::battle::BattleAnalyzerOutput, AAH};
 
 pub mod builtins;
 pub mod copilot;
@@ -20,4 +20,5 @@ pub trait Task {
 pub enum TaskEvt {
     Log(String),
     AnnotatedImg(DynamicImage),
+    BattleAnalyzerRes(BattleAnalyzerOutput)
 }

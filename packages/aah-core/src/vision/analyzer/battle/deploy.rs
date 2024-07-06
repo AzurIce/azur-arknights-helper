@@ -16,9 +16,10 @@ use crate::{
 use super::Analyzer;
 
 #[allow(unused)]
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 /// 部署卡片
 ///
+/// - `oper_name`: 干员名
 /// - `rect`: 位置信息
 /// - `available`: 是否可用
 pub struct DeployCard {
@@ -106,7 +107,7 @@ impl Analyzer for DeployAnalyzer {
             .map(|rect| {
                 let cropped = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 let avg_hsv_v = average_hsv_v(&cropped);
-                println!("{avg_hsv_v}");
+                // println!("{avg_hsv_v}");
                 let available = avg_hsv_v > 90;
 
                 let rect = Rect {

@@ -14,7 +14,7 @@ use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
-    battle::deploy::{DeployAnalyzer, DeployAnalyzerOutput},
+    battle::{deploy::{DeployAnalyzer, DeployAnalyzerOutput}, BattleAnalyzer, BattleState},
     Analyzer,
 };
 
@@ -215,10 +215,31 @@ impl AAH {
     pub(crate) fn emit_task_evt(&self, evt: TaskEvt) {
         (self.on_task_evt)(evt)
     }
+
+    /// 启动战斗分析器，直到战斗结束
+    /// 
+    /// 分析信息会通过 [`TaskEvt::BattleAnalyzerRes`] 事件返回，
+    /// 出于性能考虑，目前待部署区只设置了识别以下几位干员：
+    /// - `char_285_medic2`
+    /// - `char_502_nblade`
+    /// - `char_500_noirc`
+    /// - `char_503_rang`
+    /// - `char_501_durin`
+    /// - `char_284_spot`
+    /// - `char_212_ansel`
+    /// - `char_208_melan`
+    /// - `char_151_myrtle`
+    pub fn start_battle_analyzer(&self) {
+        let mut analyzer = BattleAnalyzer::new();
+        while analyzer.battle_state != BattleState::Completed {
+            let output = analyzer.analyze(self).unwrap();
+            self.emit_task_evt(TaskEvt::BattleAnalyzerRes(output));
+        }
+    }
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use std::{
         path::Path,
         sync::{Mutex, OnceLock},
@@ -227,6 +248,16 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn foo() {
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |evt| {
+            if let TaskEvt::BattleAnalyzerRes(res) = evt {
+                println!("{:?}", res);
+            }
+        }).unwrap();
+        aah.start_battle_analyzer()
+    }
 
     #[test]
     fn test_get_tasks() {
@@ -250,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn foo() {
+    fn screenshot() {
         let mut aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
@@ -258,12 +289,12 @@ mod tests {
         // save_screenshot(dir, "notice.png");
         // save_screenshot(dir, "main.png");
         // save_screenshot(dir, "confirm.png");
-        // save_screenshot(dir, "operation-start.png");
-        let dir = "/Volumes/Data/Dev/AahAI/dataset/1-4/img";
-        for i in 0..10 {
-            save_screenshot(&mut aah, dir, format!("{i}.png"));
-            sleep(Duration::from_secs_f32(0.2))
-        }
+        save_screenshot(&mut aah, dir, "1-4_deploying.png");
+        // let dir = "/Volumes/Data/Dev/AahAI/dataset/1-4/img";
+        // for i in 0..10 {
+        //     save_screenshot(&mut aah, dir, format!("{i}.png"));
+        //     sleep(Duration::from_secs_f32(0.2))
+        // }
         // let dir = "../aah-resource/assets";
         // save_screenshot(dir, "LS-6_1.png");
     }
