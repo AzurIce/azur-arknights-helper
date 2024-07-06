@@ -7,6 +7,7 @@ use serde::Serialize;
 use crate::{
     vision::{
         analyzer::multi_match::MultiMatchAnalyzer,
+        matcher::best_matcher::BestMatcher,
         utils::{average_hsv_v, draw_box, Rect},
     },
     AAH,
@@ -21,6 +22,7 @@ use super::Analyzer;
 /// - `rect`: 位置信息
 /// - `available`: 是否可用
 pub struct DeployCard {
+    pub oper_name: String,
     pub rect: Rect,
     pub available: bool,
 }
@@ -39,15 +41,43 @@ pub struct DeployAnalyzerOutput {
 
 pub struct DeployAnalyzer {
     use_cache: bool,
+    oper_names: Vec<String>,
+    matcher: Option<BestMatcher>,
 }
 
 impl DeployAnalyzer {
     pub fn new() -> Self {
-        Self { use_cache: false }
+        Self {
+            use_cache: false,
+            oper_names: vec![],
+            matcher: None,
+        }
     }
 
     pub fn use_cache(mut self) -> Self {
         self.use_cache = true;
+        self
+    }
+
+    pub fn with_opers(mut self, opers: Vec<String>, aah: &AAH) -> Self {
+        let oper_images = opers
+            .iter()
+            .flat_map(|s| {
+                aah.get_oper_avatars(s)
+                    .unwrap()
+                    .into_iter()
+                    .map(|img| (s.to_string(), img))
+            })
+            .collect::<Vec<(String, DynamicImage)>>();
+        self.oper_names = oper_images
+            .iter()
+            .map(|(s, _)| s.to_string())
+            .collect::<Vec<String>>();
+        let images = oper_images
+            .into_iter()
+            .map(|(_, img)| img)
+            .collect::<Vec<DynamicImage>>();
+        self.matcher = Some(BestMatcher::new(images));
         self
     }
 }
@@ -67,6 +97,7 @@ impl Analyzer for DeployAnalyzer {
         }
         let output = analyzer.analyze(core)?;
 
+        let matcher = self.matcher.as_ref().unwrap();
         let screen = output.screen;
         let res = output.res;
         let deploy_cards: Vec<DeployCard> = res
@@ -85,10 +116,17 @@ impl Analyzer for DeployAnalyzer {
                     height: 100,
                 };
 
-                DeployCard { rect, available }
+                let avatar_template = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
+                let res = matcher.match_with(avatar_template);
+                let oper_name = self.oper_names.get(res).unwrap().to_string();
+
+                DeployCard {
+                    oper_name,
+                    rect,
+                    available,
+                }
             })
             .collect();
-
 
         let annotation_t = Instant::now();
         let mut annotated_screen = output.annotated_screen;
@@ -128,7 +166,23 @@ mod test {
     #[test]
     fn test_deploy_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new();
+        let mut analyzer = DeployAnalyzer::new().with_opers(
+            vec![
+                "char_285_medic2",
+                "char_502_nblade",
+                "char_500_noirc",
+                "char_503_rang",
+                "char_501_durin",
+                "char_284_spot",
+                "char_212_ansel",
+                "char_208_melan",
+                "char_151_myrtle",
+            ]
+            .into_iter()
+            .map(|s| s.to_string())
+            .collect(),
+            &core,
+        );
         let output = analyzer.analyze(&mut core).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);
