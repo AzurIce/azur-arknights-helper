@@ -3,7 +3,7 @@ struct Uniforms {
     input_height: u32,
     template_width: u32,
     template_height: u32,
-    template_sq_sum: f32,
+    // template_sq_sum: f32,
 };
 
 @group(0)
@@ -40,6 +40,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
     var total_sum = 0.0;
     var input_sq_sum = 0.0;
+    var template_sq_sum = 0.0;
     for (var i = 0u; i < match_width; i++) {
         for (var j = 0u; j < match_height; j++) {
             var input_idx = (y + j) * input_width + (i + x);
@@ -50,12 +51,12 @@ fn main(@builtin(global_invocation_id) global_id: vec3<u32>) {
 
             var cc = input_val * template_val;
             input_sq_sum += input_val * input_val;
+            template_sq_sum += template_val * template_val;
 
             total_sum += cc;
         }
     }
-    total_sum /= sqrt(input_sq_sum * uniforms.template_sq_sum);
 
     var result_idx = y * (input_width - template_width + 1u) + x;
-    result_buf[result_idx] = total_sum;
+    result_buf[result_idx] = total_sum / sqrt(input_sq_sum * template_sq_sum);
 }
