@@ -5,17 +5,23 @@ pub mod deploy;
 use std::time::Instant;
 
 use color_print::{cformat, cprintln};
+use deploy::{DeployAnalyzer, DeployCard};
+use serde::Serialize;
 
 use super::{single_match::SingleMatchAnalyzer, Analyzer};
 
-pub struct BattleAnalyzerOutput {}
+#[derive(Debug, Serialize, Clone)]
+pub struct BattleAnalyzerOutput {
+    battle_state: BattleState,
+    deploy_cards: Vec<DeployCard>,
+}
 
 pub enum Speed {
     Speed1,
     Speed2,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize)]
 pub enum BattleState {
     Unknown,
     Resumed,
@@ -24,15 +30,19 @@ pub enum BattleState {
 }
 
 pub struct BattleAnalyzer {
-    battle_state: BattleState,
+    pub battle_state: BattleState,
+    deploy_cards: Vec<DeployCard>,
     start_time: Instant,
+    deploy_analyzer: Option<DeployAnalyzer>,
 }
 
 impl BattleAnalyzer {
     pub fn new() -> Self {
         Self {
             battle_state: BattleState::Unknown,
+            deploy_cards: Vec::new(),
             start_time: Instant::now(),
+            deploy_analyzer: None,
         }
     }
 }
@@ -44,19 +54,44 @@ impl Analyzer for BattleAnalyzer {
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();
 
+        if self.deploy_analyzer.is_none() {
+            self.deploy_analyzer = Some(
+                DeployAnalyzer::new().use_cache().with_opers(
+                    vec![
+                        "char_285_medic2",
+                        "char_502_nblade",
+                        "char_500_noirc",
+                        "char_503_rang",
+                        "char_501_durin",
+                        "char_284_spot",
+                        "char_212_ansel",
+                        "char_208_melan",
+                        "char_151_myrtle",
+                    ]
+                    .into_iter()
+                    .map(|s| s.to_string())
+                    .collect(),
+                    aah,
+                ),
+            );
+        }
+
         // Update cache
         let _ = aah.screen_cap_and_cache().unwrap();
         cprintln!("{log_tag}screen_cap_and_cache cost: {:?}", t.elapsed());
         // Update battle_state
         for (img, state) in [
             (Some("battle_pause.png"), BattleState::Resumed),
+            (Some("battle_pause-dim.png"), BattleState::Resumed),
             (Some("battle_resume.png"), BattleState::Paused),
             (None, BattleState::Unknown),
         ] {
             match img {
                 None => {
                     // battle completed
-                    if self.battle_state == BattleState::Resumed {
+                    if self.battle_state == BattleState::Resumed
+                        || self.battle_state == BattleState::Paused
+                    {
                         self.start_time = Instant::now();
                         self.battle_state = BattleState::Completed;
                     } else {
@@ -82,8 +117,17 @@ impl Analyzer for BattleAnalyzer {
             }
         }
 
+        if self.battle_state != BattleState::Unknown {
+            // TODO: Analyze battlefield (deploy)
+            let output = self.deploy_analyzer.as_mut().unwrap().analyze(aah)?;
+            self.deploy_cards = output.deploy_cards;
+        }
+
         cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
-        Ok(BattleAnalyzerOutput {})
+        Ok(BattleAnalyzerOutput {
+            battle_state: self.battle_state,
+            deploy_cards: self.deploy_cards.clone(),
+        })
     }
 }
 
