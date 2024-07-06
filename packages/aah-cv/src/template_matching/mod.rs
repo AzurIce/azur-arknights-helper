@@ -95,9 +95,12 @@ pub fn match_template_sse_normed(
     image: &ImageBuffer<Luma<f32>, Vec<f32>>,
     template: &ImageBuffer<Luma<f32>, Vec<f32>>,
 ) -> ImageBuffer<Luma<f32>, Vec<f32>> {
-    match_template(image, template, MatchTemplateMethod::SumOfSquaredErrorsNormed)
+    match_template(
+        image,
+        template,
+        MatchTemplateMethod::SumOfSquaredErrorsNormed,
+    )
 }
-
 
 /// internal
 fn matcher() -> &'static Arc<Mutex<Matcher>> {
@@ -367,7 +370,9 @@ impl Matcher {
                     pass.set_pipeline(&self.pipeline_ccorr_normed)
                 }
                 MatchTemplateMethod::SumOfSquaredErrors => pass.set_pipeline(&self.pipeline_sse),
-                MatchTemplateMethod::SumOfSquaredErrorsNormed => pass.set_pipeline(&self.pipeline_sse_normed),
+                MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                    pass.set_pipeline(&self.pipeline_sse_normed)
+                }
             }
             pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(

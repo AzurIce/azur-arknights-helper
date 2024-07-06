@@ -4,6 +4,8 @@ use aah_resource::level::get_level;
 use color_print::{cformat, cprintln};
 use serde::{Deserialize, Serialize};
 
+use crate::vision::analyzer::battle::BattleAnalyzer;
+
 use super::{builtins::ActionClickMatch, match_task::MatchTask, Task};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,6 +73,9 @@ impl Task for CopilotTask {
                 return Err(err);
             }
         }
+
+        let battle_analyzer = BattleAnalyzer::new();
+        // TODO: Do battle things
 
         Ok(())
     }

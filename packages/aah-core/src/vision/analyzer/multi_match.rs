@@ -58,10 +58,7 @@ impl Analyzer for MultiMatchAnalyzer {
     fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
         // Make sure that we are in the operation-start page
         let log_tag = cformat!("<strong>[MultiMatchAnalyzer]: </strong>");
-        cprintln!(
-            "{log_tag}matching {:?}",
-            self.template_filename
-        );
+        cprintln!("{log_tag}matching {:?}", self.template_filename);
 
         // TODO: 并不是一个好主意，缩放大图消耗时间更多，且误差更大
         // TODO: 然而测试了一下，发现缩放模板有时也会导致误差较大 (333.9063)
