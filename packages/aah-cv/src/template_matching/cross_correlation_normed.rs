@@ -104,14 +104,14 @@ impl CrossCorrelationNormedMatcher {
         let pipeline_layout = ctx
             .device
             .create_pipeline_layout(&PipelineLayoutDescriptor {
-                label: Some("CrossCorrelationMatcher PipelineLayout"),
+                label: Some("CrossCorrelationNormedMatcher PipelineLayout"),
                 bind_group_layouts: &[&bind_group_layout],
                 push_constant_ranges: &[],
             });
         let pipeline = ctx
             .device
             .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("CrossCorrelationMatcher Pipeline"),
+                label: Some("CrossCorrelationNormedMatcher Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main",
@@ -133,7 +133,7 @@ impl CrossCorrelationNormedMatcher {
 
     fn create_new_bind_group(&self) -> BindGroup {
         self.ctx.device.create_bind_group(&BindGroupDescriptor {
-            label: Some("CrossCorrelationMatcher BindGroup"),
+            label: Some("CrossCorrelationNormedMatcher BindGroup"),
             layout: &self.bind_group_layout,
             entries: &[
                 // input
@@ -312,7 +312,7 @@ fn prepare_buffer_init_with_image(
     usage: wgpu::BufferUsages,
 ) -> bool {
     let update = buffer.is_none()
-        || buffer.as_ref().unwrap().size() != (image.len() * size_of::<f32>()) as _;
+        || buffer.as_ref().unwrap().size() != (image.as_raw().len() * size_of::<f32>()) as _;
     if update {
         *buffer = Some(
             ctx.device
