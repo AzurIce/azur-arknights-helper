@@ -76,7 +76,11 @@ impl Controller for AahController {
         // cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
         // self.inner
         //     .execute_command_by_process(format!("shell input tap {} {}", x, y).as_str())?;
-        cprintln!("<blue>[AahController]</blue>: clicking ({}, {}) using minitouch", x, y);
+        cprintln!(
+            "<blue>[AahController]</blue>: clicking ({}, {}) using minitouch",
+            x,
+            y
+        );
         self.minitouch
             .lock()
             .unwrap()
@@ -85,7 +89,14 @@ impl Controller for AahController {
         Ok(())
     }
 
-    fn swipe(&self, start: (u32, u32), end: (i32, i32), duration: Duration, slope_in: f32, slope_out: f32) -> Result<(), MyError> {
+    fn swipe(
+        &self,
+        start: (u32, u32),
+        end: (i32, i32),
+        duration: Duration,
+        slope_in: f32,
+        slope_out: f32,
+    ) -> Result<(), MyError> {
         cprintln!(
             "<blue>[AahController]</blue>: swiping from {:?} to {:?} for {:?} using minitouch",
             start,
@@ -95,13 +106,7 @@ impl Controller for AahController {
         self.minitouch
             .lock()
             .unwrap()
-            .swipe(
-                start,
-                end,
-                duration,
-                slope_in,
-                slope_out,
-            )
+            .swipe(start, end, duration, slope_in, slope_out)
             .unwrap();
         // self.inner.execute_command_by_process(
         //     format!(
@@ -162,7 +167,13 @@ mod test {
     fn test_swipe() {
         let controller = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
         controller
-            .swipe((640, 360), (100, 360), Duration::from_secs_f32(0.2), 2.0, 0.0)
+            .swipe(
+                (640, 360),
+                (100, 360),
+                Duration::from_secs_f32(0.2),
+                2.0,
+                0.0,
+            )
             .unwrap();
         sleep(Duration::from_secs(10));
     }

@@ -20,5 +20,5 @@ pub trait Task {
 pub enum TaskEvt {
     Log(String),
     AnnotatedImg(DynamicImage),
-    BattleAnalyzerRes(BattleAnalyzerOutput)
+    BattleAnalyzerRes(BattleAnalyzerOutput),
 }

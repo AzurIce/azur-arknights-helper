@@ -1,6 +1,6 @@
+pub mod best_matcher;
 pub mod multi_matcher;
 pub mod single_matcher;
-pub mod best_matcher;
 
 use std::error::Error;
 
@@ -13,29 +13,6 @@ const CCORR_NORMED_THRESHOLD: f32 = 0.8;
 const CCOEFF_THRESHOLD: f32 = 30.0;
 const SSE_THRESHOLD: f32 = 40.0;
 const SSE_NORMED_THRESHOLD: f32 = 0.2;
-
-pub fn convert_image_to_ten(
-    image: DynamicImage,
-) -> Result<NdTensorBase<f32, Vec<f32>, 3>, Box<dyn Error>> {
-    let image = image.into_rgb8();
-    let (width, height) = image.dimensions();
-    let layout = image.sample_layout();
-
-    let chw_tensor = NdTensorView::from_slice(
-        image.as_raw().as_slice(),
-        [height as usize, width as usize, 3],
-        Some([
-            layout.height_stride,
-            layout.width_stride,
-            layout.channel_stride,
-        ]),
-    )
-    .map_err(|err| format!("failed to convert image to tensorL {:?}", err))?
-    .permuted([2, 0, 1]) // HWC => CHW
-    .to_tensor() // Make tensor contiguous, which makes `map` faster
-    .map(|x| *x as f32 / 255.); // Rescale from [0, 255] to [0, 1]
-    Ok(chw_tensor)
-}
 
 #[cfg(test)]
 pub mod test {

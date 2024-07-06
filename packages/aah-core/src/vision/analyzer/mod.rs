@@ -2,10 +2,10 @@ use crate::AAH;
 
 pub mod depot;
 // pub mod squad;
-pub mod multi_match;
-pub mod single_match;
-mod ocr;
 pub mod battle;
+pub mod multi_match;
+mod ocr;
+pub mod single_match;
 
 /// [`Analyzer`] 接收图像，返回分析结果 [`Analyzer::Output`]
 pub trait Analyzer {

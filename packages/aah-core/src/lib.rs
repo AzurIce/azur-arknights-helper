@@ -14,7 +14,10 @@ use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
-    battle::{deploy::{DeployAnalyzer, DeployAnalyzerOutput}, BattleAnalyzer, BattleState},
+    battle::{
+        deploy::{DeployAnalyzer, DeployAnalyzerOutput},
+        BattleAnalyzer, BattleState,
+    },
     Analyzer,
 };
 
@@ -217,7 +220,7 @@ impl AAH {
     }
 
     /// 启动战斗分析器，直到战斗结束
-    /// 
+    ///
     /// 分析信息会通过 [`TaskEvt::BattleAnalyzerRes`] 事件返回，
     /// 出于性能考虑，目前待部署区只设置了识别以下几位干员：
     /// - `char_285_medic2`
@@ -255,7 +258,8 @@ mod test {
             if let TaskEvt::BattleAnalyzerRes(res) = evt {
                 println!("{:?}", res);
             }
-        }).unwrap();
+        })
+        .unwrap();
         aah.start_battle_analyzer()
     }
 
