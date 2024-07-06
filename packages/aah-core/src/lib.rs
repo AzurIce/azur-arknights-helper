@@ -246,8 +246,6 @@ mod test {
     use std::{
         path::Path,
         sync::{Mutex, OnceLock},
-        thread::sleep,
-        time::Duration,
     };
 
     use super::*;
@@ -265,7 +263,8 @@ mod test {
 
     #[test]
     fn test_get_tasks() {
-        static s: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
+        static S: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
+        let _ = &S;
         let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         println!("{:?}", aah.get_tasks());
     }

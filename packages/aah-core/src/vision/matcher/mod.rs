@@ -2,12 +2,6 @@ pub mod best_matcher;
 pub mod multi_matcher;
 pub mod single_matcher;
 
-use std::error::Error;
-
-use image::DynamicImage;
-use rten_tensor::{NdTensorBase, NdTensorView};
-// use imageproc::template_matching::{find_extremes, match_template, MatchTemplateMethod};
-
 const CCORR_THRESHOLD: f32 = 30.0;
 const CCORR_NORMED_THRESHOLD: f32 = 0.8;
 const CCOEFF_THRESHOLD: f32 = 30.0;

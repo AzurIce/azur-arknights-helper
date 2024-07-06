@@ -1,7 +1,4 @@
-use std::{sync::Mutex, time::Instant};
-
 use aah_cv::template_matching::match_template_ccorr_normed;
-use color_print::{cformat, cprintln};
 use image::DynamicImage;
 use imageproc::template_matching::find_extremes;
 
@@ -23,7 +20,7 @@ impl BestMatcher {
         //     self.images.len()
         // );
 
-        let t = Instant::now();
+        // let t = Instant::now();
         let (mut max_val, mut max_idx) = (0.0, 0);
         for (idx, img) in self.images.iter().enumerate() {
             let res = match_template_ccorr_normed(&img.to_luma32f(), &template.to_luma32f());
