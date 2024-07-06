@@ -1,11 +1,16 @@
 use std::time::Instant;
 
-use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
+// use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
+use aah_cv::template_matching::{match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
 use image::{DynamicImage, ImageBuffer, Luma};
+use imageproc::template_matching::find_extremes;
 
 use crate::vision::{
-    matcher::{CCOEFF_THRESHOLD, SSE_THRESHOLD, THRESHOLD},
+    matcher::{
+        CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD,
+        SSE_THRESHOLD,
+    },
     utils::Rect,
 };
 
@@ -43,7 +48,7 @@ impl SingleMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrors;
+                let method = MatchTemplateMethod::SumOfSquaredErrorsNormed;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -59,27 +64,48 @@ impl SingleMatcher {
 
                 // Normalize
                 let min = res
-                    .data
+                    .as_raw()
                     .iter()
                     .min_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
                 let max = res
-                    .data
+                    .as_raw()
                     .iter()
                     .max_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
                 let data = res
-                    .data
+                    .as_raw()
                     .iter()
                     .map(|x| (x - min) / (max - min))
                     .collect::<Vec<f32>>();
+                // let min = res
+                //     .data
+                //     .iter()
+                //     .min_by(|a, b| a.partial_cmp(b).unwrap())
+                //     .unwrap();
+                // let max = res
+                //     .data
+                //     .iter()
+                //     .max_by(|a, b| a.partial_cmp(b).unwrap())
+                //     .unwrap();
+                // let data = res
+                //     .data
+                //     .iter()
+                //     .map(|x| (x - min) / (max - min))
+                //     .collect::<Vec<f32>>();
 
                 let matched_img = ImageBuffer::from_vec(
-                    res.width,
-                    res.height,
+                    res.width(),
+                    res.height(),
                     data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
                 )
                 .unwrap();
+                // let matched_img = ImageBuffer::from_vec(
+                //     res.width,
+                //     res.height,
+                //     data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
+                // )
+                // .unwrap();
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
 
                 let extrems = find_extremes(&res);
@@ -93,15 +119,21 @@ impl SingleMatcher {
                     MatchTemplateMethod::SumOfSquaredErrors => {
                         extrems.min_value <= threshold.unwrap_or(SSE_THRESHOLD)
                     }
+                    MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                        extrems.min_value <= threshold.unwrap_or(SSE_NORMED_THRESHOLD)
+                    }
                     MatchTemplateMethod::CrossCorrelation => {
-                        extrems.max_value >= threshold.unwrap_or(THRESHOLD)
+                        extrems.max_value >= threshold.unwrap_or(CCORR_THRESHOLD)
                     }
-                    MatchTemplateMethod::CCOEFF => {
-                        extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
+                    MatchTemplateMethod::CrossCorrelationNormed => {
+                        extrems.max_value >= threshold.unwrap_or(CCORR_NORMED_THRESHOLD)
                     }
-                    MatchTemplateMethod::CCOEFF_NORMED => {
-                        extrems.max_value >= threshold.unwrap_or(THRESHOLD)
-                    }
+                    // MatchTemplateMethod::CCOEFF => {
+                    //     extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
+                    // }
+                    // MatchTemplateMethod::CCOEFF_NORMED => {
+                    //     extrems.max_value >= threshold.unwrap_or(THRESHOLD)
+                    // }
                     _ => panic!("not implemented"),
                 };
 
@@ -111,10 +143,14 @@ impl SingleMatcher {
                 } else {
                     cprintln!("{log_tag}<green>success!</green>");
                     let (x, y) = match method {
-                        MatchTemplateMethod::SumOfSquaredErrors => extrems.min_value_location,
-                        MatchTemplateMethod::CrossCorrelation => extrems.max_value_location,
-                        MatchTemplateMethod::CCOEFF => extrems.max_value_location,
-                        MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
+                        MatchTemplateMethod::SumOfSquaredErrors
+                        | MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                            extrems.min_value_location
+                        }
+                        MatchTemplateMethod::CrossCorrelation
+                        | MatchTemplateMethod::CrossCorrelationNormed => extrems.max_value_location,
+                        // MatchTemplateMethod::CCOEFF => extrems.max_value_location,
+                        // MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
                         _ => panic!("not implemented"),
                     };
                     Some(Rect {
@@ -149,28 +185,28 @@ mod test {
 
     fn test_device_match(device: Device) {
         println!("#### testing device {:?} ####", device);
-        test_device_best_match(device, "start.png", "start_start.png");
+        test_device_single_match(device, "start.png", "start_start.png");
 
-        test_device_best_match(device, "wakeup.png", "wakeup_wakeup.png");
+        test_device_single_match(device, "wakeup.png", "wakeup_wakeup.png");
 
-        test_device_best_match(device, "main.png", "main_base.png");
-        test_device_best_match(device, "main.png", "main_mission.png");
-        test_device_best_match(device, "main.png", "main_operator.png");
-        test_device_best_match(device, "main.png", "main_squads.png");
-        test_device_best_match(device, "main.png", "main_recruit.png");
+        test_device_single_match(device, "main.png", "main_base.png");
+        test_device_single_match(device, "main.png", "main_mission.png");
+        test_device_single_match(device, "main.png", "main_operator.png");
+        test_device_single_match(device, "main.png", "main_squads.png");
+        test_device_single_match(device, "main.png", "main_recruit.png");
 
-        test_device_best_match(device, "notice.png", "notice_close.png");
-        test_device_best_match(device, "mission.png", "back.png");
+        test_device_single_match(device, "notice.png", "notice_close.png");
+        test_device_single_match(device, "mission.png", "back.png");
 
         // fail
-        test_device_best_match(device, "start.png", "main_base.png");
-        test_device_best_match(device, "start.png", "main_mission.png");
-        test_device_best_match(device, "start.png", "main_operator.png");
-        test_device_best_match(device, "start.png", "main_squads.png");
-        test_device_best_match(device, "start.png", "main_recruit.png");
+        test_device_single_match(device, "start.png", "main_base.png");
+        test_device_single_match(device, "start.png", "main_mission.png");
+        test_device_single_match(device, "start.png", "main_operator.png");
+        test_device_single_match(device, "start.png", "main_squads.png");
+        test_device_single_match(device, "start.png", "main_recruit.png");
     }
 
-    fn test_device_best_match<S: AsRef<str>>(
+    fn test_device_single_match<S: AsRef<str>>(
         device: Device,
         image_filename: S,
         template_filename: S,

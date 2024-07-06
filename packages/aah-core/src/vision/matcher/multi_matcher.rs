@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use aah_cv::{find_matches, match_template, MatchTemplateMethod};
+use aah_cv::template_matching::{find_matches, match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
 use image::{DynamicImage, ImageBuffer, Luma};
 
@@ -50,24 +50,24 @@ impl MultiMatcher {
 
                 // Normalize
                 let min = res
-                    .data
+                    .as_raw()
                     .iter()
                     .min_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
                 let max = res
-                    .data
+                    .as_raw()
                     .iter()
                     .max_by(|a, b| a.partial_cmp(b).unwrap())
                     .unwrap();
                 let data = res
-                    .data
+                    .as_raw()
                     .iter()
                     .map(|x| (x - min) / (max - min))
                     .collect::<Vec<f32>>();
 
                 let matched_img = ImageBuffer::from_vec(
-                    res.width,
-                    res.height,
+                    res.width(),
+                    res.height(),
                     data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
                 )
                 .unwrap();
@@ -137,7 +137,7 @@ mod test {
         let res = MultiMatcher::Template {
             image: image.to_luma32f(),
             template: template.to_luma32f(),
-            threshold: None,
+            threshold: Some(40.0),
         }
         .result();
         println!("{} matches", res.rects.len());
@@ -162,7 +162,7 @@ mod test {
             );
 
             let rect = Rect {
-                x: rect.x - 80,
+                x: rect.x.saturating_add_signed(-80),
                 y: rect.y + 10,
                 width: 140,
                 height: 170,
