@@ -13,7 +13,7 @@ use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
-    deploy::{DeployAnalyzer, DeployAnalyzerOutput},
+    battle::deploy::{DeployAnalyzer, DeployAnalyzerOutput},
     Analyzer,
 };
 
@@ -182,7 +182,7 @@ impl AAH {
 
     /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
     pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
-        let mut analyzer = DeployAnalyzer;
+        let mut analyzer = DeployAnalyzer::new();
         analyzer.analyze(self)
     }
 

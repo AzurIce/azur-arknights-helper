@@ -1,10 +1,10 @@
 use std::time::Instant;
 
 use aah_cv::{find_matches, match_template, MatchTemplateMethod};
-use color_print::cprintln;
-use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
+use color_print::{cformat, cprintln};
+use image::{DynamicImage, ImageBuffer, Luma};
 
-use crate::vision::matcher::SSE_THRESHOLD;
+use crate::vision::{matcher::SSE_THRESHOLD, utils::Rect};
 
 pub enum MultiMatcher {
     Template {
@@ -26,6 +26,7 @@ pub struct MultiMatcherResult {
 impl MultiMatcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> MultiMatcherResult {
+        let log_tag = cformat!("<strong>[MultiMatcher]: </strong>");
         match self {
             Self::Template {
                 image,
@@ -34,7 +35,14 @@ impl MultiMatcher {
             } => {
                 // let down_scaled_template = template;
                 let method = MatchTemplateMethod::SumOfSquaredErrors;
-                cprintln!("[Matcher::TemplateMatcher]: image: {}x{}, template: {}x{}, method: {:?}, matching...", image.width(), image.height(), template.width(), template.height(), method);
+                cprintln!(
+                    "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
+                    image.width(),
+                    image.height(),
+                    template.width(),
+                    template.height(),
+                    method
+                );
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
@@ -64,7 +72,6 @@ impl MultiMatcher {
                 )
                 .unwrap();
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
-                cprintln!("finding_extremes...");
 
                 let matches = find_matches(
                     &res,
@@ -82,7 +89,7 @@ impl MultiMatcher {
                     })
                     .collect();
                 cprintln!(
-                    "[Matcher::TemplateMatcher]: cost: {}s,",
+                    "<dim>{log_tag}cost: {}s</dim>",
                     start_time.elapsed().as_secs_f32(),
                 );
 

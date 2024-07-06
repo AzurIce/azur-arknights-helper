@@ -35,7 +35,7 @@ pub enum SingleMatcher {
 impl SingleMatcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> SingleMatcherResult {
-        let log_tag = cformat!("[BestMatcher::TemplateMatcher]: ");
+        let log_tag = cformat!("[SingleMatcher]: ");
         match self {
             Self::Template {
                 image,
