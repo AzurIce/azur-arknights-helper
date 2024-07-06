@@ -31,11 +31,11 @@
 
 以 [ArknightsGameData/zh_CN/gamedata/levels/obt/main/level_main_00-01.json](https://github.com/Kengxxiao/ArknightsGameData/blob/1a2cdabe0dc09f45c43cbe04503e4a7f2b0a178b/zh_CN/gamedata/levels/obt/main/level_main_00-01.json) 为例：
 
-![level_main_00-01](assets/level_main_00-01.svg)
+![level_main_00-01](./assets/level_main_00-01.svg)
 
 符合 0-1 地图：
 
-![main_00-01.png](assets/main_00-01.png)
+![main_00-01](./assets/main_00-01.png)
 
 ### 2. 路线（route）
 
