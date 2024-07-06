@@ -3,6 +3,7 @@
 
 use std::{
     error::Error,
+    fs,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -178,6 +179,25 @@ impl AAH {
         let path = self.res_dir.join("templates").join("1920x1080").join(name);
         let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
         Ok(image)
+    }
+
+    fn get_oper_avatars(&self, name: &str) -> Result<Vec<image::DynamicImage>, String> {
+        let components = name.split("_").collect::<Vec<&str>>();
+        let path = self
+            .res_dir
+            .join("avatars")
+            .join("char")
+            .join(components[1]);
+
+        let mut images = vec![];
+        for f in fs::read_dir(path).unwrap() {
+            let f = f.unwrap();
+            println!("{:?}", f.path());
+            let image = image::open(f.path()).map_err(|err| format!("avatar not found: {err}"))?;
+            // let image = image.crop_imm(30, 20, 100, 120);
+            images.push(image);
+        }
+        Ok(images)
     }
 
     /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
