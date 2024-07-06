@@ -84,9 +84,10 @@ impl Analyzer for BattleAnalyzer {
         cprintln!("{log_tag}screen_cap_and_cache cost: {:?}", t.elapsed());
         // Update battle_state
         for (img, state) in [
+            (Some("battle_resume.png"), BattleState::Paused),
             (Some("battle_pause.png"), BattleState::Resumed),
             (Some("battle_pause-dim.png"), BattleState::Resumed),
-            (Some("battle_resume.png"), BattleState::Paused),
+            (Some("battle_pause-dim-dim.png"), BattleState::Resumed),
             (None, BattleState::Unknown),
         ] {
             match img {
