@@ -4,6 +4,31 @@
 
 ## Copilot
 
+```toml
+code = "1-4" # 关卡 code
+
+[operators]
+lancet = "char_285_medic2", # ⭐ 医疗小车
+yato = "char_502_nblade", # ⭐⭐ 夜刀
+noir_corne = "char_500_noirc",  # ⭐⭐ 黑角
+rangers = "char_503_rang",   # ⭐⭐ 巡林者
+durin = "char_501_durin",  # ⭐⭐ 杜林
+spot = "char_284_spot",   # ⭐⭐⭐ 斑点
+ansel = "char_212_ansel",  # ⭐⭐⭐ 安塞尔
+melantha = "char_208_melan",  # ⭐⭐⭐ 玫兰莎
+myrtle = "char_151_myrtle", # ⭐⭐⭐⭐ 桃金娘
+
+[[steps]]
+[[steps.deploy]]
+time.sec = 1 # 按秒计时
+# time.asap = true # 越早越好
+operator = "myrtle"
+pos = [3, 4]
+direction = "right"
+```
+
+
+
 ## BattleProcessTask
 
 1. `calc_tiels_info`
