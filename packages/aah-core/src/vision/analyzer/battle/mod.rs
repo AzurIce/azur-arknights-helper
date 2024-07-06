@@ -145,5 +145,6 @@ mod test {
         let aah = crate::AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer = BattleAnalyzer::new();
         let res = analyzer.analyze(&aah).unwrap();
+        println!("{:?}", res)
     }
 }

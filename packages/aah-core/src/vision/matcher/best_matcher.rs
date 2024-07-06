@@ -1,6 +1,6 @@
 use std::{sync::Mutex, time::Instant};
 
-use aah_cv::template_matching::cross_correlation_normed::CrossCorrelationNormedMatcher;
+use aah_cv::template_matching::match_template_ccorr_normed;
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
 use imageproc::template_matching::find_extremes;
@@ -9,15 +9,11 @@ pub struct BestMatcherResult {}
 
 pub struct BestMatcher {
     images: Vec<DynamicImage>,
-    matcher: Mutex<CrossCorrelationNormedMatcher>,
 }
 
 impl BestMatcher {
     pub fn new(images: Vec<DynamicImage>) -> Self {
-        Self {
-            images,
-            matcher: Mutex::new(CrossCorrelationNormedMatcher::new()),
-        }
+        Self { images }
     }
 
     pub fn match_with(&self, template: DynamicImage) -> usize {
@@ -30,11 +26,7 @@ impl BestMatcher {
         let t = Instant::now();
         let (mut max_val, mut max_idx) = (0.0, 0);
         for (idx, img) in self.images.iter().enumerate() {
-            let res = self
-                .matcher
-                .lock()
-                .unwrap()
-                .match_template(&img.to_luma32f(), &template.to_luma32f());
+            let res = match_template_ccorr_normed(&img.to_luma32f(), &template.to_luma32f());
             let extremes = find_extremes(&res);
             if extremes.max_value > max_val {
                 max_val = extremes.max_value;
