@@ -292,7 +292,7 @@ mod test {
         // save_screenshot(dir, "notice.png");
         // save_screenshot(dir, "main.png");
         // save_screenshot(dir, "confirm.png");
-        save_screenshot(&mut aah, dir, "1-4_deploying.png");
+        save_screenshot(&mut aah, dir, "1-4_deploying_direction.png");
         // let dir = "/Volumes/Data/Dev/AahAI/dataset/1-4/img";
         // for i in 0..10 {
         //     save_screenshot(&mut aah, dir, format!("{i}.png"));
