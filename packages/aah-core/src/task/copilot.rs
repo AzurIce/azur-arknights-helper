@@ -31,16 +31,6 @@ use super::{builtins::ActionClickMatch, match_task::MatchTask, Task};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CopilotTask(pub String);
 
-// #[derive(Debug, Serialize, Deserialize)]
-// pub enum CopilotActions {
-//     SpeedUp,
-//     Deploy {
-//         name: String,
-//         tile_pos: (u32, u32),
-//         direction: Direction,
-//     },
-// }
-
 impl Task for CopilotTask {
     type Err = String;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
@@ -101,7 +91,8 @@ impl Task for CopilotTask {
 
         let level_retreat_screen_pos = level.get_retreat_screen_pos();
         let level_skill_screen_pos = level.get_skill_screen_pos();
-        let mut battle_analyzer = BattleAnalyzer::new(&aah.res_dir);
+        let mut battle_analyzer =
+            BattleAnalyzer::new(&aah.res_dir, copilot_task.operators.values().collect());
         // wait for battle begins
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在等待关卡开始...".to_string()));
         cprintln!("{log_tag}waiting for battle to begin...");
@@ -213,7 +204,9 @@ impl Task for CopilotTask {
                             direction,
                             ..
                         } => {
-                            aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 正在匹配 {operator} 部署卡片...")));
+                            aah.emit_task_evt(TaskEvt::Log(format!(
+                                "[INFO]: 正在匹配 {operator} 部署卡片..."
+                            )));
                             cprintln!(
                                 "{log_tag}looking for operator's deploy card {}...",
                                 operator
@@ -225,11 +218,15 @@ impl Task for CopilotTask {
                                         && card.available == true
                                 })
                             {
-                                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 已找到，正在计算地块屏幕坐标...")));
+                                aah.emit_task_evt(TaskEvt::Log(format!(
+                                    "[INFO]: 已找到，正在计算地块屏幕坐标..."
+                                )));
                                 cprintln!("{log_tag}found! {:?}", card);
                                 cprintln!("{log_tag}calculating tile screen pos...");
                                 let tile_pos = level.calc_tile_screen_pos(tile.0, tile.1, true);
-                                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 地块屏幕坐标 {tile_pos:?}")));
+                                aah.emit_task_evt(TaskEvt::Log(format!(
+                                    "[INFO]: 地块屏幕坐标 {tile_pos:?}"
+                                )));
                                 cprintln!("{log_tag}tile screen pos: {:?}", tile_pos);
                                 let task1 = ActionSwipe::new(
                                     (card.rect.x, card.rect.y),
@@ -269,7 +266,9 @@ impl Task for CopilotTask {
                         }
                         BattleCommand::Retreat { operator, .. } => {
                             cprintln!("{log_tag} retreating {operator}...");
-                            aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 正在撤退干员 {operator}...")));
+                            aah.emit_task_evt(TaskEvt::Log(format!(
+                                "[INFO]: 正在撤退干员 {operator}..."
+                            )));
                             if let Some(tile_pos) = deployed_operators.get(operator).cloned() {
                                 let click1 =
                                     level.calc_tile_screen_pos(tile_pos.0, tile_pos.1, false);
@@ -285,7 +284,9 @@ impl Task for CopilotTask {
                                 );
                                 if task1.run(aah).and(task2.run(aah)).is_ok() {
                                     deployed_operators.remove(operator);
-                                    aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: {operator} 已撤退")));
+                                    aah.emit_task_evt(TaskEvt::Log(format!(
+                                        "[INFO]: {operator} 已撤退"
+                                    )));
                                     success = true;
                                 }
                             }
