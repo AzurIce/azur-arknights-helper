@@ -46,8 +46,6 @@ pub struct BattleAnalyzer {
 
 impl BattleAnalyzer {
     /// 创建一个新的 [`BattleAnalyzer`]
-    ///
-    ///
     pub fn new<P: AsRef<Path>>(res_dir: P) -> Self {
         let deploy_analyzer = DeployAnalyzer::new(&res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
         Self {
@@ -59,7 +57,7 @@ impl BattleAnalyzer {
         }
     }
 
-    fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
+    pub fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[BattleAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();

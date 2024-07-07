@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use color_print::{cformat, cprintln};
+use color_print::cformat;
 use image::DynamicImage;
 
 use crate::{
