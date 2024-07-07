@@ -1,3 +1,5 @@
+//! This crate is the core of [AzurIce/AzurArknightsHelper](https://github.com/AzurIce/AzurArknightsHelper)
+//! 
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
