@@ -1,0 +1,95 @@
+level_code = "1-4"
+
+[operators]
+lancet = "char_285_medic2"
+rangers = "char_503_rang"
+yato = "char_502_nblade"
+melantha = "char_208_melan"
+noir_corne = "char_500_noirc"
+durin = "char_501_durin"
+ansel = "char_212_ansel"
+myrtle = "char_151_myrtle"
+spot = "char_284_spot"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "myrtle"
+tile = [
+    3,
+    1,
+]
+direction = "Right"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "yato"
+tile = [
+    2,
+    1,
+]
+direction = "Right"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "noir_corne"
+tile = [
+    4,
+    1,
+]
+direction = "Right"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "ansel"
+tile = [
+    5,
+    2,
+]
+direction = "Up"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "rangers"
+tile = [
+    1,
+    3,
+]
+direction = "Down"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "durin"
+tile = [
+    5,
+    3,
+]
+direction = "Up"
+
+[[steps]]
+
+[steps.Retreat]
+time = "Asap"
+operator = "yato"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "melantha"
+tile = [
+    2,
+    1,
+]
+direction = "Right"

@@ -306,11 +306,13 @@ impl Toucher for MiniTouch {
             self.mv(0, cur_x as i32, cur_y as i32, 0)?;
             self.commit()?;
             self.wait(Duration::from_millis(SWIPE_DELAY_MS as u64))?;
+            thread::sleep(Duration::from_millis(SWIPE_DELAY_MS as u64));
         }
 
         // self.mv(0, end.0, end.1, 0)?;
-        self.wait(Duration::from_millis(600))?;
+        self.wait(Duration::from_millis(200))?;
         self.commit()?;
+        thread::sleep(Duration::from_millis(200));
         self.up(0)?;
         self.commit()?;
 

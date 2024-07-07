@@ -71,7 +71,7 @@ impl Task for ActionSwipe {
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let task = || {
             aah.controller
-                .swipe_scaled(
+                .swipe(
                     self.p1,
                     self.p2,
                     Duration::from_secs_f32(self.duration),
