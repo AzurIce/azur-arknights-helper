@@ -15,17 +15,21 @@ use crate::{
     task::{
         builtins::{ActionClick, ActionSwipe},
         wrapper::GenericTaskWrapper,
+        TaskEvt,
     },
-    vision::{analyzer::{
-        battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
-        Analyzer,
-    }, utils::resource::get_template},
+    vision::{
+        analyzer::{
+            battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
+            Analyzer,
+        },
+        utils::resource::get_template,
+    },
 };
 
 use super::{builtins::ActionClickMatch, match_task::MatchTask, Task};
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CopilotTask(String);
+pub struct CopilotTask(pub String);
 
 // #[derive(Debug, Serialize, Deserialize)]
 // pub enum CopilotActions {
@@ -59,12 +63,17 @@ impl Task for CopilotTask {
         // }
 
         cprintln!("{log_tag}clicking start-pre...");
+        aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start-pre...".to_string()));
         let start_pre =
             ActionClickMatch::new(MatchTask::Template("level_start-pre.png".to_string()), None);
         match start_pre.run(aah) {
-            Ok(_) => cprintln!("{log_tag}<g>clicked start pre</g>"),
+            Ok(_) => {
+                aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start-pre".to_string()));
+                cprintln!("{log_tag}<g>clicked start pre</g>")
+            }
             Err(err) => {
                 let err = format!("failed to click start pre: {}", err);
+                aah.emit_task_evt(TaskEvt::Log(format!("[ERROR]: {err}")));
                 cprintln!("{log_tag}<r>{}</r>", err);
                 return Err(err);
             }
@@ -74,12 +83,17 @@ impl Task for CopilotTask {
         // TODO: formation
 
         cprintln!("{log_tag}clicking start...");
+        aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start...".to_string()));
         let start_pre =
             ActionClickMatch::new(MatchTask::Template("formation_start.png".to_string()), None);
         match start_pre.run(aah) {
-            Ok(_) => cprintln!("{log_tag}<g>clicked start</g>"),
+            Ok(_) => {
+                aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start".to_string()));
+                cprintln!("{log_tag}<g>clicked start</g>")
+            }
             Err(err) => {
                 let err = format!("failed to click start: {}", err);
+                aah.emit_task_evt(TaskEvt::Log(format!("[ERROR]: {err}")));
                 cprintln!("{log_tag}<r>{}</r>", err);
                 return Err(err);
             }
@@ -89,14 +103,17 @@ impl Task for CopilotTask {
         let level_skill_screen_pos = level.get_skill_screen_pos();
         let mut battle_analyzer = BattleAnalyzer::new(&aah.res_dir);
         // wait for battle begins
+        aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在等待关卡开始...".to_string()));
         cprintln!("{log_tag}waiting for battle to begin...");
         while battle_analyzer.battle_state == BattleState::Unknown {
             thread::sleep(Duration::from_secs_f32(0.5));
             battle_analyzer.analyze(aah)?;
         }
         // Do battle things
+        aah.emit_task_evt(TaskEvt::Log("[INFO]: 关卡开始".to_string()));
         cprintln!("{log_tag}battle begins!");
-        let skill_ready_template = get_template("battle_skill-ready.png", &aah.res_dir)?.to_luma32f();
+        let skill_ready_template =
+            get_template("battle_skill-ready.png", &aah.res_dir)?.to_luma32f();
         let mut commands = copilot_task.steps.iter().enumerate();
         let mut battle_analyzer_output: BattleAnalyzerOutput;
         let mut deployed_operators = HashMap::<String, (u32, u32)>::new();
@@ -105,6 +122,7 @@ impl Task for CopilotTask {
         let auto_skilling =
             |auto_skill_operators: &HashSet<String>,
              deployed_operators: &HashMap<String, (u32, u32)>| {
+                aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在检测技能".to_string()));
                 cprintln!("{log_tag}checking auto_skill...");
                 for oper in auto_skill_operators.iter() {
                     if let Some(tile_pos) = deployed_operators.get(oper).cloned() {
@@ -124,10 +142,14 @@ impl Task for CopilotTask {
                             );
                             let v = find_extremes(&res).max_value;
                             let skill_ready = v > 0.9;
+                            aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: {oper} 匹配度：{v}")));
                             cprintln!("{log_tag}{oper}'s skill match is {}", v);
                             // let skill_ready =
                             //     get_skill_ready(&skill_cropped, &aah.res_dir).unwrap() == 1;
                             if skill_ready {
+                                aah.emit_task_evt(TaskEvt::Log(format!(
+                                    "[INFO]: {oper} 技能就绪，正在使用..."
+                                )));
                                 cprintln!("{log_tag}{oper}'s skil is ready, clicking...");
                                 // 32 187 64x64
                                 let click1 =
@@ -143,6 +165,9 @@ impl Task for CopilotTask {
                                     }),
                                 );
                                 if task1.run(aah).and(task2.run(aah)).is_ok() {
+                                    aah.emit_task_evt(TaskEvt::Log(format!(
+                                        "[INFO]: {oper} 技能已使用"
+                                    )));
                                     cprintln!("{log_tag}auto_skill[{oper}]: skill clicked");
                                 }
                             }
@@ -153,12 +178,19 @@ impl Task for CopilotTask {
 
         while battle_analyzer.battle_state != BattleState::Completed {
             if let Some((idx, cmd)) = commands.next() {
+                aah.emit_task_evt(TaskEvt::Log(format!(
+                    "[INFO]: 执行命令 [{}/{}]: {:?}",
+                    idx,
+                    commands.len(),
+                    cmd
+                )));
                 cprintln!(
                     "{log_tag}executing command[{}/{}]: {:?}",
                     idx,
                     commands.len(),
                     cmd
                 );
+                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 等待 {:?}...", cmd.time())));
                 cprintln!("{log_tag}waiting for time {:?}...", cmd.time());
                 match cmd.time() {
                     BattleCommandTime::DeltaSec(delta) => {
@@ -166,6 +198,7 @@ impl Task for CopilotTask {
                     }
                     BattleCommandTime::Asap => (),
                 }
+                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 等待完成")));
                 cprintln!("{log_tag}is time!");
                 let mut success = false;
                 while !success {
@@ -180,6 +213,7 @@ impl Task for CopilotTask {
                             direction,
                             ..
                         } => {
+                            aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 正在匹配 {operator} 部署卡片...")));
                             cprintln!(
                                 "{log_tag}looking for operator's deploy card {}...",
                                 operator
@@ -191,9 +225,11 @@ impl Task for CopilotTask {
                                         && card.available == true
                                 })
                             {
+                                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 已找到，正在计算地块屏幕坐标...")));
                                 cprintln!("{log_tag}found! {:?}", card);
                                 cprintln!("{log_tag}calculating tile screen pos...");
                                 let tile_pos = level.calc_tile_screen_pos(tile.0, tile.1, true);
+                                aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 地块屏幕坐标 {tile_pos:?}")));
                                 cprintln!("{log_tag}tile screen pos: {:?}", tile_pos);
                                 let task1 = ActionSwipe::new(
                                     (card.rect.x, card.rect.y),
@@ -232,7 +268,8 @@ impl Task for CopilotTask {
                             }
                         }
                         BattleCommand::Retreat { operator, .. } => {
-                            cprintln!("{log_tag}skipping retreat...");
+                            cprintln!("{log_tag} retreating {operator}...");
+                            aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: 正在撤退干员 {operator}...")));
                             if let Some(tile_pos) = deployed_operators.get(operator).cloned() {
                                 let click1 =
                                     level.calc_tile_screen_pos(tile_pos.0, tile_pos.1, false);
@@ -248,17 +285,18 @@ impl Task for CopilotTask {
                                 );
                                 if task1.run(aah).and(task2.run(aah)).is_ok() {
                                     deployed_operators.remove(operator);
+                                    aah.emit_task_evt(TaskEvt::Log(format!("[INFO]: {operator} 已撤退")));
                                     success = true;
                                 }
                             }
                         }
                         BattleCommand::AutoSkill { operator, .. } => {
-                            cprintln!("{log_tag}skipping auto_skill...");
+                            cprintln!("{log_tag}enable auto_skill for {operator}...");
                             auto_skill_operators.insert(operator.to_string());
                             success = true;
                         }
                         BattleCommand::StopAutoSkill { operator, .. } => {
-                            cprintln!("{log_tag}skipping stop_auto_skill...");
+                            cprintln!("{log_tag}disable auto_skill for {operator}...");
                             auto_skill_operators.remove(operator);
                             success = true;
                         }

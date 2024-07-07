@@ -11,7 +11,7 @@ use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig}
 use controller::{aah_controller::AahController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
-use task::TaskEvt;
+use task::{copilot::CopilotTask, TaskEvt};
 use vision::analyzer::{
     battle::{
         deploy::{DeployAnalyzer, DeployAnalyzerOutput, EXAMPLE_DEPLOY_OPERS},
@@ -120,6 +120,19 @@ impl AAH {
         Ok(())
     }
 
+    /// 运行名为 `name` 的作业
+    ///
+    /// - `name`: 作业名称
+    pub fn run_copilot<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
+        let name = name.as_ref().to_string();
+
+        let task = CopilotTask(name);
+        println!("executing copilot {:?}", task);
+        task.run(self)?;
+
+        Ok(())
+    }
+
     /// Get screen cache or capture one. This is for internal analyzer use
     fn screen_cache_or_cap(&self) -> Result<image::DynamicImage, String> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
@@ -152,13 +165,6 @@ impl AAH {
     /// Capture a screen, and return decoded image
     pub fn get_screen(&mut self) -> Result<image::DynamicImage, String> {
         self.controller.screencap().map_err(|err| format!("{err}"))
-        // match &self.screen_cache {
-        //     Some(cache) => Ok(cache.clone()),
-        //     None => {
-        //         self.update_screen()?;
-        //         Ok(self.screen_cache.as_ref().unwrap().clone())
-        //     }
-        // }
     }
 
     /// Capture a screen, and return raw data in Png format
@@ -188,6 +194,11 @@ impl AAH {
     /// 获取所有任务名称
     pub fn get_tasks(&self) -> Vec<String> {
         self.task_config.0.keys().map(|s| s.to_string()).collect()
+    }
+
+    /// 获取所有任务名称
+    pub fn get_copilots(&self) -> Vec<String> {
+        self.copilot_config.0.keys().map(|s| s.to_string()).collect()
     }
 
     /// 发起事件
