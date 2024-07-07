@@ -8,7 +8,7 @@ use std::{
 };
 
 use color_print::{cformat, cprintln};
-use deploy::{DeployAnalyzer, DeployCard, EXAMPLE_DEPLOY_OPERS};
+use deploy::{DeployAnalyzer, DeployCard};
 use image::DynamicImage;
 use serde::Serialize;
 
@@ -46,8 +46,8 @@ pub struct BattleAnalyzer {
 
 impl BattleAnalyzer {
     /// 创建一个新的 [`BattleAnalyzer`]
-    pub fn new<P: AsRef<Path>>(res_dir: P) -> Self {
-        let deploy_analyzer = DeployAnalyzer::new(&res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+    pub fn new<P: AsRef<Path>, S: AsRef<str>>(res_dir: P, oper_names: Vec<S>) -> Self {
+        let deploy_analyzer = DeployAnalyzer::new(&res_dir, oper_names);
         Self {
             res_dir: res_dir.as_ref().to_path_buf(),
             battle_state: BattleState::Unknown,
@@ -127,14 +127,14 @@ impl Analyzer for BattleAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use crate::vision::analyzer::Analyzer;
+    use crate::vision::analyzer::{battle::deploy::EXAMPLE_DEPLOY_OPERS, Analyzer};
 
     use super::BattleAnalyzer;
 
     #[test]
     fn test_battle_analyzer() {
         let aah = crate::AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = BattleAnalyzer::new(&aah.res_dir);
+        let mut analyzer = BattleAnalyzer::new(&aah.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
         let res = analyzer.analyze(&aah).unwrap();
         println!("{:?}", res)
     }

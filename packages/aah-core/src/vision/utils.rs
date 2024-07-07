@@ -19,6 +19,29 @@ pub mod resource {
         Ok(image)
     }
 
+    pub fn get_opers<P: AsRef<Path>>(res_dir: P) -> Vec<String> {
+        let res_dir = res_dir.as_ref();
+        let mut opers: Vec<(u32, String)> = vec![];
+        let char_avatars = fs::read_dir(res_dir.join("avatars").join("char")).unwrap();
+        for char_avatar in char_avatars {
+            let char_avatar = char_avatar.unwrap();
+            if char_avatar.file_type().unwrap().is_file() {
+                continue;
+            }
+            let mut name = fs::read_dir(char_avatar.path()).unwrap();
+            let f = name.next().unwrap().unwrap();
+            let name = f.file_name().into_string().unwrap();
+            let name = name.split('_').collect::<Vec<&str>>()[0];
+            let name = name.split('.').collect::<Vec<&str>>()[0];
+            let num = char_avatar.file_name().into_string().unwrap();
+            opers.push((num.parse().unwrap(), name.to_string()));
+        }
+        opers
+            .into_iter()
+            .map(|(num, name)| format!("char_{num:03}_{name}.png"))
+            .collect()
+    }
+
     /// 输入干员列表和资源路径，以 `Vec<(名,头像)>` 形式返回这些干员的所有头像列表
     pub fn get_opers_avatars<S: AsRef<str>, P: AsRef<Path>>(
         opers: Vec<S>,
@@ -51,8 +74,10 @@ pub mod resource {
         let oper = oper.as_ref();
         let res_dir = res_dir.as_ref();
 
+        // println!("{:?}", oper);
         let components = oper.split("_").collect::<Vec<&str>>();
         let path = res_dir.join("avatars").join("char").join(components[1]);
+        // println!("{:?}", path);
 
         let mut images = vec![];
         for f in fs::read_dir(path).unwrap() {

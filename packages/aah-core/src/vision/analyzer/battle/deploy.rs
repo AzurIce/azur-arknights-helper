@@ -166,9 +166,15 @@ mod test {
     use crate::{vision::analyzer::Analyzer, AAH};
 
     #[test]
+    fn print_oper_list() {
+
+    }
+
+    #[test]
     fn test_deploy_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer = DeployAnalyzer::new(&core.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+        // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
         let output = analyzer.analyze(&mut core).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);
