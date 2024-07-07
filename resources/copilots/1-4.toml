@@ -17,10 +17,16 @@ spot = "char_284_spot"
 time = "Asap"
 operator = "myrtle"
 tile = [
-    3,
+    2,
     1,
 ]
 direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "myrtle"
 
 [[steps]]
 
@@ -28,7 +34,7 @@ direction = "Right"
 time = "Asap"
 operator = "yato"
 tile = [
-    2,
+    3,
     1,
 ]
 direction = "Right"
@@ -43,6 +49,17 @@ tile = [
     1,
 ]
 direction = "Right"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "melantha"
+tile = [
+    2,
+    2,
+]
+direction = "Down"
 
 [[steps]]
 
@@ -87,9 +104,9 @@ operator = "yato"
 
 [steps.Deploy]
 time = "Asap"
-operator = "melantha"
+operator = "spot"
 tile = [
-    2,
+    3,
     1,
 ]
 direction = "Right"

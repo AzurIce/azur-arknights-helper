@@ -1,14 +1,21 @@
-use std::{thread, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    thread,
+    time::Duration,
+};
 
+use aah_cv::template_matching::match_template_ccorr_normed;
 use aah_resource::level::get_level;
 use color_print::{cformat, cprintln};
-use ndarray::AssignElem;
+use imageproc::template_matching::find_extremes;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    adb::command,
     config::copilot::{BattleCommand, BattleCommandTime, Direction},
-    task::{builtins::ActionSwipe, wrapper::GenericTaskWrapper},
+    task::{
+        builtins::{ActionClick, ActionSwipe},
+        wrapper::GenericTaskWrapper,
+    },
     vision::analyzer::{
         battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
         Analyzer,
@@ -78,6 +85,8 @@ impl Task for CopilotTask {
             }
         }
 
+        let level_retreat_screen_pos = level.get_retreat_screen_pos();
+        let level_skill_screen_pos = level.get_skill_screen_pos();
         let mut battle_analyzer = BattleAnalyzer::new();
         // wait for battle begins
         cprintln!("{log_tag}waiting for battle to begin...");
@@ -87,8 +96,61 @@ impl Task for CopilotTask {
         }
         // Do battle things
         cprintln!("{log_tag}battle begins!");
+        let skill_ready_template = aah.get_template("battle_skill-ready.png")?.to_luma32f();
         let mut commands = copilot_task.steps.iter().enumerate();
         let mut battle_analyzer_output: BattleAnalyzerOutput;
+        let mut deployed_operators = HashMap::<String, (u32, u32)>::new();
+        let mut auto_skill_operators = HashSet::<String>::new();
+
+        let auto_skilling =
+            |auto_skill_operators: &HashSet<String>,
+             deployed_operators: &HashMap<String, (u32, u32)>| {
+                cprintln!("{log_tag}checking auto_skill...");
+                for oper in auto_skill_operators.iter() {
+                    if let Some(tile_pos) = deployed_operators.get(oper).cloned() {
+                        if let Ok(screen) = aah.screen_cache_or_cap() {
+                            let (tile_screen_x, tile_screen_y) =
+                                level.calc_tile_screen_pos(tile_pos.0, tile_pos.1, false);
+                            let skill_cropped = screen.crop_imm(
+                                (tile_screen_x as u32).saturating_add_signed(-32),
+                                (tile_screen_y as u32).saturating_add_signed(-187),
+                                64,
+                                64,
+                            );
+                            // skill_cropped.save("./output.png").unwrap();
+                            let res = match_template_ccorr_normed(
+                                &skill_cropped.to_luma32f(),
+                                &skill_ready_template,
+                            );
+                            let v = find_extremes(&res).max_value;
+                            let skill_ready = v > 0.9;
+                            cprintln!("{log_tag}{oper}'s skill match is {}", v);
+                            // let skill_ready =
+                            //     get_skill_ready(&skill_cropped, &aah.res_dir).unwrap() == 1;
+                            if skill_ready {
+                                cprintln!("{log_tag}{oper}'s skil is ready, clicking...");
+                                // 32 187 64x64
+                                let click1 =
+                                    level.calc_tile_screen_pos(tile_pos.0, tile_pos.1, false);
+                                let task1 =
+                                    ActionClick::new(click1.0 as u32, click1.1 as u32, None);
+                                let task2 = ActionClick::new(
+                                    level_skill_screen_pos.0 as u32,
+                                    level_skill_screen_pos.1 as u32,
+                                    Some(GenericTaskWrapper {
+                                        delay: 0.2,
+                                        ..Default::default()
+                                    }),
+                                );
+                                if task1.run(aah).and(task2.run(aah)).is_ok() {
+                                    cprintln!("{log_tag}auto_skill[{oper}]: skill clicked");
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
         while battle_analyzer.battle_state != BattleState::Completed {
             if let Some((idx, cmd)) = commands.next() {
                 cprintln!(
@@ -107,6 +169,10 @@ impl Task for CopilotTask {
                 cprintln!("{log_tag}is time!");
                 let mut success = false;
                 while !success {
+                    battle_analyzer_output = battle_analyzer.analyze(aah)?;
+                    // auto skilling
+                    auto_skilling(&auto_skill_operators, &deployed_operators);
+
                     match cmd {
                         BattleCommand::Deploy {
                             operator,
@@ -114,7 +180,6 @@ impl Task for CopilotTask {
                             direction,
                             ..
                         } => {
-                            battle_analyzer_output = battle_analyzer.analyze(aah)?;
                             cprintln!(
                                 "{log_tag}looking for operator's deploy card {}...",
                                 operator
@@ -161,26 +226,50 @@ impl Task for CopilotTask {
                                     }),
                                 );
                                 if task1.run(aah).and(task2.run(aah)).is_ok() {
+                                    deployed_operators.insert(operator.to_string(), *tile);
                                     success = true;
                                 }
                             }
                         }
                         BattleCommand::Retreat { operator, .. } => {
                             cprintln!("{log_tag}skipping retreat...");
-                            success = true;
+                            if let Some(tile_pos) = deployed_operators.get(operator).cloned() {
+                                let click1 =
+                                    level.calc_tile_screen_pos(tile_pos.0, tile_pos.1, false);
+                                let task1 =
+                                    ActionClick::new(click1.0 as u32, click1.1 as u32, None);
+                                let task2 = ActionClick::new(
+                                    level_retreat_screen_pos.0 as u32,
+                                    level_retreat_screen_pos.1 as u32,
+                                    Some(GenericTaskWrapper {
+                                        delay: 0.2,
+                                        ..Default::default()
+                                    }),
+                                );
+                                if task1.run(aah).and(task2.run(aah)).is_ok() {
+                                    deployed_operators.remove(operator);
+                                    success = true;
+                                }
+                            }
                         }
                         BattleCommand::AutoSkill { operator, .. } => {
                             cprintln!("{log_tag}skipping auto_skill...");
+                            auto_skill_operators.insert(operator.to_string());
                             success = true;
                         }
                         BattleCommand::StopAutoSkill { operator, .. } => {
                             cprintln!("{log_tag}skipping stop_auto_skill...");
+                            auto_skill_operators.remove(operator);
                             success = true;
                         }
                     }
                 }
                 cprintln!("{log_tag}command done!");
             }
+
+            battle_analyzer.analyze(aah)?;
+            // auto skilling
+            auto_skilling(&auto_skill_operators, &deployed_operators);
         }
 
         Ok(())
