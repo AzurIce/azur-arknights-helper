@@ -8,7 +8,7 @@ use std::{
     sync::Mutex,
 };
 
-use config::{navigate::NavigateConfig, task::TaskConfig};
+use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
@@ -36,6 +36,8 @@ pub struct AAH {
     pub controller: Box<dyn Controller + Sync + Send>,
     /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
     pub task_config: TaskConfig,
+    /// 由 `copilots.toml` 和 `copilots` 目录加载的任务配置
+    pub copilot_config: CopilotConfig,
     /// 由 `navigates.toml` 加载的导航配置
     pub navigate_config: NavigateConfig,
     // /// 屏幕内容的缓存
@@ -80,6 +82,8 @@ impl AAH {
         let res_dir = res_dir.as_ref().to_path_buf();
         let task_config =
             TaskConfig::load(&res_dir).map_err(|err| format!("task config not found: {err}"))?;
+        let copilot_config = CopilotConfig::load(&res_dir)
+            .map_err(|err| format!("copilot config not found: {err}"))?;
         let navigate_config = NavigateConfig::load(&res_dir)
             .map_err(|err| format!("navigate config not found: {err}"))?;
         // let controller = Box::new(AdbInputController::connect(serial)?);
@@ -90,6 +94,7 @@ impl AAH {
             res_dir,
             controller,
             task_config,
+            copilot_config,
             navigate_config,
             on_task_evt: Box::new(on_task_evt),
             screen_cache: Mutex::new(None),
