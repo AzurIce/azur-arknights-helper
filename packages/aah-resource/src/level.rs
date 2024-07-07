@@ -97,25 +97,25 @@ impl Level {
         Vector3::new(1.3143386840820312, 1.314337134361267, -0.3967874050140381);
 
     /// 计算干员的撤退按钮在屏幕中的位置
-    pub fn get_retreat_screen_pos(&self) {
+    pub fn get_retreat_screen_pos(&self) -> (f32, f32) {
         let width = 1920.0;
         let height = 1080.0;
         let camera_pos = self.camera_pos(true, width, height);
         let camera_euler = camera_euler_angles_xyz(true);
 
         let pos = Vector3::new(-Self::REL_POS.x, Self::REL_POS.y, Self::REL_POS.z);
-        world_to_screen(camera_pos, camera_euler, pos, width, height);
+        world_to_screen(camera_pos, camera_euler, pos, width, height)
     }
 
     /// 计算干员的技能按钮在屏幕中的位置
-    pub fn get_skill_screen_pos(&self) {
+    pub fn get_skill_screen_pos(&self) -> (f32, f32){
         let width = 1920.0;
         let height = 1080.0;
         let camera_pos = self.camera_pos(true, width, height);
         let camera_euler = camera_euler_angles_xyz(true);
 
         let pos = Vector3::new(Self::REL_POS.x, -Self::REL_POS.y, Self::REL_POS.z);
-        world_to_screen(camera_pos, camera_euler, pos, width, height);
+        world_to_screen(camera_pos, camera_euler, pos, width, height)
     }
 }
 

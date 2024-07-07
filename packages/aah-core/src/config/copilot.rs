@@ -136,13 +136,17 @@ pub fn example_copilot_task() -> CopilotTask {
             BattleCommand::Deploy {
                 time: BattleCommandTime::Asap,
                 operator: "myrtle".to_string(),
-                tile: (3, 1),
+                tile: (2, 1),
                 direction: Direction::Right,
+            },
+            BattleCommand::AutoSkill {
+                time: BattleCommandTime::Asap,
+                operator: "myrtle".to_string(),
             },
             BattleCommand::Deploy {
                 time: BattleCommandTime::Asap,
                 operator: "yato".to_string(),
-                tile: (2, 1),
+                tile: (3, 1),
                 direction: Direction::Right,
             },
             BattleCommand::Deploy {
@@ -150,6 +154,12 @@ pub fn example_copilot_task() -> CopilotTask {
                 operator: "noir_corne".to_string(),
                 tile: (4, 1),
                 direction: Direction::Right,
+            },
+            BattleCommand::Deploy {
+                time: BattleCommandTime::Asap,
+                operator: "melantha".to_string(),
+                tile: (2, 2),
+                direction: Direction::Down,
             },
             BattleCommand::Deploy {
                 time: BattleCommandTime::Asap,
@@ -175,9 +185,9 @@ pub fn example_copilot_task() -> CopilotTask {
             },
             BattleCommand::Deploy {
                 time: BattleCommandTime::Asap,
-                operator: "melantha".to_string(),
-                tile: (2, 1),
-                direction: Direction::Right,
+                operator: "spot".to_string(),
+                tile: (3, 1),
+                direction: Direction::Up,
             },
         ],
     }
