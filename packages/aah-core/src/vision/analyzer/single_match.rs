@@ -1,10 +1,12 @@
+use std::path::Path;
+
 use image::DynamicImage;
 
 use crate::{
     controller::DEFAULT_HEIGHT,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
-        utils::{draw_box, Rect},
+        utils::{draw_box, resource::get_template, Rect},
     },
     AAH,
 };
@@ -18,15 +20,18 @@ pub struct SingleMatchAnalyzerOutput {
 }
 
 pub struct SingleMatchAnalyzer {
+    template: DynamicImage,
     template_filename: String,
     use_cache: bool,
     roi: [(f32, f32); 2], // topleft and bottomright
 }
 
 impl SingleMatchAnalyzer {
-    pub fn new(template_filename: String) -> Self {
+    pub fn new<S: AsRef<str>, P: AsRef<Path>>(res_dir: P, template_filename: S) -> Self {
+        let template = get_template(&template_filename, &res_dir).unwrap();
         Self {
-            template_filename,
+            template,
+            template_filename: template_filename.as_ref().to_string(),
             use_cache: false,
             roi: [(0.0, 0.0), (1.0, 1.0)],
         }
@@ -41,11 +46,8 @@ impl SingleMatchAnalyzer {
         self.roi = [tl, br];
         self
     }
-}
 
-impl Analyzer for SingleMatchAnalyzer {
-    type Output = SingleMatchAnalyzerOutput;
-    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+    pub fn analyze_image(&self, image: &DynamicImage) -> Result<SingleMatchAnalyzerOutput, String> {
         // Make sure that we are in the operation-start page
         println!(
             "[TemplateMatchAnalyzer]: matching {:?}",
@@ -58,43 +60,34 @@ impl Analyzer for SingleMatchAnalyzer {
         //     .controller
         //     .screencap_scaled()
         //     .map_err(|err| format!("{:?}", err))?;
-
-        // Get image
-        let screen = if self.use_cache {
-            core.screen_cache_or_cap()?.clone()
-        } else {
-            core.screen_cap_and_cache()
-                .map_err(|err| format!("{:?}", err))?
-        };
         let tl = (
-            self.roi[0].0 * screen.width() as f32,
-            self.roi[0].1 * screen.height() as f32,
+            self.roi[0].0 * image.width() as f32,
+            self.roi[0].1 * image.height() as f32,
         );
         let br = (
-            self.roi[1].0 * screen.width() as f32,
-            self.roi[1].1 * screen.height() as f32,
+            self.roi[1].0 * image.width() as f32,
+            self.roi[1].1 * image.height() as f32,
         );
         let tl = (tl.0 as u32, tl.1 as u32);
         let br = (br.0 as u32, br.1 as u32);
 
-        let cropped = screen.crop_imm(tl.0, tl.1, br.0 - tl.0, br.1 - tl.1);
-        let template = core.get_template(&self.template_filename).unwrap();
+        let cropped = image.crop_imm(tl.0, tl.1, br.0 - tl.0, br.1 - tl.1);
 
         // Scaling
-        let template = if screen.height() != DEFAULT_HEIGHT {
-            let scale_factor = screen.height() as f32 / DEFAULT_HEIGHT as f32;
+        let template = if image.height() != DEFAULT_HEIGHT {
+            let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
 
-            let new_width = (template.width() as f32 * scale_factor) as u32;
-            let new_height = (template.height() as f32 * scale_factor) as u32;
+            let new_width = (self.template.width() as f32 * scale_factor) as u32;
+            let new_height = (self.template.height() as f32 * scale_factor) as u32;
 
             DynamicImage::ImageRgba8(image::imageops::resize(
-                &template,
+                &self.template,
                 new_width,
                 new_height,
                 image::imageops::FilterType::Lanczos3,
             ))
         } else {
-            template
+            self.template.clone()
         };
 
         // Match
@@ -114,7 +107,7 @@ impl Analyzer for SingleMatchAnalyzer {
         };
 
         // Annotated
-        let mut annotated_screen = screen.clone();
+        let mut annotated_screen = image.clone();
         if let Some(rect) = &res.rect {
             draw_box(
                 &mut annotated_screen,
@@ -126,13 +119,27 @@ impl Analyzer for SingleMatchAnalyzer {
             );
         }
 
-        let screen = Box::new(screen);
+        let screen = Box::new(image.clone());
         let annotated_screen = Box::new(annotated_screen);
-        Ok(Self::Output {
+        Ok(SingleMatchAnalyzerOutput {
             screen,
             res,
             annotated_screen,
         })
+    }
+}
+
+impl Analyzer for SingleMatchAnalyzer {
+    type Output = SingleMatchAnalyzerOutput;
+    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+        // Get image
+        let screen = if self.use_cache {
+            core.screen_cache_or_cap()?.clone()
+        } else {
+            core.screen_cap_and_cache()
+                .map_err(|err| format!("{:?}", err))?
+        };
+        self.analyze_image(&screen)
     }
 }
 
@@ -145,7 +152,7 @@ mod test {
     fn test_single_match_analyzer() {
         let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer =
-            SingleMatchAnalyzer::new("start_start.png".to_string()).roi((0.3, 0.75), (0.6, 1.0));
+            SingleMatchAnalyzer::new(&aah.res_dir, "start_start.png").roi((0.3, 0.75), (0.6, 1.0));
         let output = analyzer.analyze(&aah).unwrap();
         println!("{:?}", output.res.rect);
     }

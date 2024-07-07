@@ -16,10 +16,10 @@ use crate::{
         builtins::{ActionClick, ActionSwipe},
         wrapper::GenericTaskWrapper,
     },
-    vision::analyzer::{
+    vision::{analyzer::{
         battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
         Analyzer,
-    },
+    }, utils::resource::get_template},
 };
 
 use super::{builtins::ActionClickMatch, match_task::MatchTask, Task};
@@ -87,7 +87,7 @@ impl Task for CopilotTask {
 
         let level_retreat_screen_pos = level.get_retreat_screen_pos();
         let level_skill_screen_pos = level.get_skill_screen_pos();
-        let mut battle_analyzer = BattleAnalyzer::new();
+        let mut battle_analyzer = BattleAnalyzer::new(&aah.res_dir);
         // wait for battle begins
         cprintln!("{log_tag}waiting for battle to begin...");
         while battle_analyzer.battle_state == BattleState::Unknown {
@@ -96,7 +96,7 @@ impl Task for CopilotTask {
         }
         // Do battle things
         cprintln!("{log_tag}battle begins!");
-        let skill_ready_template = aah.get_template("battle_skill-ready.png")?.to_luma32f();
+        let skill_ready_template = get_template("battle_skill-ready.png", &aah.res_dir)?.to_luma32f();
         let mut commands = copilot_task.steps.iter().enumerate();
         let mut battle_analyzer_output: BattleAnalyzerOutput;
         let mut deployed_operators = HashMap::<String, (u32, u32)>::new();

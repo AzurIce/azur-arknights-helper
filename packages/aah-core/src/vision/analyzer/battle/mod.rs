@@ -2,10 +2,14 @@
 
 pub mod deploy;
 
-use std::time::Instant;
+use std::{
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use color_print::{cformat, cprintln};
-use deploy::{DeployAnalyzer, DeployCard};
+use deploy::{DeployAnalyzer, DeployCard, EXAMPLE_DEPLOY_OPERS};
+use image::DynamicImage;
 use serde::Serialize;
 
 use super::{single_match::SingleMatchAnalyzer, Analyzer};
@@ -33,54 +37,34 @@ pub enum BattleState {
 }
 
 pub struct BattleAnalyzer {
+    res_dir: PathBuf,
     pub battle_state: BattleState,
     deploy_cards: Vec<DeployCard>,
     start_time: Instant,
-    deploy_analyzer: Option<DeployAnalyzer>,
+    deploy_analyzer: DeployAnalyzer,
 }
 
 impl BattleAnalyzer {
-    pub fn new() -> Self {
+    /// 创建一个新的 [`BattleAnalyzer`]
+    ///
+    ///
+    pub fn new<P: AsRef<Path>>(res_dir: P) -> Self {
+        let deploy_analyzer = DeployAnalyzer::new(&res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
         Self {
+            res_dir: res_dir.as_ref().to_path_buf(),
             battle_state: BattleState::Unknown,
             deploy_cards: Vec::new(),
             start_time: Instant::now(),
-            deploy_analyzer: None,
+            deploy_analyzer,
         }
     }
-}
 
-impl Analyzer for BattleAnalyzer {
-    type Output = BattleAnalyzerOutput;
-    fn analyze(&mut self, aah: &crate::AAH) -> Result<Self::Output, String> {
+    fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[BattleAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();
 
-        if self.deploy_analyzer.is_none() {
-            self.deploy_analyzer = Some(
-                DeployAnalyzer::new().use_cache().with_opers(
-                    vec![
-                        "char_285_medic2",
-                        "char_502_nblade",
-                        "char_500_noirc",
-                        "char_503_rang",
-                        "char_501_durin",
-                        "char_284_spot",
-                        "char_212_ansel",
-                        "char_208_melan",
-                        "char_151_myrtle",
-                    ]
-                    .into_iter()
-                    .map(|s| s.to_string())
-                    .collect(),
-                    aah,
-                ),
-            );
-        }
-
         // Update cache
-        let _ = aah.screen_cap_and_cache().unwrap();
         cprintln!("{log_tag}screen_cap_and_cache cost: {:?}", t.elapsed());
         // Update battle_state
         for (img, state) in [
@@ -103,10 +87,10 @@ impl Analyzer for BattleAnalyzer {
                     }
                 }
                 Some(img) => {
-                    let output = SingleMatchAnalyzer::new(img.to_string())
+                    let output = SingleMatchAnalyzer::new(&self.res_dir, img.to_string())
                         .roi((0.875, 0.0), (1.0, 0.125))
                         .use_cache()
-                        .analyze(aah)?;
+                        .analyze_image(image)?;
                     if output.res.rect.is_some() {
                         // battle started
                         if self.battle_state == BattleState::Unknown
@@ -123,7 +107,7 @@ impl Analyzer for BattleAnalyzer {
 
         if self.battle_state != BattleState::Unknown {
             // TODO: Analyze battlefield (deploy)
-            let output = self.deploy_analyzer.as_mut().unwrap().analyze(aah)?;
+            let output = self.deploy_analyzer.analyze_image(image)?;
             self.deploy_cards = output.deploy_cards;
         }
 
@@ -132,6 +116,14 @@ impl Analyzer for BattleAnalyzer {
             battle_state: self.battle_state,
             deploy_cards: self.deploy_cards.clone(),
         })
+    }
+}
+
+impl Analyzer for BattleAnalyzer {
+    type Output = BattleAnalyzerOutput;
+    fn analyze(&mut self, aah: &crate::AAH) -> Result<Self::Output, String> {
+        let screen = aah.screen_cap_and_cache().unwrap();
+        self.analyze_image(&screen)
     }
 }
 
@@ -144,7 +136,7 @@ mod test {
     #[test]
     fn test_battle_analyzer() {
         let aah = crate::AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = BattleAnalyzer::new();
+        let mut analyzer = BattleAnalyzer::new(&aah.res_dir);
         let res = analyzer.analyze(&aah).unwrap();
         println!("{:?}", res)
     }

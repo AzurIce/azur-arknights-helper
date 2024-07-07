@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{path::Path, time::Instant};
 
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
@@ -8,7 +8,7 @@ use crate::{
     vision::{
         analyzer::multi_match::MultiMatchAnalyzer,
         matcher::best_matcher::BestMatcher,
-        utils::{average_hsv_v, draw_box, Rect},
+        utils::{average_hsv_v, draw_box, resource::get_opers_avatars, Rect},
     },
     AAH,
 };
@@ -43,15 +43,29 @@ pub struct DeployAnalyzerOutput {
 pub struct DeployAnalyzer {
     use_cache: bool,
     oper_names: Vec<String>,
-    matcher: Option<BestMatcher>,
+    matcher: BestMatcher,
+    multi_match_analyzer: MultiMatchAnalyzer,
 }
 
 impl DeployAnalyzer {
-    pub fn new() -> Self {
+    pub fn new<S: AsRef<str>, P: AsRef<Path>>(res_dir: P, opers: Vec<S>) -> Self {
+        let opers_avatars = get_opers_avatars(opers, &res_dir).unwrap();
+        let oper_names = opers_avatars
+            .iter()
+            .map(|(s, _)| s.to_string())
+            .collect::<Vec<String>>();
+        let images = opers_avatars
+            .into_iter()
+            .map(|(_, img)| img)
+            .collect::<Vec<DynamicImage>>();
+
+        let multi_match_analyzer = MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, Some(40.0))
+                .roi((0.0, 0.75), (1.0, 1.0));
         Self {
             use_cache: false,
-            oper_names: vec![],
-            matcher: None,
+            oper_names,
+            matcher: BestMatcher::new(images),
+            multi_match_analyzer,
         }
     }
 
@@ -60,53 +74,18 @@ impl DeployAnalyzer {
         self
     }
 
-    pub fn with_opers(mut self, opers: Vec<String>, aah: &AAH) -> Self {
-        let oper_images = opers
-            .iter()
-            .flat_map(|s| {
-                aah.get_oper_avatars(s)
-                    .unwrap()
-                    .into_iter()
-                    .map(|img| (s.to_string(), img))
-            })
-            .collect::<Vec<(String, DynamicImage)>>();
-        self.oper_names = oper_images
-            .iter()
-            .map(|(s, _)| s.to_string())
-            .collect::<Vec<String>>();
-        let images = oper_images
-            .into_iter()
-            .map(|(_, img)| img)
-            .collect::<Vec<DynamicImage>>();
-        self.matcher = Some(BestMatcher::new(images));
-        self
-    }
-}
-
-impl Analyzer for DeployAnalyzer {
-    type Output = DeployAnalyzerOutput;
-    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+    pub fn analyze_image(&mut self, image: &DynamicImage) -> Result<DeployAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[DeployAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing deploy...");
         let t = Instant::now();
 
-        // Make sure that we are in the operation-start page
-        let mut analyzer =
-            MultiMatchAnalyzer::new("battle_deploy-card-cost1.png", None, Some(40.0))
-                .roi((0.0, 0.75), (1.0, 1.0));
-        if self.use_cache {
-            analyzer = analyzer.use_cache()
-        }
-        let output = analyzer.analyze(core)?;
-
-        let matcher = self.matcher.as_ref().unwrap();
-        let screen = output.screen;
+        let output = self.multi_match_analyzer.analyze_image(image)?;
         let res = output.res;
         let deploy_cards: Vec<DeployCard> = res
             .rects
             .into_iter()
             .map(|rect| {
-                let cropped = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
+                let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 let avg_hsv_v = average_hsv_v(&cropped);
                 // println!("{avg_hsv_v}");
                 let available = avg_hsv_v > 90;
@@ -118,9 +97,9 @@ impl Analyzer for DeployAnalyzer {
                     height: 100,
                 };
 
-                let avatar_template = screen.crop_imm(rect.x, rect.y, rect.width, rect.height);
+                let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
-                let res = matcher.match_with(avatar_template);
+                let res = self.matcher.match_with(avatar_template);
                 let oper_name = self.oper_names.get(res).unwrap().to_string();
 
                 DeployCard {
@@ -154,12 +133,32 @@ impl Analyzer for DeployAnalyzer {
 
         cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
         Ok(DeployAnalyzerOutput {
-            screen,
+            screen: output.screen,
             deploy_cards,
             annotated_screen,
         })
     }
 }
+
+impl Analyzer for DeployAnalyzer {
+    type Output = DeployAnalyzerOutput;
+    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+        let screen = core.screen_cap_and_cache()?;
+        self.analyze_image(&screen)
+    }
+}
+
+pub const EXAMPLE_DEPLOY_OPERS: [&str; 9] = [
+    "char_285_medic2",
+    "char_502_nblade",
+    "char_500_noirc",
+    "char_503_rang",
+    "char_501_durin",
+    "char_284_spot",
+    "char_212_ansel",
+    "char_208_melan",
+    "char_151_myrtle",
+];
 
 #[cfg(test)]
 mod test {
@@ -169,23 +168,7 @@ mod test {
     #[test]
     fn test_deploy_analyzer() {
         let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new().with_opers(
-            vec![
-                "char_285_medic2",
-                "char_502_nblade",
-                "char_500_noirc",
-                "char_503_rang",
-                "char_501_durin",
-                "char_284_spot",
-                "char_212_ansel",
-                "char_208_melan",
-                "char_151_myrtle",
-            ]
-            .into_iter()
-            .map(|s| s.to_string())
-            .collect(),
-            &core,
-        );
+        let mut analyzer = DeployAnalyzer::new(&core.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
         let output = analyzer.analyze(&mut core).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);

@@ -3,7 +3,6 @@
 
 use std::{
     error::Error,
-    fs,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -15,7 +14,7 @@ use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
     battle::{
-        deploy::{DeployAnalyzer, DeployAnalyzerOutput},
+        deploy::{DeployAnalyzer, DeployAnalyzerOutput, EXAMPLE_DEPLOY_OPERS},
         BattleAnalyzer, BattleState,
     },
     Analyzer,
@@ -180,37 +179,9 @@ impl AAH {
         Ok(())
     }
 
-    /// 从 `{res_path}/resources/templates/1920x1080` 目录中根据文件名称获取模板
-    /// - `name` 为完整文件名
-    pub fn get_template<S: AsRef<str>>(&self, name: S) -> Result<image::DynamicImage, String> {
-        let name = name.as_ref();
-        let path = self.res_dir.join("templates").join("1920x1080").join(name);
-        let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
-        Ok(image)
-    }
-
-    fn get_oper_avatars(&self, name: &str) -> Result<Vec<image::DynamicImage>, String> {
-        let components = name.split("_").collect::<Vec<&str>>();
-        let path = self
-            .res_dir
-            .join("avatars")
-            .join("char")
-            .join(components[1]);
-
-        let mut images = vec![];
-        for f in fs::read_dir(path).unwrap() {
-            let f = f.unwrap();
-            println!("{:?}", f.path());
-            let image = image::open(f.path()).map_err(|err| format!("avatar not found: {err}"))?;
-            // let image = image.crop_imm(30, 20, 100, 120);
-            images.push(image);
-        }
-        Ok(images)
-    }
-
     /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
     pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
-        let mut analyzer = DeployAnalyzer::new();
+        let mut analyzer = DeployAnalyzer::new(&self.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
         analyzer.analyze(self)
     }
 
@@ -227,18 +198,9 @@ impl AAH {
     /// 启动战斗分析器，直到战斗结束
     ///
     /// 分析信息会通过 [`TaskEvt::BattleAnalyzerRes`] 事件返回，
-    /// 出于性能考虑，目前待部署区只设置了识别以下几位干员：
-    /// - `char_285_medic2`
-    /// - `char_502_nblade`
-    /// - `char_500_noirc`
-    /// - `char_503_rang`
-    /// - `char_501_durin`
-    /// - `char_284_spot`
-    /// - `char_212_ansel`
-    /// - `char_208_melan`
-    /// - `char_151_myrtle`
+    /// 出于性能考虑，目前待部署区只设置了识别 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
     pub fn start_battle_analyzer(&self) {
-        let mut analyzer = BattleAnalyzer::new();
+        let mut analyzer = BattleAnalyzer::new(&self.res_dir);
         while analyzer.battle_state != BattleState::Completed {
             let output = analyzer.analyze(self).unwrap();
             self.emit_task_evt(TaskEvt::BattleAnalyzerRes(output));

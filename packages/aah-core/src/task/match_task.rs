@@ -30,7 +30,8 @@ impl Task for MatchTask {
 
         let res = match self {
             Self::Template(template_filename) => {
-                let mut analyzer = SingleMatchAnalyzer::new(template_filename.to_string());
+                let mut analyzer =
+                    SingleMatchAnalyzer::new(&aah.res_dir, template_filename.to_string());
                 let output = analyzer.analyze(aah)?;
 
                 aah.emit_task_evt(TaskEvt::Log(format!(
