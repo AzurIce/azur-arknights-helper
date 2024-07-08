@@ -34,7 +34,7 @@ impl MultiMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrors;
+                let method = MatchTemplateMethod::SumOfSquaredDifference;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -46,7 +46,7 @@ impl MultiMatcher {
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
-                let res = match_template(image, template, method);
+                let res = match_template(image, template, method, false);
 
                 // Normalize
                 let min = res
