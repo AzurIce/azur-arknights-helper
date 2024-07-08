@@ -5,6 +5,7 @@ pub mod single_matcher;
 const CCORR_THRESHOLD: f32 = 30.0;
 const CCORR_NORMED_THRESHOLD: f32 = 0.9;
 const CCOEFF_THRESHOLD: f32 = 30.0;
+const CCOEFF_NORMED_THRESHOLD: f32 = 0.9;
 const SSE_THRESHOLD: f32 = 40.0;
 const SSE_NORMED_THRESHOLD: f32 = 0.2;
 
