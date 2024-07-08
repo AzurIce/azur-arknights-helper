@@ -1,11 +1,29 @@
 [Multi]
 fail_fast = false
-tasks = [
-    { ActionClickMatch = { match_task = { type = "Template", template = "start_start.png" }, wrapper = { retry = 1 } } },
-    { ActionClickMatch = { match_task = { type = "Template", template = "wakeup_wakeup.png" }, wrapper = { delay = 2, retry = 5 } } },
-    # 月卡
-    { ActionClickMatch = { match_task = { type = "Template", template = "confirm.png" }, wrapper = { delay = 6, retry = 2 } } },
-    { ActionClickMatch = { match_task = { type = "Template", template = "qiandao_close.png" }, wrapper = { delay = 2, retry = 2 } } },
-    # 公告
-    { ActionClickMatch = { match_task = { type = "Template", template = "notice_close.png" }, wrapper = { delay = 2, retry = 2 } } },
-]
+
+[[Multi.tasks]]
+[Multi.tasks.ActionClickMatch]
+match_task = { type = "Template", template = "start_start.png" }
+wrapper = { retry = 1 }
+
+[[Multi.tasks]]
+[Multi.tasks.ActionClickMatch]
+match_task = { type = "Template", template = "wakeup_wakeup.png" }
+wrapper = { delay = 2, retry = 5 }
+
+# 月卡
+[[Multi.tasks]]
+[Multi.tasks.ActionClickMatch]
+match_task = { type = "Template", template = "confirm.png" }
+wrapper = { delay = 6, retry = 2 }
+
+[[Multi.tasks]]
+[Multi.tasks.ActionClickMatch]
+match_task = { type = "Template", template = "qiandao_close.png" }
+wrapper = { delay = 2, retry = 2 }
+
+# 公告
+[[Multi.tasks]]
+[Multi.tasks.ActionClickMatch]
+match_task = { type = "Template", template = "notice_close.png" }
+wrapper = { delay = 2, retry = 2 }
