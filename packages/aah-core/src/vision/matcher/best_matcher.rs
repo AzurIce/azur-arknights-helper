@@ -34,7 +34,7 @@ impl BestMatcher {
                 false,
             );
             let extremes = find_extremes(&res);
-            println!("{:?}", extremes.max_value);
+            // println!("{:?}", extremes.max_value);
             if extremes.max_value > max_val {
                 max_val = extremes.max_value;
                 max_idx = Some(idx);
@@ -43,7 +43,7 @@ impl BestMatcher {
                 }
             }
         }
-        println!("{:?}", max_idx);
+        // println!("{:?}", max_idx);
         cprintln!("<dim>{log_tag}cost: {:?}</dim>", t.elapsed());
         max_idx
     }
