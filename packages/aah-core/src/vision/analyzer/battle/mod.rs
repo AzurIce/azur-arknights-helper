@@ -83,8 +83,6 @@ impl BattleAnalyzer {
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();
 
-        // Update cache
-        cprintln!("{log_tag}screen_cap_and_cache cost: {:?}", t.elapsed());
         // Update battle_state
         for (img, state) in [
             (Some("battle_resume.png"), BattleState::Paused),
@@ -130,7 +128,7 @@ impl BattleAnalyzer {
             self.deploy_cards = output.deploy_cards;
         }
 
-        cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
+        cprintln!("{log_tag}cost: {:?}...", t.elapsed());
         Ok(BattleAnalyzerOutput {
             battle_state: self.battle_state,
             deploy_cards: self.deploy_cards.clone(),

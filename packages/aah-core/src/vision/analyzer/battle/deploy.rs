@@ -82,37 +82,34 @@ impl DeployAnalyzer {
 
         let output = self.multi_match_analyzer.analyze_image(image)?;
         let res = output.res;
-        let deploy_cards: Vec<DeployCard> = res
-            .rects
-            .into_iter()
-            .filter_map(|rect| {
-                let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
-                let avg_hsv_v = average_hsv_v(&cropped);
-                // println!("{avg_hsv_v}");
-                let available = avg_hsv_v > 90;
+        let mut deploy_cards: Vec<DeployCard> = Vec::with_capacity(res.rects.len());
+        for rect in res.rects {
+            let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
+            let avg_hsv_v = average_hsv_v(&cropped);
+            // println!("{avg_hsv_v}");
+            let available = avg_hsv_v > 90;
 
-                let rect = Rect {
-                    x: rect.x.saturating_add_signed(-15 - 40),
-                    y: rect.y.saturating_add(60),
-                    width: 80,
-                    height: 100,
-                };
+            let rect = Rect {
+                x: rect.x.saturating_add_signed(-15 - 40),
+                y: rect.y.saturating_add(60),
+                width: 80,
+                height: 100,
+            };
 
-                let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
-                assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
-                let res = self.matcher.match_with(avatar_template);
-                res.and_then(|res| {
-                    let oper_name = self.oper_names.get(res).unwrap().to_string();
-                    Some(DeployCard {
-                        oper_name,
-                        rect,
-                        available,
-                    })
+            let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
+            assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
+            let res = self.matcher.match_with(avatar_template);
+            if let Some(idx) = res {
+                let oper_name = self.oper_names.get(idx).unwrap().to_string();
+                deploy_cards.push(DeployCard {
+                    oper_name,
+                    rect,
+                    available,
                 })
-            })
-            .collect();
+            }
+        }
+        cprintln!("{log_tag}deploy_cards elapsed: {:?}...", t.elapsed());
 
-        let annotation_t = Instant::now();
         let mut annotated_screen = output.annotated_screen;
         for deploy_card in &deploy_cards {
             let color = if deploy_card.available {
@@ -131,7 +128,7 @@ impl DeployAnalyzer {
                 color,
             );
         }
-        cprintln!("{log_tag}annotation cost: {:?}...", annotation_t.elapsed());
+        cprintln!("{log_tag}annoteded elapsed: {:?}...", t.elapsed());
 
         cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
         Ok(DeployAnalyzerOutput {
@@ -172,10 +169,11 @@ mod test {
 
     #[test]
     fn test_deploy_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new(&core.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+        // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let mut analyzer = DeployAnalyzer::new("../../resources", EXAMPLE_DEPLOY_OPERS.to_vec());
         // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
-        let output = analyzer.analyze(&mut core).unwrap();
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);
     }

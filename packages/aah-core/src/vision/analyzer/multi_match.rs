@@ -1,6 +1,6 @@
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
-use color_print::cformat;
+use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
 use crate::{
@@ -62,7 +62,8 @@ impl MultiMatchAnalyzer {
         image: &DynamicImage,
     ) -> Result<MultiMatchAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[MultiMatchAnalyzer]: </strong>");
-        // cprintln!("{log_tag}matching {:?}", self.template_filename);
+        cprintln!("{log_tag}matching {:?}", self.template_filename);
+        let t = Instant::now();
 
         // TODO: 并不是一个好主意，缩放大图消耗时间更多，且误差更大
         // TODO: 然而测试了一下，发现缩放模板有时也会导致误差较大 (333.9063)
@@ -144,6 +145,7 @@ impl MultiMatchAnalyzer {
             );
         }
 
+        cprintln!("{log_tag}cost: {:?}", t.elapsed());
         let screen = Box::new(image.clone());
         let annotated_screen = Box::new(annotated_screen);
         Ok(MultiMatchAnalyzerOutput {
