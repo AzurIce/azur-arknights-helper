@@ -14,7 +14,7 @@ use super::{Task, TaskEvt};
 #[serde(tag = "type", content = "template")]
 pub enum MatchTask {
     Template(String), // template_filename
-    // Ocr(String),      // text
+                      // Ocr(String),      // text
 }
 
 #[cfg(test)]
@@ -41,21 +41,20 @@ impl Task for MatchTask {
                 aah.emit_task_evt(TaskEvt::AnnotatedImg(*output.annotated_screen));
 
                 output.res.rect
-            }
-            // Self::Ocr(text) => {
-                // return Err("not implemented".to_string());
-                // let image = convert_image_to_ten(image)
-                //     .map_err(|err| format!("failed to convert image to tensor: {:?}", err))?;
-                // if let Some(ocr_engine) = &aah.ocr_engine {
-                //     Matcher::Ocr {
-                //         image,
-                //         text: text.clone(),
-                //         engine: ocr_engine,
-                //     }
-                // } else {
-                //     return Err("".to_string());
-                // }
-            // }
+            } // Self::Ocr(text) => {
+              // return Err("not implemented".to_string());
+              // let image = convert_image_to_ten(image)
+              //     .map_err(|err| format!("failed to convert image to tensor: {:?}", err))?;
+              // if let Some(ocr_engine) = &aah.ocr_engine {
+              //     Matcher::Ocr {
+              //         image,
+              //         text: text.clone(),
+              //         engine: ocr_engine,
+              //     }
+              // } else {
+              //     return Err("".to_string());
+              // }
+              // }
         }
         .ok_or("match failed".to_string());
 

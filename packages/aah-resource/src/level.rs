@@ -108,7 +108,7 @@ impl Level {
     }
 
     /// 计算干员的技能按钮在屏幕中的位置
-    pub fn get_skill_screen_pos(&self) -> (f32, f32){
+    pub fn get_skill_screen_pos(&self) -> (f32, f32) {
         let width = 1920.0;
         let height = 1080.0;
         let camera_pos = self.camera_pos(true, width, height);

@@ -11,10 +11,7 @@ use crate::{
     controller::{app::App, Toucher},
 };
 
-use super::{
-    app::minitouch::MiniTouch,
-    Controller,
-};
+use super::{app::minitouch::MiniTouch, Controller};
 
 pub struct AahController {
     pub inner: adb::Device,

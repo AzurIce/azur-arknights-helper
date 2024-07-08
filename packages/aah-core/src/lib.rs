@@ -28,8 +28,8 @@ pub mod adb;
 pub mod config;
 pub mod controller;
 pub mod task;
-pub mod vision;
 pub mod utils;
+pub mod vision;
 
 /// AAH 的实例
 pub struct AAH {
@@ -71,7 +71,7 @@ pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
 
 impl AAH {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
-    /// 
+    ///
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
     /// - `on_task_evt`: 任务事件的回调函数
@@ -191,7 +191,7 @@ impl AAH {
     }
 
     /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
-    /// 
+    ///
     /// 通过该函数进行的分析只包含 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
     pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
         // self.default_oper_list.clone() cost 52s
@@ -221,7 +221,7 @@ impl AAH {
     /// 启动战斗分析器，直到战斗结束
     ///
     /// 分析信息会通过 [`TaskEvt::BattleAnalyzerRes`] 事件返回，
-    /// 
+    ///
     /// 出于性能考虑，目前待部署区只设置了识别 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
     /// TODO: self.default_oper_list.clone() cost 52s
     pub fn start_battle_analyzer(&self) {
