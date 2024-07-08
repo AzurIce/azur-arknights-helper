@@ -1,15 +1,25 @@
 use std::time::Instant;
 
-use aah_cv::template_matching::{find_matches, match_template, MatchTemplateMethod};
+use aah_cv::{
+    template_matching::{find_matches, match_template, MatchTemplateMethod},
+    utils::{luma32f_to_luma8, normalize_luma32f},
+};
 use color_print::{cformat, cprintln};
 use image::{DynamicImage, ImageBuffer, Luma};
 
-use crate::vision::{matcher::SSE_THRESHOLD, utils::Rect};
+use crate::vision::{
+    matcher::{
+        CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD,
+        SSE_THRESHOLD,
+    },
+    utils::Rect,
+};
 
 pub enum MultiMatcher {
     Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
+        method: MatchTemplateMethod,
         threshold: Option<f32>,
     },
 }
@@ -31,10 +41,19 @@ impl MultiMatcher {
             Self::Template {
                 image,
                 template,
+                method,
                 threshold,
             } => {
+                let threshold = threshold.unwrap_or(match method {
+                    MatchTemplateMethod::SumOfSquaredDifference => SSE_THRESHOLD,
+                    MatchTemplateMethod::SumOfSquaredDifferenceNormed => SSE_NORMED_THRESHOLD,
+                    MatchTemplateMethod::CrossCorrelation => CCORR_THRESHOLD,
+                    MatchTemplateMethod::CrossCorrelationNormed => CCORR_NORMED_THRESHOLD,
+                    MatchTemplateMethod::CorrelationCoefficient => CCOEFF_THRESHOLD,
+                    MatchTemplateMethod::CorrelationCoefficientNormed => CCOEFF_THRESHOLD,
+                });
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredDifference;
+                // let method = MatchTemplateMethod::SumOfSquaredDifference;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -46,39 +65,22 @@ impl MultiMatcher {
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
-                let res = match_template(image, template, method, false);
+                let mut res = match_template(image, template, *method, false);
 
                 // Normalize
-                let min = res
-                    .as_raw()
-                    .iter()
-                    .min_by(|a, b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let max = res
-                    .as_raw()
-                    .iter()
-                    .max_by(|a, b| a.partial_cmp(b).unwrap())
-                    .unwrap();
-                let data = res
-                    .as_raw()
-                    .iter()
-                    .map(|x| (x - min) / (max - min))
-                    .collect::<Vec<f32>>();
+                if matches!(
+                    method,
+                    MatchTemplateMethod::CorrelationCoefficient
+                        | MatchTemplateMethod::CrossCorrelation
+                        | MatchTemplateMethod::SumOfSquaredDifference
+                ) {
+                    res = normalize_luma32f(&res)
+                }
 
-                let matched_img = ImageBuffer::from_vec(
-                    res.width(),
-                    res.height(),
-                    data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
-                )
-                .unwrap();
+                let matched_img = luma32f_to_luma8(&res);
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
 
-                let matches = find_matches(
-                    &res,
-                    template.width(),
-                    template.height(),
-                    threshold.unwrap_or(SSE_THRESHOLD),
-                );
+                let matches = find_matches(&res, template.width(), template.height(), *method, threshold);
                 let rects: Vec<Rect> = matches
                     .into_iter()
                     .map(|m| Rect {
@@ -104,6 +106,7 @@ impl MultiMatcher {
 
 #[cfg(test)]
 mod test {
+    use aah_cv::template_matching::MatchTemplateMethod;
     use image::math::Rect;
 
     use crate::vision::{
@@ -119,6 +122,7 @@ mod test {
         test_device(Device::MUMU);
     }
 
+    // test to match battle_deploy-card-cost-icon
     fn test_device(device: Device) {
         println!("#### testing device {:?} ####", device);
         for i in 0..=5 {
@@ -137,9 +141,12 @@ mod test {
         let res = MultiMatcher::Template {
             image: image.to_luma32f(),
             template: template.to_luma32f(),
-            threshold: Some(40.0),
+            method: MatchTemplateMethod::CrossCorrelationNormed,
+            threshold: Some(0.85),
+            // threshold: Some(40.0),
         }
         .result();
+        res.matched_img.save(format!("./assets/output/matched_{image_filename}")).unwrap();
         println!("{} matches", res.rects.len());
 
         let mut cnt = 0;
@@ -167,10 +174,10 @@ mod test {
                 width: 140,
                 height: 170,
             };
-            image
-                .crop_imm(rect.x, rect.y, rect.width, rect.height)
-                .save(format!("./assets/output/{}.png", cnt))
-                .unwrap();
+            // image
+            //     .crop_imm(rect.x, rect.y, rect.width, rect.height)
+            //     .save(format!("./assets/output/{}.png", cnt))
+            //     .unwrap();
             cnt += 1;
             draw_box(
                 &mut res_image,

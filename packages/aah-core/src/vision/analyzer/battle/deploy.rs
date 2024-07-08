@@ -59,8 +59,9 @@ impl DeployAnalyzer {
             .map(|(_, img)| img)
             .collect::<Vec<DynamicImage>>();
 
+        // ccorr_normed 0.9
         let multi_match_analyzer =
-            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, Some(40.0))
+            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, None)
                 .roi((0.0, 0.75), (1.0, 1.0));
         Self {
             use_cache: false,
@@ -80,8 +81,10 @@ impl DeployAnalyzer {
         cprintln!("{log_tag}analyzing deploy...");
         let t = Instant::now();
 
+        cprintln!("{log_tag}searching deploy cards...");
         let output = self.multi_match_analyzer.analyze_image(image)?;
         let res = output.res;
+        cprintln!("{log_tag}found {} deploy cards...", res.rects.len());
         let mut deploy_cards: Vec<DeployCard> = Vec::with_capacity(res.rects.len());
         for rect in res.rects {
             let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
@@ -170,7 +173,20 @@ mod test {
     #[test]
     fn test_deploy_analyzer() {
         // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new("../../resources", EXAMPLE_DEPLOY_OPERS.to_vec());
+        let mut analyzer = DeployAnalyzer::new("../../resources", vec![
+            "char_1028_texas2",
+            "char_4087_ines",
+            "char_479_sleach",
+            "char_222_bpipe",
+            "char_1016_agoat2",
+            "char_245_cello",
+            "char_1020_reed2",
+            "char_4117_ray",
+            "char_2025_shu",
+            "char_1032_excu2",
+            "char_1035_wisdel",
+            "char_311_mudrok"
+        ]);
         // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
         let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
         let output = analyzer.analyze_image(&image).unwrap();
