@@ -11,8 +11,8 @@ use std::{
 
 use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
-use ocrs::{OcrEngine, OcrEngineParams};
-use rten::Model;
+// use ocrs::{OcrEngine, OcrEngineParams};
+// use rten::Model;
 use task::{copilot::CopilotTask, TaskEvt};
 use vision::analyzer::{
     battle::{
@@ -46,28 +46,28 @@ pub struct AAH {
     on_task_evt: Box<dyn Fn(TaskEvt) + Sync + Send>,
 }
 
-pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
-    let res_dir = res_dir.as_ref();
-    let detection_model_path = res_dir
-        .join("models")
-        .join("ocrs")
-        .join("text-detection.rten");
-    let rec_model_path = res_dir
-        .join("models")
-        .join("ocrs")
-        .join("text-recognition.rten");
+// pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
+//     let res_dir = res_dir.as_ref();
+//     let detection_model_path = res_dir
+//         .join("models")
+//         .join("ocrs")
+//         .join("text-detection.rten");
+//     let rec_model_path = res_dir
+//         .join("models")
+//         .join("ocrs")
+//         .join("text-recognition.rten");
 
-    let detection_model = Model::load_file(detection_model_path).unwrap();
-    let recognition_model = Model::load_file(rec_model_path).unwrap();
+//     let detection_model = Model::load_file(detection_model_path).unwrap();
+//     let recognition_model = Model::load_file(rec_model_path).unwrap();
 
-    let engine = OcrEngine::new(OcrEngineParams {
-        detection_model: Some(detection_model),
-        recognition_model: Some(recognition_model),
-        ..Default::default()
-    })
-    .unwrap();
-    engine
-}
+//     let engine = OcrEngine::new(OcrEngineParams {
+//         detection_model: Some(detection_model),
+//         recognition_model: Some(recognition_model),
+//         ..Default::default()
+//     })
+//     .unwrap();
+//     engine
+// }
 
 impl AAH {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
