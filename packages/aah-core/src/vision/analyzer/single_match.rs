@@ -1,13 +1,15 @@
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
+use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
 use crate::{
     controller::DEFAULT_HEIGHT,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
-        utils::{draw_box, resource::get_template, Rect},
+        utils::{draw_box, Rect},
     },
+    utils::resource::get_template,
     AAH,
 };
 
@@ -49,10 +51,9 @@ impl SingleMatchAnalyzer {
 
     pub fn analyze_image(&self, image: &DynamicImage) -> Result<SingleMatchAnalyzerOutput, String> {
         // Make sure that we are in the operation-start page
-        println!(
-            "[TemplateMatchAnalyzer]: matching {:?}",
-            self.template_filename
-        );
+        let log_tag = cformat!("<strong>[SingleMatchAnalyzer]: </strong>");
+        cprintln!("{log_tag}matching {:?}", self.template_filename);
+        let t = Instant::now();
 
         // TODO: 并不是一个好主意，缩放大图消耗时间更多，且误差更大
         // TODO: 然而测试了一下，发现缩放模板有时也会导致误差较大 (333.9063)
@@ -119,6 +120,7 @@ impl SingleMatchAnalyzer {
             );
         }
 
+        println!("cost: {:?}", t.elapsed());
         let screen = Box::new(image.clone());
         let annotated_screen = Box::new(annotated_screen);
         Ok(SingleMatchAnalyzerOutput {

@@ -1,15 +1,14 @@
-use std::path::Path;
+use std::{path::Path, time::Instant};
 
+use aah_cv::template_matching::MatchTemplateMethod;
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
 use crate::{
-    controller::DEFAULT_HEIGHT,
-    vision::{
+    controller::DEFAULT_HEIGHT, utils::resource::get_template, vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
-        utils::{binarize_image, draw_box, resource::get_template, Rect},
-    },
-    AAH,
+        utils::{binarize_image, draw_box, Rect},
+    }, AAH
 };
 
 use super::Analyzer;
@@ -62,7 +61,8 @@ impl MultiMatchAnalyzer {
         image: &DynamicImage,
     ) -> Result<MultiMatchAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[MultiMatchAnalyzer]: </strong>");
-        // cprintln!("{log_tag}matching {:?}", self.template_filename);
+        cprintln!("{log_tag}matching {:?}", self.template_filename);
+        let t = Instant::now();
 
         // TODO: 并不是一个好主意，缩放大图消耗时间更多，且误差更大
         // TODO: 然而测试了一下，发现缩放模板有时也会导致误差较大 (333.9063)
@@ -115,6 +115,7 @@ impl MultiMatchAnalyzer {
         let res = MultiMatcher::Template {
             image: cropped.to_luma32f(), // use cropped
             template: template.to_luma32f(),
+            method: MatchTemplateMethod::CrossCorrelationNormed,
             threshold: self.threshold,
         }
         .result();
@@ -144,6 +145,7 @@ impl MultiMatchAnalyzer {
             );
         }
 
+        cprintln!("{log_tag}cost: {:?}", t.elapsed());
         let screen = Box::new(image.clone());
         let annotated_screen = Box::new(annotated_screen);
         Ok(MultiMatchAnalyzerOutput {
@@ -176,14 +178,16 @@ mod test {
 
     #[test]
     fn test_multi_template_match_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
         let mut analyzer = MultiMatchAnalyzer::new(
-            &core.res_dir,
-            "battle_deploy-card-cost0.png",
-            Some(127),
+            "../../resources",
+            "battle_deploy-card-cost1.png",
+            None,
             None,
         );
-        let output = analyzer.analyze(&mut core).unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
+        output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.res.rects);
     }
 }

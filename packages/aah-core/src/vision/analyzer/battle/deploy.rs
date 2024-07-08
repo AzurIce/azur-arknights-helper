@@ -5,10 +5,11 @@ use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
+    utils::resource::get_opers_avatars,
     vision::{
         analyzer::multi_match::MultiMatchAnalyzer,
         matcher::best_matcher::BestMatcher,
-        utils::{average_hsv_v, draw_box, resource::get_opers_avatars, Rect},
+        utils::{average_hsv_v, draw_box, Rect},
     },
     AAH,
 };
@@ -59,12 +60,14 @@ impl DeployAnalyzer {
             .map(|(_, img)| img)
             .collect::<Vec<DynamicImage>>();
 
-        let multi_match_analyzer = MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, Some(40.0))
+        // ccorr_normed 0.9
+        let multi_match_analyzer =
+            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, None)
                 .roi((0.0, 0.75), (1.0, 1.0));
         Self {
             use_cache: false,
             oper_names,
-            matcher: BestMatcher::new(images),
+            matcher: BestMatcher::new(images, None),
             multi_match_analyzer,
         }
     }
@@ -79,38 +82,38 @@ impl DeployAnalyzer {
         cprintln!("{log_tag}analyzing deploy...");
         let t = Instant::now();
 
+        cprintln!("{log_tag}searching deploy cards...");
         let output = self.multi_match_analyzer.analyze_image(image)?;
         let res = output.res;
-        let deploy_cards: Vec<DeployCard> = res
-            .rects
-            .into_iter()
-            .map(|rect| {
-                let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
-                let avg_hsv_v = average_hsv_v(&cropped);
-                // println!("{avg_hsv_v}");
-                let available = avg_hsv_v > 90;
+        cprintln!("{log_tag}found {} deploy cards...", res.rects.len());
+        let mut deploy_cards: Vec<DeployCard> = Vec::with_capacity(res.rects.len());
+        for rect in res.rects {
+            let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
+            let avg_hsv_v = average_hsv_v(&cropped);
+            // println!("{avg_hsv_v}");
+            let available = avg_hsv_v > 90;
 
-                let rect = Rect {
-                    x: rect.x.saturating_add_signed(-15 - 40),
-                    y: rect.y.saturating_add(60),
-                    width: 80,
-                    height: 100,
-                };
+            let rect = Rect {
+                x: rect.x.saturating_add_signed(-15 - 40),
+                y: rect.y.saturating_add(60),
+                width: 80,
+                height: 100,
+            };
 
-                let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
-                assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
-                let res = self.matcher.match_with(avatar_template);
-                let oper_name = self.oper_names.get(res).unwrap().to_string();
-
-                DeployCard {
+            let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
+            assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
+            let res = self.matcher.match_with(avatar_template);
+            if let Some(idx) = res {
+                let oper_name = self.oper_names.get(idx).unwrap().to_string();
+                deploy_cards.push(DeployCard {
                     oper_name,
                     rect,
                     available,
-                }
-            })
-            .collect();
+                })
+            }
+        }
+        cprintln!("{log_tag}deploy_cards elapsed: {:?}...", t.elapsed());
 
-        let annotation_t = Instant::now();
         let mut annotated_screen = output.annotated_screen;
         for deploy_card in &deploy_cards {
             let color = if deploy_card.available {
@@ -129,7 +132,7 @@ impl DeployAnalyzer {
                 color,
             );
         }
-        cprintln!("{log_tag}annotation cost: {:?}...", annotation_t.elapsed());
+        cprintln!("{log_tag}annoteded elapsed: {:?}...", t.elapsed());
 
         cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
         Ok(DeployAnalyzerOutput {
@@ -166,10 +169,31 @@ mod test {
     use crate::{vision::analyzer::Analyzer, AAH};
 
     #[test]
+    fn print_oper_list() {}
+
+    #[test]
     fn test_deploy_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new(&core.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
-        let output = analyzer.analyze(&mut core).unwrap();
+        // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let mut analyzer = DeployAnalyzer::new(
+            "../../resources",
+            vec![
+                "char_1028_texas2",
+                "char_4087_ines",
+                "char_479_sleach",
+                "char_222_bpipe",
+                "char_1016_agoat2",
+                "char_245_cello",
+                "char_1020_reed2",
+                "char_4117_ray",
+                "char_2025_shu",
+                "char_1032_excu2",
+                "char_1035_wisdel",
+                "char_311_mudrok",
+            ],
+        );
+        // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.deploy_cards);
     }

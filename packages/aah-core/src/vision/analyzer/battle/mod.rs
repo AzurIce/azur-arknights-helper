@@ -8,7 +8,7 @@ use std::{
 };
 
 use color_print::{cformat, cprintln};
-use deploy::{DeployAnalyzer, DeployCard, EXAMPLE_DEPLOY_OPERS};
+use deploy::{DeployAnalyzer, DeployCard};
 use image::DynamicImage;
 use serde::Serialize;
 
@@ -16,19 +16,24 @@ use super::{single_match::SingleMatchAnalyzer, Analyzer};
 
 #[derive(Debug, Serialize, Clone)]
 /// [`BattleAnalyzer`] 的分析结果：
-/// - `battle_state`: 战斗状态，见 [`BattleState`]
-/// - `deploy_cards`: 部署卡片列表，见 [`DeployCard`]
+/// - `battle_state`: 当前关卡的战斗状态，见 [`BattleState`]
+///   依据右上角的 暂停/继续 按钮来判断：
+///   - 找到按钮前为 [`BattleState::Unknown`]
+///   - 之后为 [`BattleState::Resumed`] 或 [`BattleState::Paused`]
+///   - 按钮丢失后为 [`BattleState::Completed`]
+/// - `deploy_cards`: 部署卡片列表，包含了部署卡片的干员、位置、就绪信息，见 [`DeployCard`]
 pub struct BattleAnalyzerOutput {
     pub battle_state: BattleState,
     pub deploy_cards: Vec<DeployCard>,
 }
 
-pub enum Speed {
-    Speed1,
-    Speed2,
-}
+// pub enum Speed {
+//     Speed1,
+//     Speed2,
+// }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize)]
+/// 关卡的战斗状态，判断依据见 [`BattleAnalyzerOutput`]
 pub enum BattleState {
     Unknown,
     Resumed,
@@ -36,6 +41,36 @@ pub enum BattleState {
     Completed,
 }
 
+/// 战场分析器，详情见输出分析结果 [`BattleAnalyzer`]
+///
+/// # Example
+/// ```rust
+/// use aah_core::vision::analyzer::battle::BattleAnalyzer;
+/// use image;
+///
+/// fn main() {
+///     let mut analyzer = BattleAnalyzer::new(
+///         "../../resources",
+///         vec![
+///             "char_1028_texas2",
+///             "char_4087_ines",
+///             "char_479_sleach",
+///             "char_222_bpipe",
+///             "char_1016_agoat2",
+///             "char_245_cello",
+///             "char_1020_reed2",
+///             "char_4117_ray",
+///             "char_2025_shu",
+///             "char_1032_excu2",
+///             "char_1035_wisdel",
+///             "char_311_mudrok",
+///         ],
+///     );
+///     let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+///     let output = analyzer.analyze_image(&image).unwrap();
+///     println!("{:?}", output.deploy_cards);
+/// }
+/// ```
 pub struct BattleAnalyzer {
     res_dir: PathBuf,
     pub battle_state: BattleState,
@@ -47,9 +82,10 @@ pub struct BattleAnalyzer {
 impl BattleAnalyzer {
     /// 创建一个新的 [`BattleAnalyzer`]
     ///
-    ///
-    pub fn new<P: AsRef<Path>>(res_dir: P) -> Self {
-        let deploy_analyzer = DeployAnalyzer::new(&res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+    /// - `res_dir`: 资源文件路径，会通过 [`crate::utils::resource::get_template`] 加载模板
+    /// - `oper_names`: 内部的 [`DeployAnalyzer`] 识别的干员，为游戏内部资源文件的命名方式，如 `char_102_texas`, `char_1028_texas2`
+    pub fn new<P: AsRef<Path>, S: AsRef<str>>(res_dir: P, oper_names: Vec<S>) -> Self {
+        let deploy_analyzer = DeployAnalyzer::new(&res_dir, oper_names);
         Self {
             res_dir: res_dir.as_ref().to_path_buf(),
             battle_state: BattleState::Unknown,
@@ -59,13 +95,12 @@ impl BattleAnalyzer {
         }
     }
 
-    fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
+    /// 分析传入的 `image`
+    pub fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
         let log_tag = cformat!("<strong>[BattleAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();
 
-        // Update cache
-        cprintln!("{log_tag}screen_cap_and_cache cost: {:?}", t.elapsed());
         // Update battle_state
         for (img, state) in [
             (Some("battle_resume.png"), BattleState::Paused),
@@ -111,7 +146,7 @@ impl BattleAnalyzer {
             self.deploy_cards = output.deploy_cards;
         }
 
-        cprintln!("{log_tag}total cost: {:?}...", t.elapsed());
+        cprintln!("{log_tag}cost: {:?}...", t.elapsed());
         Ok(BattleAnalyzerOutput {
             battle_state: self.battle_state,
             deploy_cards: self.deploy_cards.clone(),
@@ -129,15 +164,31 @@ impl Analyzer for BattleAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use crate::vision::analyzer::Analyzer;
+    use crate::vision::analyzer::{battle::deploy::EXAMPLE_DEPLOY_OPERS, Analyzer};
 
     use super::BattleAnalyzer;
 
     #[test]
     fn test_battle_analyzer() {
-        let aah = crate::AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = BattleAnalyzer::new(&aah.res_dir);
-        let res = analyzer.analyze(&aah).unwrap();
-        println!("{:?}", res)
+        let mut analyzer = BattleAnalyzer::new(
+            "../../resources",
+            vec![
+                "char_1028_texas2",
+                "char_4087_ines",
+                "char_479_sleach",
+                "char_222_bpipe",
+                "char_1016_agoat2",
+                "char_245_cello",
+                "char_1020_reed2",
+                "char_4117_ray",
+                "char_2025_shu",
+                "char_1032_excu2",
+                "char_1035_wisdel",
+                "char_311_mudrok",
+            ],
+        );
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
+        println!("{:?}", output.deploy_cards);
     }
 }

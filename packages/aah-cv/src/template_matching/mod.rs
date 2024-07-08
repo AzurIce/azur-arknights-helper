@@ -1,4 +1,8 @@
-use std::sync::{Arc, Mutex, OnceLock};
+use std::{
+    fmt::Display,
+    path::Path,
+    sync::{Arc, Mutex, OnceLock},
+};
 
 use bytemuck::{Pod, Zeroable};
 use image::{GenericImageView, ImageBuffer, Luma};
@@ -19,6 +23,7 @@ pub fn find_matches(
     input: &ImageBuffer<Luma<f32>, Vec<f32>>,
     template_width: u32,
     template_height: u32,
+    method: MatchTemplateMethod,
     threshold: f32,
 ) -> Vec<Match> {
     let mut matches: Vec<Match> = Vec::new();
@@ -30,7 +35,16 @@ pub fn find_matches(
         for x in 0..input_width {
             let value = input.get_pixel(x, y).0[0];
 
-            if value < threshold {
+            let ok = if matches!(
+                method,
+                MatchTemplateMethod::SumOfSquaredDifference
+                    | MatchTemplateMethod::SumOfSquaredDifferenceNormed
+            ) {
+                value < threshold
+            } else {
+                value > threshold
+            };
+            if ok {
                 if let Some(m) = matches.iter_mut().rev().find(|m| {
                     ((m.location.0 as i32 - x as i32).abs() as u32) < template_width
                         && ((m.location.1 as i32 - y as i32).abs() as u32) < template_height
@@ -55,51 +69,36 @@ pub fn find_matches(
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MatchTemplateMethod {
+    SumOfSquaredDifference,
+    SumOfSquaredDifferenceNormed,
     CrossCorrelation,
     CrossCorrelationNormed,
-    SumOfSquaredErrors,
-    SumOfSquaredErrorsNormed,
+    CorrelationCoefficient,
+    CorrelationCoefficientNormed,
+}
+
+impl Display for MatchTemplateMethod {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            MatchTemplateMethod::SumOfSquaredDifference => "sqdiff",
+            MatchTemplateMethod::SumOfSquaredDifferenceNormed => "sqdiff_normed",
+            MatchTemplateMethod::CrossCorrelation => "ccorr",
+            MatchTemplateMethod::CrossCorrelationNormed => "ccorr_normed",
+            MatchTemplateMethod::CorrelationCoefficient => "ccoeff",
+            MatchTemplateMethod::CorrelationCoefficientNormed => "ccoeff_normed",
+        };
+        f.write_str(s)
+    }
 }
 
 pub fn match_template(
     image: &ImageBuffer<Luma<f32>, Vec<f32>>,
     template: &ImageBuffer<Luma<f32>, Vec<f32>>,
     method: MatchTemplateMethod,
+    padding: bool,
 ) -> ImageBuffer<Luma<f32>, Vec<f32>> {
     let mut matcher = matcher().lock().unwrap();
-    matcher.match_template(image, template, method)
-}
-
-pub fn match_template_ccorr_normed(
-    image: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
-) -> ImageBuffer<Luma<f32>, Vec<f32>> {
-    match_template(image, template, MatchTemplateMethod::CrossCorrelationNormed)
-}
-
-pub fn match_template_ccorr(
-    image: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
-) -> ImageBuffer<Luma<f32>, Vec<f32>> {
-    match_template(image, template, MatchTemplateMethod::CrossCorrelation)
-}
-
-pub fn match_template_sse(
-    image: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
-) -> ImageBuffer<Luma<f32>, Vec<f32>> {
-    match_template(image, template, MatchTemplateMethod::SumOfSquaredErrors)
-}
-
-pub fn match_template_sse_normed(
-    image: &ImageBuffer<Luma<f32>, Vec<f32>>,
-    template: &ImageBuffer<Luma<f32>, Vec<f32>>,
-) -> ImageBuffer<Luma<f32>, Vec<f32>> {
-    match_template(
-        image,
-        template,
-        MatchTemplateMethod::SumOfSquaredErrorsNormed,
-    )
+    matcher.match_template(image, template, method, padding)
 }
 
 /// internal
@@ -131,8 +130,10 @@ struct Matcher {
     bind_group: Option<wgpu::BindGroup>,
     pipeline_ccorr: wgpu::ComputePipeline,
     pipeline_ccorr_normed: wgpu::ComputePipeline,
-    pipeline_sse: wgpu::ComputePipeline,
-    pipeline_sse_normed: wgpu::ComputePipeline,
+    pipeline_sqdiff: wgpu::ComputePipeline,
+    pipeline_sqdiff_normed: wgpu::ComputePipeline,
+    pipeline_ccoeff: wgpu::ComputePipeline,
+    pipeline_ccoeff_normed: wgpu::ComputePipeline,
 }
 
 impl Matcher {
@@ -229,25 +230,45 @@ impl Matcher {
                     compilation_options: PipelineCompilationOptions::default(),
                 });
 
-        let pipeline_sse = ctx
+        let pipeline_sqdiff = ctx
             .device
             .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("Sum of Squared Error Pipeline"),
+                label: Some("Sum of Squared Difference Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point: "main_sse",
+                entry_point: "main_sqdiff",
                 compilation_options: PipelineCompilationOptions::default(),
             });
 
-        let pipeline_sse_normed = ctx
+        let pipeline_sqdiff_normed =
+            ctx.device
+                .create_compute_pipeline(&ComputePipelineDescriptor {
+                    label: Some("Sum of Squared Difference Normed Pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: "main_sqdiff_normed",
+                    compilation_options: PipelineCompilationOptions::default(),
+                });
+
+        let pipeline_ccoeff = ctx
             .device
             .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("Sum of Squared Error Normed Pipeline"),
+                label: Some("Correlation Coefficient Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point: "main_sse_normed",
+                entry_point: "main_ccoeff",
                 compilation_options: PipelineCompilationOptions::default(),
             });
+
+        let pipeline_ccoeff_normed =
+            ctx.device
+                .create_compute_pipeline(&ComputePipelineDescriptor {
+                    label: Some("Correlation Coefficient Normed Pipeline"),
+                    layout: Some(&pipeline_layout),
+                    module: &shader_module,
+                    entry_point: "main_ccoeff_normed",
+                    compilation_options: PipelineCompilationOptions::default(),
+                });
 
         Matcher {
             ctx,
@@ -261,8 +282,10 @@ impl Matcher {
             pipeline_layout,
             pipeline_ccorr,
             pipeline_ccorr_normed,
-            pipeline_sse,
-            pipeline_sse_normed,
+            pipeline_sqdiff,
+            pipeline_sqdiff_normed,
+            pipeline_ccoeff,
+            pipeline_ccoeff_normed,
         }
     }
 
@@ -304,7 +327,77 @@ impl Matcher {
         image: &ImageBuffer<Luma<f32>, Vec<f32>>,
         template: &ImageBuffer<Luma<f32>, Vec<f32>>,
         match_method: MatchTemplateMethod,
+        padding: bool,
     ) -> ImageBuffer<Luma<f32>, Vec<f32>> {
+        let (image, template) = if matches!(
+            match_method,
+            MatchTemplateMethod::CorrelationCoefficient
+                | MatchTemplateMethod::CorrelationCoefficientNormed
+        ) {
+            let avg_kernel = ImageBuffer::from_pixel(
+                template.width(),
+                template.height(),
+                Luma([1.0 / (template.width() * template.height()) as f32]),
+            );
+            let avg_image = self.match_template(
+                image,
+                &avg_kernel,
+                MatchTemplateMethod::CrossCorrelation,
+                true,
+            );
+            let avg_template = self.match_template(
+                template,
+                &avg_kernel,
+                MatchTemplateMethod::CrossCorrelation,
+                true,
+            );
+
+            let image = ImageBuffer::from_vec(
+                image.width(),
+                image.height(),
+                image
+                    .as_raw()
+                    .iter()
+                    .zip(avg_image.as_raw().iter())
+                    .map(|(v, avg)| v - avg)
+                    .collect(),
+            )
+            .unwrap();
+            let template = ImageBuffer::from_vec(
+                template.width(),
+                template.height(),
+                template
+                    .as_raw()
+                    .iter()
+                    .zip(avg_template.as_raw().iter())
+                    .map(|(v, avg)| v - avg)
+                    .collect(),
+            )
+            .unwrap();
+
+            (image, template)
+        } else {
+            (image.clone(), template.clone())
+        };
+        let image = if padding {
+            let padded_image = ImageBuffer::from_fn(
+                image.width() + template.width() - 1,
+                image.height() + template.height() - 1,
+                |x, y| {
+                    if x >= image.width() || y >= image.height() {
+                        Luma([0.0])
+                    } else {
+                        *image.get_pixel(x, y)
+                    }
+                },
+            );
+            padded_image
+        } else {
+            image.clone()
+        };
+        let image = &image;
+        let template = &template;
+
         let (result_w, result_h) = (
             image.width() - template.width() + 1,
             image.height() - template.height() + 1,
@@ -369,15 +462,23 @@ impl Matcher {
                 MatchTemplateMethod::CrossCorrelationNormed => {
                     pass.set_pipeline(&self.pipeline_ccorr_normed)
                 }
-                MatchTemplateMethod::SumOfSquaredErrors => pass.set_pipeline(&self.pipeline_sse),
-                MatchTemplateMethod::SumOfSquaredErrorsNormed => {
-                    pass.set_pipeline(&self.pipeline_sse_normed)
+                MatchTemplateMethod::SumOfSquaredDifference => {
+                    pass.set_pipeline(&self.pipeline_sqdiff)
+                }
+                MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
+                    pass.set_pipeline(&self.pipeline_sqdiff_normed)
+                }
+                MatchTemplateMethod::CorrelationCoefficient => {
+                    pass.set_pipeline(&self.pipeline_ccoeff)
+                }
+                MatchTemplateMethod::CorrelationCoefficientNormed => {
+                    pass.set_pipeline(&self.pipeline_ccoeff_normed)
                 }
             }
             pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(
-                (result_w as f32 / 16.0).ceil() as u32,
-                (result_h as f32 / 16.0).ceil() as u32,
+                (result_w as f32 / 8.0).ceil() as u32,
+                (result_h as f32 / 8.0).ceil() as u32,
                 1,
             );
         }
@@ -462,4 +563,112 @@ fn prepare_buffer_init_with_image(
         );
     }
     update
+}
+
+#[cfg(test)]
+mod test {
+    use crate::utils::save_luma32f;
+
+    use super::*;
+    use std::{cmp::Ordering, error::Error, fs, time::Instant};
+
+    #[test]
+    fn foo() -> Result<(), Box<dyn Error>> {
+        let image = image::open("./assets/in_battle.png")?;
+        let template = image::open("./assets/battle_deploy-card-cost1.png")?;
+        fs::create_dir_all("./assets/output")?;
+
+        let image = image.to_luma32f();
+        save_luma32f(&image, "./assets/output/grey.png", false);
+        let image = ImageBuffer::from_fn(image.width(), image.height(), |x, y| {
+            let mut sum = 0.0;
+            let mut cnt = 0;
+            for i in x..(x + template.width()).min(image.width()) {
+                for j in y..(y + template.height()).min(image.height()) {
+                    sum += image.get_pixel(i, j).0[0];
+                    cnt += 1;
+                }
+            }
+            // println!("{sum}/{cnt}");
+            // println!("{} {}", image.get_pixel(x, y).0[0], sum / cnt as f32);
+            Luma([(sum / cnt as f32)])
+        });
+        save_luma32f(&image, "./assets/output/avg.png", false);
+        Ok(())
+    }
+
+    #[test]
+    fn test_template_matching() -> Result<(), Box<dyn Error>> {
+        let image = image::open("./assets/in_battle.png")?;
+        let template = image::open("./assets/battle_deploy-card-cost1.png")?;
+        fs::create_dir_all("./assets/output")?;
+
+        for method in [
+            MatchTemplateMethod::SumOfSquaredDifference,
+            MatchTemplateMethod::SumOfSquaredDifferenceNormed,
+            MatchTemplateMethod::CrossCorrelation,
+            MatchTemplateMethod::CrossCorrelationNormed,
+            MatchTemplateMethod::CorrelationCoefficient,
+            MatchTemplateMethod::CorrelationCoefficientNormed,
+        ] {
+            println!("matching using {}...", method);
+            let t = Instant::now();
+            let res = match_template(&image.to_luma32f(), &template.to_luma32f(), method, false);
+            println!("cost: {:?}", t.elapsed());
+            save_luma32f(
+                &res,
+                format!("./assets/output/{method}.png"),
+                matches!(
+                    method,
+                    MatchTemplateMethod::SumOfSquaredDifference
+                        | MatchTemplateMethod::CrossCorrelation
+                        | MatchTemplateMethod::CorrelationCoefficient
+                ),
+            );
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_btn_matching() -> Result<(), Box<dyn Error>> {
+        let images = ["in_battle", "1-4_deploying", "1-4_deploying_direction"].map(|name| {
+            (
+                name.to_string(),
+                image::open(format!("./assets/{name}.png")).unwrap(),
+            )
+        });
+        let dir = Path::new("./assets/output/battle_pause");
+        let template = image::open("./assets/battle_pause.png")?;
+        fs::create_dir_all(&dir)?;
+
+        for method in [
+            MatchTemplateMethod::SumOfSquaredDifference,
+            MatchTemplateMethod::SumOfSquaredDifferenceNormed,
+            MatchTemplateMethod::CrossCorrelation,
+            MatchTemplateMethod::CrossCorrelationNormed,
+            MatchTemplateMethod::CorrelationCoefficient,
+            MatchTemplateMethod::CorrelationCoefficientNormed,
+        ] {
+            for (name, image) in images.iter() {
+                println!("matching using {}...", method);
+                let t = Instant::now();
+                let res =
+                    match_template(&image.to_luma32f(), &template.to_luma32f(), method, false);
+                println!("cost: {:?}", t.elapsed());
+                save_luma32f(
+                    &res,
+                    dir.join(format!("{method}-{name}.png")),
+                    matches!(
+                        method,
+                        MatchTemplateMethod::SumOfSquaredDifference
+                            | MatchTemplateMethod::CrossCorrelation
+                            | MatchTemplateMethod::CorrelationCoefficient
+                    ),
+                );
+            }
+        }
+
+        Ok(())
+    }
 }

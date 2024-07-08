@@ -8,8 +8,7 @@ use imageproc::template_matching::find_extremes;
 
 use crate::vision::{
     matcher::{
-        CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD,
-        SSE_THRESHOLD,
+        CCOEFF_NORMED_THRESHOLD, CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD, SSE_THRESHOLD
     },
     utils::Rect,
 };
@@ -48,7 +47,7 @@ impl SingleMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrorsNormed;
+                let method = MatchTemplateMethod::SumOfSquaredDifference;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -60,7 +59,7 @@ impl SingleMatcher {
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
-                let res = match_template(image, template, method);
+                let res = match_template(image, template, method, false);
 
                 // Normalize
                 let min = res
@@ -116,10 +115,10 @@ impl SingleMatcher {
                 );
 
                 let success = match method {
-                    MatchTemplateMethod::SumOfSquaredErrors => {
+                    MatchTemplateMethod::SumOfSquaredDifference => {
                         extrems.min_value <= threshold.unwrap_or(SSE_THRESHOLD)
                     }
-                    MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                    MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
                         extrems.min_value <= threshold.unwrap_or(SSE_NORMED_THRESHOLD)
                     }
                     MatchTemplateMethod::CrossCorrelation => {
@@ -128,12 +127,12 @@ impl SingleMatcher {
                     MatchTemplateMethod::CrossCorrelationNormed => {
                         extrems.max_value >= threshold.unwrap_or(CCORR_NORMED_THRESHOLD)
                     }
-                    // MatchTemplateMethod::CCOEFF => {
-                    //     extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
-                    // }
-                    // MatchTemplateMethod::CCOEFF_NORMED => {
-                    //     extrems.max_value >= threshold.unwrap_or(THRESHOLD)
-                    // }
+                    MatchTemplateMethod::CorrelationCoefficient => {
+                        extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
+                    }
+                    MatchTemplateMethod::CorrelationCoefficientNormed => {
+                        extrems.max_value >= threshold.unwrap_or(CCOEFF_NORMED_THRESHOLD)
+                    }
                     _ => panic!("not implemented"),
                 };
 
@@ -143,14 +142,14 @@ impl SingleMatcher {
                 } else {
                     cprintln!("{log_tag}<green>success!</green>");
                     let (x, y) = match method {
-                        MatchTemplateMethod::SumOfSquaredErrors
-                        | MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                        MatchTemplateMethod::SumOfSquaredDifference
+                        | MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
                             extrems.min_value_location
                         }
                         MatchTemplateMethod::CrossCorrelation
-                        | MatchTemplateMethod::CrossCorrelationNormed => extrems.max_value_location,
-                        // MatchTemplateMethod::CCOEFF => extrems.max_value_location,
-                        // MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
+                        | MatchTemplateMethod::CrossCorrelationNormed 
+                        | MatchTemplateMethod::CorrelationCoefficient
+                        | MatchTemplateMethod::CorrelationCoefficientNormed => extrems.max_value_location,
                         _ => panic!("not implemented"),
                     };
                     Some(Rect {
