@@ -164,8 +164,6 @@ impl Analyzer for BattleAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use crate::vision::analyzer::{battle::deploy::EXAMPLE_DEPLOY_OPERS, Analyzer};
-
     use super::BattleAnalyzer;
 
     #[test]

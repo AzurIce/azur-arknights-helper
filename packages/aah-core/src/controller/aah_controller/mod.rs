@@ -1,11 +1,10 @@
 use std::{
-    path::{Path, PathBuf},
+    path::Path,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use color_print::cprintln;
-use log::{error, info};
 
 use crate::{
     adb::{self, MyError},
@@ -13,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    app::{minicap::Minicap, minitouch::MiniTouch},
+    app::minitouch::MiniTouch,
     Controller,
 };
 
@@ -21,7 +20,7 @@ pub struct AahController {
     pub inner: adb::Device,
     width: u32,
     height: u32,
-    res_dir: PathBuf,
+    // res_dir: PathBuf,
     // minicap: Minicap,
     minitouch: Arc<Mutex<MiniTouch>>,
 }
@@ -55,7 +54,7 @@ impl AahController {
             inner: device,
             width,
             height,
-            res_dir,
+            // res_dir,
             // minicap,
             minitouch,
         };
@@ -151,7 +150,7 @@ impl Controller for AahController {
 
 #[cfg(test)]
 mod test {
-    use std::{io::Read, net::TcpStream, thread::sleep, time::Duration};
+    use std::{thread::sleep, time::Duration};
 
     use crate::controller::Controller;
 
@@ -159,7 +158,7 @@ mod test {
 
     #[test]
     fn test_minicaper() {
-        let controller = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let _ = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
         sleep(Duration::from_secs(4));
     }
 
@@ -176,37 +175,5 @@ mod test {
             )
             .unwrap();
         sleep(Duration::from_secs(10));
-    }
-
-    #[test]
-    fn test_connect() {
-        println!("connecting to minicap tcp...");
-        let mut connection = TcpStream::connect("localhost:1313").unwrap();
-        println!("connected");
-
-        let mut q: Vec<u8> = Vec::new();
-        let mut header_occurs = false;
-        loop {
-            let mut buf = [0u8; 1024];
-            match connection.read(&mut buf) {
-                Err(err) => {
-                    println!("{:?}", err);
-                }
-                Ok(sz) => {
-                    if sz == 0 {
-                        continue;
-                    }
-                    q.extend(buf);
-                    println!("{:?}", q);
-
-                    if q.len() >= 24 {
-                        header_occurs = true;
-                        let header_data = q.drain(0..24).collect::<Vec<u8>>();
-                        println!("header_data: {:?}", header_data);
-                        break;
-                    }
-                }
-            }
-        }
     }
 }

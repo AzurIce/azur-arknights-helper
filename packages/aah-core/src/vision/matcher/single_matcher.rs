@@ -8,7 +8,8 @@ use imageproc::template_matching::find_extremes;
 
 use crate::vision::{
     matcher::{
-        CCOEFF_NORMED_THRESHOLD, CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD, SSE_THRESHOLD
+        CCOEFF_NORMED_THRESHOLD, CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD,
+        SSE_NORMED_THRESHOLD, SSE_THRESHOLD,
     },
     utils::Rect,
 };
@@ -133,7 +134,6 @@ impl SingleMatcher {
                     MatchTemplateMethod::CorrelationCoefficientNormed => {
                         extrems.max_value >= threshold.unwrap_or(CCOEFF_NORMED_THRESHOLD)
                     }
-                    _ => panic!("not implemented"),
                 };
 
                 let rect = if !success {
@@ -147,10 +147,11 @@ impl SingleMatcher {
                             extrems.min_value_location
                         }
                         MatchTemplateMethod::CrossCorrelation
-                        | MatchTemplateMethod::CrossCorrelationNormed 
+                        | MatchTemplateMethod::CrossCorrelationNormed
                         | MatchTemplateMethod::CorrelationCoefficient
-                        | MatchTemplateMethod::CorrelationCoefficientNormed => extrems.max_value_location,
-                        _ => panic!("not implemented"),
+                        | MatchTemplateMethod::CorrelationCoefficientNormed => {
+                            extrems.max_value_location
+                        }
                     };
                     Some(Rect {
                         x,

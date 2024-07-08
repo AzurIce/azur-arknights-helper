@@ -7,29 +7,10 @@ use crate::{adb::MyError, vision::utils::Rect};
 // pub mod adb_input_controller;
 pub mod aah_controller;
 pub mod app;
-pub mod minitouch;
-// pub use adb_input_controller::AdbInputController;
 
 /// 默认宽高
 pub const DEFAULT_WIDTH: u32 = 1920;
 pub const DEFAULT_HEIGHT: u32 = 1080;
-
-pub struct ScreenPos {
-    x: f32,
-    y: f32,
-    ratio: f32,
-}
-
-struct RawScreenPos {
-    x: f32,
-    y: f32,
-}
-
-// impl Into<RawScreenPos> for ScreenPos {
-//     fn into(self) -> RawScreenPos {
-//         // ? 假设：明日方舟界面元素缩放按照高度缩放
-//     }
-// }
 
 /// [`Controller`] 承担着设备操作相关的事情，如触控、截图
 /// 所有 [`Controller`]：

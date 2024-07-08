@@ -166,7 +166,6 @@ pub const EXAMPLE_DEPLOY_OPERS: [&str; 9] = [
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{vision::analyzer::Analyzer, AAH};
 
     #[test]
     fn print_oper_list() {}
