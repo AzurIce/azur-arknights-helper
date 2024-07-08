@@ -59,12 +59,13 @@ impl DeployAnalyzer {
             .map(|(_, img)| img)
             .collect::<Vec<DynamicImage>>();
 
-        let multi_match_analyzer = MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, Some(40.0))
+        let multi_match_analyzer =
+            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, Some(40.0))
                 .roi((0.0, 0.75), (1.0, 1.0));
         Self {
             use_cache: false,
             oper_names,
-            matcher: BestMatcher::new(images),
+            matcher: BestMatcher::new(images, None),
             multi_match_analyzer,
         }
     }
@@ -84,7 +85,7 @@ impl DeployAnalyzer {
         let deploy_cards: Vec<DeployCard> = res
             .rects
             .into_iter()
-            .map(|rect| {
+            .filter_map(|rect| {
                 let cropped = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 let avg_hsv_v = average_hsv_v(&cropped);
                 // println!("{avg_hsv_v}");
@@ -100,13 +101,14 @@ impl DeployAnalyzer {
                 let avatar_template = image.crop_imm(rect.x, rect.y, rect.width, rect.height);
                 assert!(avatar_template.width() * avatar_template.height() > 0); // make sure the template is not empty
                 let res = self.matcher.match_with(avatar_template);
-                let oper_name = self.oper_names.get(res).unwrap().to_string();
-
-                DeployCard {
-                    oper_name,
-                    rect,
-                    available,
-                }
+                res.and_then(|res| {
+                    let oper_name = self.oper_names.get(res).unwrap().to_string();
+                    Some(DeployCard {
+                        oper_name,
+                        rect,
+                        available,
+                    })
+                })
             })
             .collect();
 
@@ -166,9 +168,7 @@ mod test {
     use crate::{vision::analyzer::Analyzer, AAH};
 
     #[test]
-    fn print_oper_list() {
-
-    }
+    fn print_oper_list() {}
 
     #[test]
     fn test_deploy_analyzer() {

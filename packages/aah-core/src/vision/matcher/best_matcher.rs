@@ -6,14 +6,15 @@ pub struct BestMatcherResult {}
 
 pub struct BestMatcher {
     images: Vec<DynamicImage>,
+    threshold: Option<f32>,
 }
 
 impl BestMatcher {
-    pub fn new(images: Vec<DynamicImage>) -> Self {
-        Self { images }
+    pub fn new(images: Vec<DynamicImage>, threshold: Option<f32>) -> Self {
+        Self { images, threshold }
     }
 
-    pub fn match_with(&self, template: DynamicImage) -> usize {
+    pub fn match_with(&self, template: DynamicImage) -> Option<usize> {
         // let log_tag = cformat!("[BestMatcher]: ");
         // cprintln!(
         //     "<dim>{log_tag}matching template with {} images</dim>",
@@ -21,19 +22,19 @@ impl BestMatcher {
         // );
 
         // let t = Instant::now();
-        let (mut max_val, mut max_idx) = (0.0, 0);
+        let (mut max_val, mut max_idx) = (0.0, None);
         for (idx, img) in self.images.iter().enumerate() {
             let res = match_template(
                 &img.to_luma32f(),
                 &template.to_luma32f(),
-                MatchTemplateMethod::CrossCorrelationNormed,
+                MatchTemplateMethod::CorrelationCoefficientNormed,
                 false,
             );
             let extremes = find_extremes(&res);
             if extremes.max_value > max_val {
                 max_val = extremes.max_value;
-                max_idx = idx;
-                if max_val >= 0.99 {
+                max_idx = Some(idx);
+                if max_val >= self.threshold.unwrap_or(0.99) {
                     break;
                 }
             }
