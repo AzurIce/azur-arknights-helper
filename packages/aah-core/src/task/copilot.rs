@@ -17,12 +17,10 @@ use crate::{
         wrapper::GenericTaskWrapper,
         TaskEvt,
     },
-    vision::{
-        analyzer::{
-            battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
-            Analyzer,
-        },
-        utils::resource::get_template,
+    utils::resource::get_template,
+    vision::analyzer::{
+        battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
+        Analyzer,
     },
 };
 
@@ -131,7 +129,7 @@ impl Task for CopilotTask {
                                 &skill_cropped.to_luma32f(),
                                 &skill_ready_template,
                                 MatchTemplateMethod::CrossCorrelationNormed,
-                                false
+                                false,
                             );
                             let v = find_extremes(&res).max_value;
                             let skill_ready = v > 0.9;

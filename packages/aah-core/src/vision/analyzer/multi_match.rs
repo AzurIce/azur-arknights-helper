@@ -5,12 +5,10 @@ use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
 use crate::{
-    controller::DEFAULT_HEIGHT,
-    vision::{
+    controller::DEFAULT_HEIGHT, utils::resource::get_template, vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
-        utils::{binarize_image, draw_box, resource::get_template, Rect},
-    },
-    AAH,
+        utils::{binarize_image, draw_box, Rect},
+    }, AAH
 };
 
 use super::Analyzer;

@@ -5,10 +5,11 @@ use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
+    utils::resource::get_opers_avatars,
     vision::{
         analyzer::multi_match::MultiMatchAnalyzer,
         matcher::best_matcher::BestMatcher,
-        utils::{average_hsv_v, draw_box, resource::get_opers_avatars, Rect},
+        utils::{average_hsv_v, draw_box, Rect},
     },
     AAH,
 };
@@ -173,20 +174,23 @@ mod test {
     #[test]
     fn test_deploy_analyzer() {
         // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = DeployAnalyzer::new("../../resources", vec![
-            "char_1028_texas2",
-            "char_4087_ines",
-            "char_479_sleach",
-            "char_222_bpipe",
-            "char_1016_agoat2",
-            "char_245_cello",
-            "char_1020_reed2",
-            "char_4117_ray",
-            "char_2025_shu",
-            "char_1032_excu2",
-            "char_1035_wisdel",
-            "char_311_mudrok"
-        ]);
+        let mut analyzer = DeployAnalyzer::new(
+            "../../resources",
+            vec![
+                "char_1028_texas2",
+                "char_4087_ines",
+                "char_479_sleach",
+                "char_222_bpipe",
+                "char_1016_agoat2",
+                "char_245_cello",
+                "char_1020_reed2",
+                "char_4117_ray",
+                "char_2025_shu",
+                "char_1032_excu2",
+                "char_1035_wisdel",
+                "char_311_mudrok",
+            ],
+        );
         // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
         let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
         let output = analyzer.analyze_image(&image).unwrap();
