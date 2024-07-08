@@ -1,4 +1,7 @@
+use std::time::Instant;
+
 use aah_cv::template_matching::{match_template, MatchTemplateMethod};
+use color_print::{cformat, cprintln};
 use image::DynamicImage;
 use imageproc::template_matching::find_extremes;
 
@@ -15,19 +18,19 @@ impl BestMatcher {
     }
 
     pub fn match_with(&self, template: DynamicImage) -> Option<usize> {
-        // let log_tag = cformat!("[BestMatcher]: ");
-        // cprintln!(
-        //     "<dim>{log_tag}matching template with {} images</dim>",
-        //     self.images.len()
-        // );
+        let log_tag = cformat!("[BestMatcher]: ");
+        cprintln!(
+            "<dim>{log_tag}matching template with {} images</dim>",
+            self.images.len()
+        );
 
-        // let t = Instant::now();
+        let t = Instant::now();
         let (mut max_val, mut max_idx) = (0.0, None);
         for (idx, img) in self.images.iter().enumerate() {
             let res = match_template(
                 &img.to_luma32f(),
                 &template.to_luma32f(),
-                MatchTemplateMethod::CorrelationCoefficientNormed,
+                MatchTemplateMethod::CrossCorrelationNormed,
                 false,
             );
             let extremes = find_extremes(&res);
@@ -39,7 +42,7 @@ impl BestMatcher {
                 }
             }
         }
-        // cprintln!("<dim>cost: {:?}</dim>", t.elapsed());
+        cprintln!("{log_tag}cost: {:?}", t.elapsed());
         max_idx
     }
 }
