@@ -467,8 +467,8 @@ impl Matcher {
             }
             pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(
-                (result_w as f32 / 16.0).ceil() as u32,
-                (result_h as f32 / 16.0).ceil() as u32,
+                (result_w as f32 / 8.0).ceil() as u32,
+                (result_h as f32 / 8.0).ceil() as u32,
                 1,
             );
         }
