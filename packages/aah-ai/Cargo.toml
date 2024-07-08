@@ -1,0 +1,9 @@
+[package]
+name = "aah-ai"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image.workspace = true
+rten = "0.11.0"
+rten-tensor = "0.11.0"
