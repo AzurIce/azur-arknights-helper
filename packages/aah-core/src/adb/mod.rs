@@ -167,6 +167,7 @@ pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
     }
 }
 
+#[allow(unused)]
 pub struct Device {
     /// The Adb host which is using to access this device
     host: Mutex<Host>,

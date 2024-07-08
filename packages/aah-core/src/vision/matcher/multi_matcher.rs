@@ -130,6 +130,7 @@ mod test {
         }
     }
 
+    #[allow(unused)]
     /// deploy available recognize
     fn test_device_multi_match<S: AsRef<str>>(device: Device, image_filename: S) {
         let image_filename = image_filename.as_ref();

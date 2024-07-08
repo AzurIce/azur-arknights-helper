@@ -5,10 +5,13 @@ use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
 use crate::{
-    controller::DEFAULT_HEIGHT, utils::resource::get_template, vision::{
+    controller::DEFAULT_HEIGHT,
+    utils::resource::get_template,
+    vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
         utils::{binarize_image, draw_box, Rect},
-    }, AAH
+    },
+    AAH,
 };
 
 use super::Analyzer;
@@ -171,10 +174,7 @@ impl Analyzer for MultiMatchAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        vision::analyzer::{multi_match::MultiMatchAnalyzer, Analyzer},
-        AAH,
-    };
+    use crate::vision::analyzer::multi_match::MultiMatchAnalyzer;
 
     #[test]
     fn test_multi_template_match_analyzer() {

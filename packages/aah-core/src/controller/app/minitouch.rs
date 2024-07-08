@@ -2,14 +2,12 @@ use std::{
     io::{BufRead, Write},
     path::Path,
     process::{ChildStdin, Command, Stdio},
-    sync::{mpsc::channel, Arc, Mutex},
     thread::{self, sleep},
     time::Duration,
 };
 
 use color_print::cprintln;
-use log::{error, info};
-use rten::ops::MaxPool;
+use log::info;
 
 use crate::{
     adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
@@ -44,6 +42,7 @@ impl Drop for MiniTouch {
     }
 }
 
+#[allow(unused)]
 #[derive(Default)]
 pub struct MiniTouchState {
     // flip_xy: bool,
@@ -322,10 +321,7 @@ impl Toucher for MiniTouch {
 
 #[cfg(test)]
 mod test {
-    use crate::{
-        adb::connect,
-        controller::{minitouch::MiniTouchController, Controller},
-    };
+    use crate::adb::connect;
 
     use super::*;
 
