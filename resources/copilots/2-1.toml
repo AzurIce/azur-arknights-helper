@@ -1,0 +1,135 @@
+level_code = "2-1"
+
+[operators]
+lancet = "char_285_medic2"#车
+rangers = "char_503_rang"#巡林者
+yato = "char_502_nblade"#夜刀
+melantha = "char_208_melan"#玫兰莎
+noir_corne = "char_500_noirc"#黑角
+durin = "char_501_durin"#杜林
+ansel = "char_212_ansel"#安赛尔
+myrtle = "char_151_myrtle"#桃金娘
+spot = "char_284_spot"#斑点
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "myrtle"
+tile = [
+    3,
+    8,
+]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "myrtle"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "yato"
+tile = [
+    1,
+    6,
+]
+direction = "Left"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "melantha"
+tile = [
+    2,
+    6,
+]
+direction = "Up"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "melantha"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "lancet"
+tile = [
+    4,
+    6,
+]
+direction = "Up"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "rangers"
+tile = [
+    1,
+    8,
+]
+direction = "Left"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "noir_corne"
+tile = [
+    1,
+    7,
+]
+direction = "Left"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "durin"
+tile = [
+    2,
+    5,
+]
+direction = "Right"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "ansel"
+tile = [
+    2,
+    4,
+]
+direction = "Right"
+
+[[steps]]
+
+[steps.Retreat]
+time = "Asap"
+operator = "ansel"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "spot"
+tile = [
+    2,
+    7,
+]
+direction = "Left"
+
+[[steps]]
+
+[steps.Retreat]
+time = "Asap"
+operator = "spot"

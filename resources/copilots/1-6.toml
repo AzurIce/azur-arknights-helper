@@ -1,0 +1,127 @@
+level_code = "1-6"
+
+[operators]
+bluep = "char_129_bluep"    #蓝毒
+mostma = "char_213_mostma"  #莫斯提马
+gdglow = "char_377_gdglow"  #澄闪
+jesca2 = "char_1034_jesca2" #涤火杰西卡
+wisdel = "char_1035_wisdel" #维什戴尔
+surtr = "char_350_surtr"   #42
+yato2 = "char_1029_yato2"   #麒麟夜刀
+reed2 = "char_1020_reed2"   #焰影苇草
+thorns = "char_293_thorns"  #棘刺
+hsguma = "char_136_hsguma"  #星熊
+f12yin = "char_264_f12yin" #山
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "yato2"
+tile = [1, 2]
+direction = "Left"
+
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "bluep"
+tile = [2, 4]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "bluep"
+
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "thorns"
+tile = [3, 3]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "thorns"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "hsguma"
+tile = [2, 3]
+direction = "Up"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "hsguma"
+
+[[steps]]
+
+[steps.Retreat]
+time = "Asap"
+operator = "yato2"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "jesca2"
+tile = [3, 2]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "jesca2"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "wisdel"
+tile = [2, 5]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "wisdel"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "gdglow"
+tile = [2, 6]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "gdglow"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "mostma"
+tile = [4, 6]
+direction = "Left"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "mostma"

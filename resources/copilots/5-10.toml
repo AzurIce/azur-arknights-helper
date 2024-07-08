@@ -1,0 +1,147 @@
+level_code = "5-10"
+
+[operators]
+agoat2 = "char_1016_agoat2" #纯烬艾雅法拉
+mostma = "char_213_mostma"  #莫斯提马
+gdglow = "char_377_gdglow"  #澄闪
+jesca2 = "char_1034_jesca2" #涤火杰西卡
+wisdel = "char_1035_wisdel" #维什戴尔
+surtr = "char_350_surtr"    #42
+yato2 = "char_1029_yato2"   #麒麟夜刀
+reed2 = "char_1020_reed2"   #焰影苇草
+thorns = "char_293_thorns"  #棘刺
+hsguma = "char_136_hsguma"  #星熊
+f12yin = "char_264_f12yin"  #山
+ines = "char_4087_ines"     #伊内斯
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "ines"
+tile = [3, 6]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "ines"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "f12yin"
+tile = [4, 5]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "f12yin"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "wisdel"
+tile = [3, 5]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "wisdel"
+
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "reed2"
+tile = [3, 4]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "reed2"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "agoat2"
+tile = [3, 3]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "agoat2"
+
+[[steps]]
+
+[steps.Retreat]
+time = "Asap"
+operator = "ines"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "gdglow"
+tile = [5, 4]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "gdglow"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "hsguma"
+tile = [4, 3]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "hsguma"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "jesca2"
+tile = [3, 6]
+direction = "Right"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "jesca2"
+
+[[steps]]
+
+[steps.Deploy]
+time = "Asap"
+operator = "ines"
+tile = [2, 7]
+direction = "Up"
+
+[[steps]]
+
+[steps.AutoSkill]
+time = "Asap"
+operator = "ines"
