@@ -8,8 +8,7 @@ use imageproc::template_matching::find_extremes;
 
 use crate::vision::{
     matcher::{
-        CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD,
-        SSE_THRESHOLD,
+        CCOEFF_NORMED_THRESHOLD, CCOEFF_THRESHOLD, CCORR_NORMED_THRESHOLD, CCORR_THRESHOLD, SSE_NORMED_THRESHOLD, SSE_THRESHOLD
     },
     utils::Rect,
 };
@@ -48,7 +47,7 @@ impl SingleMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredDifferenceNormed;
+                let method = MatchTemplateMethod::SumOfSquaredDifference;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -128,12 +127,12 @@ impl SingleMatcher {
                     MatchTemplateMethod::CrossCorrelationNormed => {
                         extrems.max_value >= threshold.unwrap_or(CCORR_NORMED_THRESHOLD)
                     }
-                    // MatchTemplateMethod::CCOEFF => {
-                    //     extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
-                    // }
-                    // MatchTemplateMethod::CCOEFF_NORMED => {
-                    //     extrems.max_value >= threshold.unwrap_or(THRESHOLD)
-                    // }
+                    MatchTemplateMethod::CorrelationCoefficient => {
+                        extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
+                    }
+                    MatchTemplateMethod::CorrelationCoefficientNormed => {
+                        extrems.max_value >= threshold.unwrap_or(CCOEFF_NORMED_THRESHOLD)
+                    }
                     _ => panic!("not implemented"),
                 };
 
@@ -148,9 +147,9 @@ impl SingleMatcher {
                             extrems.min_value_location
                         }
                         MatchTemplateMethod::CrossCorrelation
-                        | MatchTemplateMethod::CrossCorrelationNormed => extrems.max_value_location,
-                        // MatchTemplateMethod::CCOEFF => extrems.max_value_location,
-                        // MatchTemplateMethod::CCOEFF_NORMED => extrems.max_value_location,
+                        | MatchTemplateMethod::CrossCorrelationNormed 
+                        | MatchTemplateMethod::CorrelationCoefficient
+                        | MatchTemplateMethod::CorrelationCoefficientNormed => extrems.max_value_location,
                         _ => panic!("not implemented"),
                     };
                     Some(Rect {
