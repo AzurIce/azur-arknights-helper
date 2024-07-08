@@ -113,6 +113,7 @@ impl DeployAnalyzer {
             }
         }
         cprintln!("{log_tag}deploy_cards elapsed: {:?}...", t.elapsed());
+        cprintln!("{log_tag}deploy_cards:{:?}", deploy_cards);
 
         let mut annotated_screen = output.annotated_screen;
         for deploy_card in &deploy_cards {
@@ -176,24 +177,42 @@ mod test {
         let mut analyzer = DeployAnalyzer::new(
             "../../resources",
             vec![
-                "char_1028_texas2",
-                "char_4087_ines",
-                "char_479_sleach",
-                "char_222_bpipe",
+                // "char_1028_texas2",
+                // "char_4087_ines",
+                // "char_479_sleach",
+                // "char_222_bpipe",
+                // "char_1016_agoat2",
+                // "char_245_cello",
+                // "char_1020_reed2",
+                // "char_4117_ray",
+                // "char_2025_shu",
+                // "char_1032_excu2",
+                // "char_1035_wisdel",
+                // "char_311_mudrok",
+
                 "char_1016_agoat2",
-                "char_245_cello",
-                "char_1020_reed2",
-                "char_4117_ray",
-                "char_2025_shu",
-                "char_1032_excu2",
+                "char_213_mostma",
+                "char_377_gdglow",
+                "char_1034_jesca2",
                 "char_1035_wisdel",
-                "char_311_mudrok",
+                "char_350_surtr",
+                "char_1029_yato2",
+                "char_1020_reed2",
+                "char_293_thorns",
+                "char_136_hsguma",
+                "char_264_f12yin",
+                "char_4087_ines",
             ],
         );
         // let mut analyzer = DeployAnalyzer::new(&core.res_dir, core.default_oper_list.clone()); // self.default_oper_list.clone() cost 52s
-        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        // let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let image = image::open("./assets/5-10-resumed.png").unwrap();
         let output = analyzer.analyze_image(&image).unwrap();
-        output.annotated_screen.save("./assets/output.png").unwrap();
+        output.annotated_screen.save("./assets/output-5-10-resumed.png").unwrap();
+        println!("{:?}", output.deploy_cards);
+        let image = image::open("./assets/5-10-paused.png").unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
+        output.annotated_screen.save("./assets/output-5-10-paused.png").unwrap();
         println!("{:?}", output.deploy_cards);
     }
 }
