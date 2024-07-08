@@ -1,5 +1,6 @@
 use std::{path::Path, time::Instant};
 
+use aah_cv::template_matching::MatchTemplateMethod;
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
@@ -116,6 +117,7 @@ impl MultiMatchAnalyzer {
         let res = MultiMatcher::Template {
             image: cropped.to_luma32f(), // use cropped
             template: template.to_luma32f(),
+            method: MatchTemplateMethod::CrossCorrelationNormed,
             threshold: self.threshold,
         }
         .result();
@@ -178,14 +180,16 @@ mod test {
 
     #[test]
     fn test_multi_template_match_analyzer() {
-        let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
         let mut analyzer = MultiMatchAnalyzer::new(
-            &core.res_dir,
-            "battle_deploy-card-cost0.png",
-            Some(127),
+            "../../resources",
+            "battle_deploy-card-cost1.png",
+            None,
             None,
         );
-        let output = analyzer.analyze(&mut core).unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
+        output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.res.rects);
     }
 }
