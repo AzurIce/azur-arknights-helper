@@ -1,5 +1,5 @@
 [package]
-name = "azur-arknights-helper-cli"
+name = "aah"
 version = "0.1.0"
 edition = "2021"
 
