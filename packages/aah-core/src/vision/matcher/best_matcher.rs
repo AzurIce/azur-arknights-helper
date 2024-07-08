@@ -1,4 +1,4 @@
-use aah_cv::template_matching::match_template_ccorr_normed;
+use aah_cv::template_matching::{match_template, MatchTemplateMethod};
 use image::DynamicImage;
 use imageproc::template_matching::find_extremes;
 
@@ -23,7 +23,12 @@ impl BestMatcher {
         // let t = Instant::now();
         let (mut max_val, mut max_idx) = (0.0, 0);
         for (idx, img) in self.images.iter().enumerate() {
-            let res = match_template_ccorr_normed(&img.to_luma32f(), &template.to_luma32f());
+            let res = match_template(
+                &img.to_luma32f(),
+                &template.to_luma32f(),
+                MatchTemplateMethod::CrossCorrelationNormed,
+                false,
+            );
             let extremes = find_extremes(&res);
             if extremes.max_value > max_val {
                 max_val = extremes.max_value;

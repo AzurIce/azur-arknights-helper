@@ -48,7 +48,7 @@ impl SingleMatcher {
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredErrorsNormed;
+                let method = MatchTemplateMethod::SumOfSquaredDifferenceNormed;
                 cprintln!(
                     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                     image.width(),
@@ -60,7 +60,7 @@ impl SingleMatcher {
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
-                let res = match_template(image, template, method);
+                let res = match_template(image, template, method, false);
 
                 // Normalize
                 let min = res
@@ -116,10 +116,10 @@ impl SingleMatcher {
                 );
 
                 let success = match method {
-                    MatchTemplateMethod::SumOfSquaredErrors => {
+                    MatchTemplateMethod::SumOfSquaredDifference => {
                         extrems.min_value <= threshold.unwrap_or(SSE_THRESHOLD)
                     }
-                    MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                    MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
                         extrems.min_value <= threshold.unwrap_or(SSE_NORMED_THRESHOLD)
                     }
                     MatchTemplateMethod::CrossCorrelation => {
@@ -143,8 +143,8 @@ impl SingleMatcher {
                 } else {
                     cprintln!("{log_tag}<green>success!</green>");
                     let (x, y) = match method {
-                        MatchTemplateMethod::SumOfSquaredErrors
-                        | MatchTemplateMethod::SumOfSquaredErrorsNormed => {
+                        MatchTemplateMethod::SumOfSquaredDifference
+                        | MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
                             extrems.min_value_location
                         }
                         MatchTemplateMethod::CrossCorrelation

@@ -1,5 +1,5 @@
 //! This crate is the core of [AzurIce/AzurArknightsHelper](https://github.com/AzurIce/AzurArknightsHelper)
-//! 
+//!
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
@@ -14,13 +14,13 @@ use controller::{aah_controller::AahController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::{copilot::CopilotTask, TaskEvt};
-use vision::{analyzer::{
+use vision::analyzer::{
     battle::{
         deploy::{DeployAnalyzer, DeployAnalyzerOutput, EXAMPLE_DEPLOY_OPERS},
         BattleAnalyzer, BattleState,
     },
     Analyzer,
-}, utils::resource::get_opers};
+};
 
 use crate::task::Task;
 
@@ -206,7 +206,11 @@ impl AAH {
 
     /// 获取所有任务名称
     pub fn get_copilots(&self) -> Vec<String> {
-        self.copilot_config.0.keys().map(|s| s.to_string()).collect()
+        self.copilot_config
+            .0
+            .keys()
+            .map(|s| s.to_string())
+            .collect()
     }
 
     /// 发起事件

@@ -4,7 +4,7 @@ use std::{
     time::Duration,
 };
 
-use aah_cv::template_matching::match_template_ccorr_normed;
+use aah_cv::template_matching::{match_template, MatchTemplateMethod};
 use aah_resource::level::get_level;
 use color_print::{cformat, cprintln};
 use imageproc::template_matching::find_extremes;
@@ -127,9 +127,11 @@ impl Task for CopilotTask {
                                 64,
                             );
                             // skill_cropped.save("./output.png").unwrap();
-                            let res = match_template_ccorr_normed(
+                            let res = match_template(
                                 &skill_cropped.to_luma32f(),
                                 &skill_ready_template,
+                                MatchTemplateMethod::CrossCorrelationNormed,
+                                false
                             );
                             let v = find_extremes(&res).max_value;
                             let skill_ready = v > 0.9;
