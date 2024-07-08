@@ -23,6 +23,7 @@ pub fn find_matches(
     input: &ImageBuffer<Luma<f32>, Vec<f32>>,
     template_width: u32,
     template_height: u32,
+    method: MatchTemplateMethod,
     threshold: f32,
 ) -> Vec<Match> {
     let mut matches: Vec<Match> = Vec::new();
@@ -34,7 +35,16 @@ pub fn find_matches(
         for x in 0..input_width {
             let value = input.get_pixel(x, y).0[0];
 
-            if value < threshold {
+            let ok = if matches!(
+                method,
+                MatchTemplateMethod::SumOfSquaredDifference
+                    | MatchTemplateMethod::SumOfSquaredDifferenceNormed
+            ) {
+                value < threshold
+            } else {
+                value > threshold
+            };
+            if ok {
                 if let Some(m) = matches.iter_mut().rev().find(|m| {
                     ((m.location.0 as i32 - x as i32).abs() as u32) < template_width
                         && ((m.location.1 as i32 - y as i32).abs() as u32) < template_height
