@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use image::{DynamicImage, GenericImageView, ImageBuffer, Luma};
+use image::{DynamicImage, ImageBuffer, Luma};
 
 pub fn image_mean(image: &ImageBuffer<Luma<f32>, Vec<f32>>) -> f32 {
     let mut sum = 0.0;

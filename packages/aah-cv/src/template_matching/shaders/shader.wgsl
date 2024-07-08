@@ -22,7 +22,7 @@ var<storage, read_write> result_buf: array<f32>;
 var<uniform> uniforms: Uniforms;
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // Sum of squared errors
 fn main_sqdiff(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
@@ -57,7 +57,7 @@ fn main_sqdiff(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // Sum of squared errors normed
 fn main_sqdiff_normed(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
@@ -96,7 +96,7 @@ fn main_sqdiff_normed(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // Cross Correleation
 fn main_ccorr(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
@@ -131,7 +131,7 @@ fn main_ccorr(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // Cross Correleation normed
 fn main_ccorr_normed(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
@@ -170,7 +170,7 @@ fn main_ccorr_normed(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // CCOEFF
 fn main_ccoeff(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
@@ -205,7 +205,7 @@ fn main_ccoeff(@builtin(global_invocation_id) global_id: vec3<u32>) {
 }
 
 @compute
-@workgroup_size(16, 16, 1)
+@workgroup_size(8, 8, 1)
 // CCOEFF_NORMED
 fn main_ccoeff_normed(@builtin(global_invocation_id) global_id: vec3<u32>) {
     var x = global_id.x;
