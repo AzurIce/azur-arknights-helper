@@ -80,7 +80,13 @@ impl MultiMatcher {
                 let matched_img = luma32f_to_luma8(&res);
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
 
-                let matches = find_matches(&res, template.width(), template.height(), *method, threshold);
+                let matches = find_matches(
+                    &res,
+                    template.width(),
+                    template.height(),
+                    *method,
+                    threshold,
+                );
                 let rects: Vec<Rect> = matches
                     .into_iter()
                     .map(|m| Rect {
@@ -147,7 +153,9 @@ mod test {
             // threshold: Some(40.0),
         }
         .result();
-        res.matched_img.save(format!("./assets/output/matched_{image_filename}")).unwrap();
+        res.matched_img
+            .save(format!("./assets/output/matched_{image_filename}"))
+            .unwrap();
         println!("{} matches", res.rects.len());
 
         let mut cnt = 0;

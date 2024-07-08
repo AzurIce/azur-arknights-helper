@@ -5,11 +5,11 @@ use image::DynamicImage;
 
 use crate::{
     controller::DEFAULT_HEIGHT,
+    utils::resource::get_template,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
         utils::{draw_box, Rect},
     },
-    utils::resource::get_template,
     AAH,
 };
 
