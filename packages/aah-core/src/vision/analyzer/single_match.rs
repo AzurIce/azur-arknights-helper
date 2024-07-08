@@ -7,8 +7,9 @@ use crate::{
     controller::DEFAULT_HEIGHT,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
-        utils::{draw_box, resource::get_template, Rect},
+        utils::{draw_box, Rect},
     },
+    utils::resource::get_template,
     AAH,
 };
 

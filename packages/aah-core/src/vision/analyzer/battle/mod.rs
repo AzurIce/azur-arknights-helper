@@ -42,16 +42,34 @@ pub enum BattleState {
 }
 
 /// 战场分析器，详情见输出分析结果 [`BattleAnalyzer`]
-/// 
+///
 /// # Example
 /// ```rust
 /// use aah_core::vision::analyzer::battle::BattleAnalyzer;
 /// use image;
-/// 
-/// let mut analyzer = BattleAnalyzer::new("../../resources", vec!["char_1028_texas2"]);
-/// let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
-/// let output = analyzer.analyze_image(&image).unwrap();
-/// println!("{:?}", output);
+///
+/// fn main() {
+///     let mut analyzer = BattleAnalyzer::new(
+///         "../../resources",
+///         vec![
+///             "char_1028_texas2",
+///             "char_4087_ines",
+///             "char_479_sleach",
+///             "char_222_bpipe",
+///             "char_1016_agoat2",
+///             "char_245_cello",
+///             "char_1020_reed2",
+///             "char_4117_ray",
+///             "char_2025_shu",
+///             "char_1032_excu2",
+///             "char_1035_wisdel",
+///             "char_311_mudrok",
+///         ],
+///     );
+///     let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+///     let output = analyzer.analyze_image(&image).unwrap();
+///     println!("{:?}", output.deploy_cards);
+/// }
 /// ```
 pub struct BattleAnalyzer {
     res_dir: PathBuf,
@@ -63,9 +81,9 @@ pub struct BattleAnalyzer {
 
 impl BattleAnalyzer {
     /// 创建一个新的 [`BattleAnalyzer`]
-    /// 
-    /// 从 `res_dir` 加载模板文件，设置内部的 [`DeployAnalyzer`] 识别 `oper_names` 对应的干员
-    /// `oper_names` 为游戏内部资源文件的命名方式，如 `char_102_texas`, `char_1028_texas2`
+    ///
+    /// - `res_dir`: 资源文件路径，会通过 [`crate::utils::resource::get_template`] 加载模板
+    /// - `oper_names`: 内部的 [`DeployAnalyzer`] 识别的干员，为游戏内部资源文件的命名方式，如 `char_102_texas`, `char_1028_texas2`
     pub fn new<P: AsRef<Path>, S: AsRef<str>>(res_dir: P, oper_names: Vec<S>) -> Self {
         let deploy_analyzer = DeployAnalyzer::new(&res_dir, oper_names);
         Self {
@@ -152,9 +170,25 @@ mod test {
 
     #[test]
     fn test_battle_analyzer() {
-        let aah = crate::AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let mut analyzer = BattleAnalyzer::new(&aah.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
-        let res = analyzer.analyze(&aah).unwrap();
-        println!("{:?}", res)
+        let mut analyzer = BattleAnalyzer::new(
+            "../../resources",
+            vec![
+                "char_1028_texas2",
+                "char_4087_ines",
+                "char_479_sleach",
+                "char_222_bpipe",
+                "char_1016_agoat2",
+                "char_245_cello",
+                "char_1020_reed2",
+                "char_4117_ray",
+                "char_2025_shu",
+                "char_1032_excu2",
+                "char_1035_wisdel",
+                "char_311_mudrok",
+            ],
+        );
+        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let output = analyzer.analyze_image(&image).unwrap();
+        println!("{:?}", output.deploy_cards);
     }
 }
