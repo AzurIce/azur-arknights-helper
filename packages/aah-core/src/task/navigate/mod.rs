@@ -2,7 +2,7 @@ use std::{thread, time::Duration};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{task::Task, AAH};
+use crate::{task::Runnable, AAH};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Navigate {
@@ -10,7 +10,7 @@ pub enum Navigate {
     NavigateOut(String),
 }
 
-impl Task for Navigate {
+impl Runnable for Navigate {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         thread::sleep(Duration::from_secs_f32(0.5)); // TODO: get this elegant (refactor the structure)
