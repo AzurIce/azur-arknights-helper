@@ -24,19 +24,6 @@ use crate::{
     },
 };
 
-#[derive(Default)]
-struct CopilotState {
-    /// name to tile_pos
-    deployed_operators: HashMap<String, (u32, u32)>,
-    auto_skill_operators: HashSet<String>,
-}
-
-impl CopilotState {
-    pub fn new() -> Self {
-        Self::default()
-    }
-}
-
 impl Runnable for Copilot {
     type Err = String;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {

@@ -9,7 +9,6 @@ pub mod action;
 pub mod battle;
 pub mod match_task;
 pub mod navigate;
-pub mod wrapper;
 
 pub trait Runnable {
     type Res = ();
