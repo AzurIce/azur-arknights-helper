@@ -36,7 +36,7 @@ pub struct MultiMatcherResult {
 impl MultiMatcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> MultiMatcherResult {
-        let log_tag = cformat!("<strong>[MultiMatcher]: </strong>");
+        // let log_tag = cformat!("<strong>[MultiMatcher]: </strong>");
         match self {
             Self::Template {
                 image,
@@ -54,14 +54,14 @@ impl MultiMatcher {
                 });
                 // let down_scaled_template = template;
                 // let method = MatchTemplateMethod::SumOfSquaredDifference;
-                cprintln!(
-                    "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
-                    image.width(),
-                    image.height(),
-                    template.width(),
-                    template.height(),
-                    method
-                );
+                // cprintln!(
+                //     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
+                //     image.width(),
+                //     image.height(),
+                //     template.width(),
+                //     template.height(),
+                //     method
+                // );
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
@@ -96,10 +96,10 @@ impl MultiMatcher {
                         height: template.height(),
                     })
                     .collect();
-                cprintln!(
-                    "<dim>{log_tag}cost: {}s</dim>",
-                    start_time.elapsed().as_secs_f32(),
-                );
+                // cprintln!(
+                //     "<dim>{log_tag}cost: {}s</dim>",
+                //     start_time.elapsed().as_secs_f32(),
+                // );
 
                 return MultiMatcherResult {
                     rects,

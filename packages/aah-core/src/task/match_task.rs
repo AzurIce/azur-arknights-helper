@@ -8,7 +8,7 @@ use crate::{
     AAH,
 };
 
-use super::{Task, TaskEvt};
+use super::{Runnable, TaskEvt};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type", content = "template")]
@@ -22,7 +22,7 @@ mod test {}
 
 // TODO: add optional roi field
 
-impl Task for MatchTask {
+impl Runnable for MatchTask {
     type Res = Rect;
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, String> {
