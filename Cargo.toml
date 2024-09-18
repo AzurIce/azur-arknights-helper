@@ -10,11 +10,16 @@ members = ["packages/*"]
 aah-core = { path = "packages/aah-core" }
 aah-cv = { path = "packages/aah-cv" }
 aah-resource = { path = "packages/aah-resource" }
-image = "0.25.1"
+image = "0.25.2"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+git2 = "0.19.0"
+iced = "0.13.0"
 aah-core.workspace = true
 clap = { version = "4.4.12", features = ["derive"] }
 env_logger = "0.10.1"
+tracing = "0.1.40"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+reqwest = "0.12.7"

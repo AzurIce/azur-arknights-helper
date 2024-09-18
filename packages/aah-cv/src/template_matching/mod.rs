@@ -9,7 +9,7 @@ use image::{GenericImageView, ImageBuffer, Luma};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
     BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
-    ComputePipelineDescriptor, PipelineCompilationOptions, PipelineLayoutDescriptor,
+    ComputePipelineDescriptor, PipelineLayoutDescriptor,
 };
 
 use crate::gpu::Context;
@@ -217,7 +217,6 @@ impl Matcher {
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main_ccorr",
-                compilation_options: PipelineCompilationOptions::default(),
             });
 
         let pipeline_ccorr_normed =
@@ -227,7 +226,6 @@ impl Matcher {
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
                     entry_point: "main_ccorr_normed",
-                    compilation_options: PipelineCompilationOptions::default(),
                 });
 
         let pipeline_sqdiff = ctx
@@ -237,7 +235,6 @@ impl Matcher {
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main_sqdiff",
-                compilation_options: PipelineCompilationOptions::default(),
             });
 
         let pipeline_sqdiff_normed =
@@ -247,7 +244,6 @@ impl Matcher {
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
                     entry_point: "main_sqdiff_normed",
-                    compilation_options: PipelineCompilationOptions::default(),
                 });
 
         let pipeline_ccoeff = ctx
@@ -257,7 +253,6 @@ impl Matcher {
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
                 entry_point: "main_ccoeff",
-                compilation_options: PipelineCompilationOptions::default(),
             });
 
         let pipeline_ccoeff_normed =
@@ -267,7 +262,6 @@ impl Matcher {
                     layout: Some(&pipeline_layout),
                     module: &shader_module,
                     entry_point: "main_ccoeff_normed",
-                    compilation_options: PipelineCompilationOptions::default(),
                 });
 
         Matcher {
