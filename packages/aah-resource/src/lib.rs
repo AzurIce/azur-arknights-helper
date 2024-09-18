@@ -64,10 +64,11 @@ fn fetch_options() -> FetchOptions<'static> {
 /// A struct for local Maa Resource Dir
 ///
 /// default should be at `./.aah/MaaResource`
+#[derive(Debug)]
 pub struct Resource {
-    repo_root: PathBuf,
-    root: PathBuf,
-    manifest: Manifest,
+    pub repo_root: PathBuf,
+    pub root: PathBuf,
+    pub manifest: Manifest,
 }
 
 impl Resource {
@@ -167,8 +168,8 @@ mod test {
             .init();
     }
 
-    #[test]
-    fn test_try_initialize_resource() {
+    #[tokio::test]
+    async fn test_try_initialize_resource() {
         init_logger();
 
         let resource = Resource::try_init("./test/.aah/resources").unwrap();
