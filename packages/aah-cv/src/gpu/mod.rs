@@ -196,7 +196,6 @@ impl<T: Pod> GpuTaskWrapper<T> {
                 layout: Some(&pipeline_layout),
                 module: &task.cs_module(&context.device),
                 entry_point: "main",
-                compilation_options: Default::default(),
             });
 
         let entries_builder = BindGroupEntriesBuilder::new().add_buffer(&result_buffer);

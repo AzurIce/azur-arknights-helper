@@ -122,6 +122,7 @@ async fn execute_gpu(numbers: &[[f32; 2]]) -> Option<Vec<[f32; 2]>> {
                 label: None,
                 required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::downlevel_defaults(),
+                ..Default::default()
             },
             None,
         )
@@ -269,7 +270,6 @@ async fn execute_gpu_inner(
         layout: Some(&pipeline_layout),
         module: &cs_module,
         entry_point: "main",
-        compilation_options: Default::default(),
     });
 
     // Instantiates the bind group, once again specifying the binding of buffers.
