@@ -2,38 +2,9 @@ use std::{collections::HashMap, error::Error, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::task::{
-    builtins::{ActionClickMatch, BuiltinTask, ByName},
-    match_task::MatchTask,
-};
+use crate::task::{action::Action, match_task::MatchTask};
 
-#[cfg(test)]
-mod test {
-    use std::{error::Error, fs::OpenOptions, io::Write};
-
-    use super::*;
-
-    #[test]
-    fn write_default_navigate_config() -> Result<(), Box<dyn Error>> {
-        let navigate_config = NavigateConfig::default();
-        let config_str = toml::to_string_pretty(&navigate_config)?;
-
-        let config_file = "../../resources/navigates.toml";
-        let mut open_options = OpenOptions::new();
-        open_options.write(true).create(true);
-
-        let mut file = open_options.open(config_file)?;
-        file.write_fmt(format_args!("{}", config_str))?;
-        Ok(())
-    }
-
-    #[test]
-    fn test_load_navigate_config() -> Result<(), Box<dyn Error>> {
-        let config = NavigateConfig::load("../../resources")?;
-        println!("{:?}", config);
-        Ok(())
-    }
-}
+use super::task::{Task, TaskStep};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);
@@ -85,22 +56,24 @@ impl Default for NavigateConfig {
         map.insert(
             "base".to_string(),
             Navigate {
-                enter_task: BuiltinTask::ActionClickMatch(ActionClickMatch::new(
-                    MatchTask::Template("EnterInfrastMistCity.png".to_string()),
-                    None,
-                )),
-                exit_task: BuiltinTask::ByName(ByName::new("back", None)),
+                enter_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
+                    match_task: MatchTask::Template("main_base.png".to_string()),
+                })]),
+                exit_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
+                    match_task: MatchTask::Template("back.png".to_string()),
+                })]),
             },
         );
 
         map.insert(
             "mission".to_string(),
             Navigate {
-                enter_task: BuiltinTask::ActionClickMatch(ActionClickMatch::new(
-                    MatchTask::Template("EnterMissionMistCity.png".to_string()),
-                    None,
-                )),
-                exit_task: BuiltinTask::ByName(ByName::new("back", None)),
+                enter_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
+                    match_task: MatchTask::Template("main_mission.png".to_string()),
+                })]),
+                exit_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
+                    match_task: MatchTask::Template("back.png".to_string()),
+                })]),
             },
         );
 
@@ -110,6 +83,34 @@ impl Default for NavigateConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Navigate {
-    pub enter_task: BuiltinTask,
-    pub exit_task: BuiltinTask,
+    pub enter_task: Task,
+    pub exit_task: Task,
+}
+
+#[cfg(test)]
+mod test {
+    use std::{error::Error, fs::OpenOptions, io::Write};
+
+    use super::*;
+
+    #[test]
+    fn write_default_navigate_config() -> Result<(), Box<dyn Error>> {
+        let navigate_config = NavigateConfig::default();
+        let config_str = toml::to_string_pretty(&navigate_config)?;
+
+        let config_file = "../../resources/navigates.toml";
+        let mut open_options = OpenOptions::new();
+        open_options.write(true).create(true);
+
+        let mut file = open_options.open(config_file)?;
+        file.write_fmt(format_args!("{}", config_str))?;
+        Ok(())
+    }
+
+    #[test]
+    fn test_load_navigate_config() -> Result<(), Box<dyn Error>> {
+        let config = NavigateConfig::load("../../resources")?;
+        println!("{:?}", config);
+        Ok(())
+    }
 }
