@@ -11,9 +11,7 @@ use std::{
 
 use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
-// use ocrs::{OcrEngine, OcrEngineParams};
-// use rten::Model;
-use task::{copilot::CopilotTask, TaskEvt};
+use task::TaskEvt;
 use vision::analyzer::{
     battle::{
         deploy::{DeployAnalyzer, DeployAnalyzerOutput, EXAMPLE_DEPLOY_OPERS},
@@ -22,11 +20,12 @@ use vision::analyzer::{
     Analyzer,
 };
 
-use crate::task::Task;
+use crate::task::Runnable;
 
 pub mod adb;
 pub mod config;
 pub mod controller;
+pub mod copilot;
 pub mod task;
 pub mod utils;
 pub mod vision;
@@ -81,12 +80,15 @@ impl AAH {
         on_task_evt: F,
     ) -> Result<Self, Box<dyn Error>> {
         let res_dir = res_dir.as_ref().to_path_buf();
-        let task_config =
-            TaskConfig::load(&res_dir).map_err(|err| format!("task config not found: {err}"))?;
-        let copilot_config = CopilotConfig::load(&res_dir)
-            .map_err(|err| format!("copilot config not found: {err}"))?;
-        let navigate_config = NavigateConfig::load(&res_dir)
-            .map_err(|err| format!("navigate config not found: {err}"))?;
+        // let task_config =
+        // TaskConfig::load(&res_dir).map_err(|err| format!("task config not found: {err}"))?;
+        let task_config = TaskConfig::default();
+        // let copilot_config = CopilotConfig::load(&res_dir)
+        //     .map_err(|err| format!("copilot config not found: {err}"))?;
+        let copilot_config = CopilotConfig::default();
+        // let navigate_config = NavigateConfig::load(&res_dir)
+        //     .map_err(|err| format!("navigate config not found: {err}"))?;
+        let navigate_config = NavigateConfig::default();
         // let controller = Box::new(AdbInputController::connect(serial)?);
         let controller = Box::new(AahController::connect(serial, &res_dir)?);
 
@@ -112,17 +114,9 @@ impl AAH {
     pub fn run_task<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
-        let task = self
-            .task_config
-            .0
-            .get(&name)
-            .ok_or("failed to get task")?
-            .clone();
-        println!("executing {:?}", task);
+        let task = self.task_config.0.get(&name).ok_or("failed to get task")?;
 
-        task.run(self)?;
-
-        Ok(())
+        task.run(self)
     }
 
     /// 运行名为 `name` 的作业
@@ -131,9 +125,13 @@ impl AAH {
     pub fn run_copilot<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
-        let task = CopilotTask(name);
-        println!("executing copilot {:?}", task);
-        task.run(self)?;
+        let copilot = self
+            .copilot_config
+            .0
+            .get(&name)
+            .ok_or("failed to get copilot")?;
+
+        copilot.run(self)?;
 
         Ok(())
     }

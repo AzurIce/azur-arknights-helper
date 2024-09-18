@@ -40,7 +40,7 @@ pub enum SingleMatcher {
 impl SingleMatcher {
     /// 执行匹配并获取结果
     pub fn result(&self) -> SingleMatcherResult {
-        let log_tag = cformat!("[SingleMatcher]: ");
+        // let log_tag = cformat!("[SingleMatcher]: ");
         match self {
             Self::Template {
                 image,
@@ -49,14 +49,14 @@ impl SingleMatcher {
             } => {
                 // let down_scaled_template = template;
                 let method = MatchTemplateMethod::SumOfSquaredDifference;
-                cprintln!(
-                    "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
-                    image.width(),
-                    image.height(),
-                    template.width(),
-                    template.height(),
-                    method
-                );
+                // cprintln!(
+                //     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
+                //     image.width(),
+                //     image.height(),
+                //     template.width(),
+                //     template.height(),
+                //     method
+                // );
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
                 let start_time = Instant::now();
@@ -109,11 +109,11 @@ impl SingleMatcher {
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
 
                 let extrems = find_extremes(&res);
-                cprintln!(
-                    "<dim>{log_tag}cost: {}s, {:?}</dim>",
-                    start_time.elapsed().as_secs_f32(),
-                    extrems
-                );
+                // cprintln!(
+                //     "<dim>{log_tag}cost: {}s, {:?}</dim>",
+                //     start_time.elapsed().as_secs_f32(),
+                //     extrems
+                // );
 
                 let success = match method {
                     MatchTemplateMethod::SumOfSquaredDifference => {
@@ -137,10 +137,10 @@ impl SingleMatcher {
                 };
 
                 let rect = if !success {
-                    cprintln!("{log_tag}<red>failed</red>");
+                    // cprintln!("{log_tag}<red>failed</red>");
                     None
                 } else {
-                    cprintln!("{log_tag}<green>success!</green>");
+                    // cprintln!("{log_tag}<green>success!</green>");
                     let (x, y) = match method {
                         MatchTemplateMethod::SumOfSquaredDifference
                         | MatchTemplateMethod::SumOfSquaredDifferenceNormed => {

@@ -8,16 +8,33 @@
 ## 如何使用
 
 ```
-Usage: azur-arknights-helper-cli.exe [OPTIONS] [TASK]
+Usage: aah [OPTIONS] [COMMAND]
 
-Arguments:
-  [TASK]  The task name want to execute
+Commands:
+  task     run task
+  copilot  run copilot
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
-  -s, --serial-number <SERIAL_NUMBER>  The serial number of the target device
+  -s, --serial-number <SERIAL_NUMBER>  The serial number of the target device, default: 127.0.0.1:16384
   -h, --help                           Print help
   -V, --version                        Print version
 ```
+
+目前，aah 仅支持 1920x1080 的屏幕，建议使用 MUMU 模拟器，并在设置中调节分辨率为 1920x1080。
+
+### 1. Task 执行
+
+> 后续会实现自定义 Task 的功能
+
+aah 提供了一些自带的任务：
+
+- `start_up`：开始唤醒
+- `award`：领取奖励
+
+
+
+
 
 ## Task 配置
 

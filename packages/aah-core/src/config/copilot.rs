@@ -1,13 +1,48 @@
-use std::{collections::HashMap, error::Error, fs, path::Path};
+use core::fmt;
+use std::{
+    collections::HashMap,
+    error::Error,
+    fmt::{Display, Formatter},
+    fs,
+    path::Path,
+};
 
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CopilotTask {
+pub struct Copilot {
+    pub name: String,
     pub level_code: String,
     pub operators: HashMap<String, String>,
-    pub steps: Vec<BattleCommand>,
+    pub steps: Vec<CopilotStep>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CopilotStep {
+    pub time: CopilotStepTime,
+    pub action: CopilotAction,
+}
+
+impl CopilotStep {
+    pub fn from_action(action: CopilotAction) -> Self {
+        Self {
+            time: CopilotStepTime::Asap,
+            action,
+        }
+    }
+
+    pub fn with_time(mut self, time: CopilotStepTime) -> Self {
+        self.time = time;
+        self
+    }
+}
+
+// #[derive(Debug, Serialize, Deserialize, Clone)]
+// pub struct CopilotTask {
+//     pub level_code: String,
+//     pub operators: HashMap<String, String>,
+//     pub steps: Vec<CopilotAction>,
+// }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Direction {
@@ -17,47 +52,44 @@ pub enum Direction {
     Down,
 }
 
+impl Display for Direction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Direction::Left => "left",
+            Direction::Up => "up",
+            Direction::Right => "right",
+            Direction::Down => "down",
+        })
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum BattleCommandTime {
+pub enum CopilotStepTime {
     DeltaSec(f32),
+    /// As Soom As Possible
     Asap,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum BattleCommand {
+pub enum CopilotAction {
     Deploy {
-        time: BattleCommandTime,
         operator: String,
-        tile: (u32, u32),
+        position: (u32, u32),
         direction: Direction,
     },
     AutoSkill {
-        time: BattleCommandTime,
         operator: String,
     },
     StopAutoSkill {
-        time: BattleCommandTime,
         operator: String,
     },
     Retreat {
-        time: BattleCommandTime,
         operator: String,
     },
 }
 
-impl BattleCommand {
-    pub fn time(&self) -> BattleCommandTime {
-        match self {
-            BattleCommand::Deploy { time, .. } => time.clone(),
-            BattleCommand::AutoSkill { time, .. } => time.clone(),
-            BattleCommand::StopAutoSkill { time, .. } => time.clone(),
-            BattleCommand::Retreat { time, .. } => time.clone(),
-        }
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
-pub struct CopilotConfig(pub HashMap<String, CopilotTask>);
+pub struct CopilotConfig(pub HashMap<String, Copilot>);
 impl CopilotConfig {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
         let path = path.as_ref();
@@ -73,7 +105,7 @@ impl CopilotConfig {
                     continue;
                 }
                 if let Ok(task) = fs::read_to_string(entry.path()) {
-                    let task = toml::from_str::<CopilotTask>(&task)?;
+                    let task = toml::from_str::<Copilot>(&task)?;
 
                     config.0.insert(
                         entry
@@ -90,7 +122,7 @@ impl CopilotConfig {
         Ok(config)
     }
 
-    pub fn get_task<S: AsRef<str>>(&self, name: S) -> Result<CopilotTask, String> {
+    pub fn get_task<S: AsRef<str>>(&self, name: S) -> Result<Copilot, String> {
         return self
             .0
             .get(name.as_ref())
@@ -116,8 +148,9 @@ impl Default for CopilotConfig {
 //     action: BattleStepCommand,
 // }
 
-pub fn example_copilot_task() -> CopilotTask {
-    CopilotTask {
+pub fn example_copilot_task() -> Copilot {
+    Copilot {
+        name: "1-4".to_string(),
         level_code: "1-4".to_string(),
         operators: {
             let mut map = HashMap::new();
@@ -133,62 +166,52 @@ pub fn example_copilot_task() -> CopilotTask {
             map
         },
         steps: vec![
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "myrtle".to_string(),
-                tile: (2, 1),
+                position: (2, 1),
                 direction: Direction::Right,
-            },
-            BattleCommand::AutoSkill {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::AutoSkill {
                 operator: "myrtle".to_string(),
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "yato".to_string(),
-                tile: (3, 1),
+                position: (3, 1),
                 direction: Direction::Right,
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "noir_corne".to_string(),
-                tile: (4, 1),
+                position: (4, 1),
                 direction: Direction::Right,
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "melantha".to_string(),
-                tile: (2, 2),
+                position: (2, 2),
                 direction: Direction::Down,
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "ansel".to_string(),
-                tile: (5, 2),
+                position: (5, 2),
                 direction: Direction::Up,
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "rangers".to_string(),
-                tile: (1, 3),
+                position: (1, 3),
                 direction: Direction::Down,
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "durin".to_string(),
-                tile: (5, 3),
+                position: (5, 3),
                 direction: Direction::Up,
-            },
-            BattleCommand::Retreat {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Retreat {
                 operator: "yato".to_string(),
-            },
-            BattleCommand::Deploy {
-                time: BattleCommandTime::Asap,
+            }),
+            CopilotStep::from_action(CopilotAction::Deploy {
                 operator: "spot".to_string(),
-                tile: (3, 1),
+                position: (3, 1),
                 direction: Direction::Up,
-            },
+            }),
         ],
     }
 }
