@@ -1,6 +1,6 @@
 use std::net::{Ipv4Addr, SocketAddrV4};
 
-use log::info;
+use log::{info, trace};
 
 use super::{
     command::{
@@ -14,41 +14,6 @@ use super::{
 use super::{DeviceInfo, MyError};
 
 pub mod command;
-
-#[cfg(test)]
-mod test {
-    use crate::adb::command::local_service::ShellCommand;
-
-    use super::*;
-
-    fn init() {
-        let _ = env_logger::builder().is_test(true).try_init();
-    }
-
-    #[test]
-    fn test_host_devices() -> Result<(), MyError> {
-        init();
-        let mut host = connect_default().unwrap();
-
-        for device_info in host.devices_long()? {
-            println!("{:?}", device_info)
-        }
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_shell_command() {
-        init();
-        let mut host = connect_default().unwrap();
-
-        host.execute_local_command(
-            "127.0.0.1:16384".to_string(),
-            ShellCommand::new("input swipe 100 100 1000 1000".to_string()),
-        )
-        .unwrap();
-    }
-}
 
 pub struct Host {
     socket_addr: SocketAddrV4,
@@ -100,7 +65,7 @@ impl Host {
         // TODO: maybe reconnect every time is a good choice?
         // TODO: no, for transport
         if self.adb_tcp_stream.is_none() {
-            info!("reconnecting to server...");
+            trace!("reconnecting to server...");
             self.reconnect()?;
         }
 
@@ -112,7 +77,7 @@ impl Host {
 
     fn transport<S: AsRef<str>>(&mut self, serial_number: S) -> Result<(), String> {
         let serial_number = serial_number.as_ref();
-        info!("transporting to {}...", serial_number);
+        trace!("transporting to {}...", serial_number);
         if let Some(serial) = &self.transported_serial {
             if serial == serial_number {
                 info!("already transported, skipped");
@@ -136,5 +101,40 @@ impl Host {
         self.reconnect()?;
         self.transport(serial_number)?;
         self.execute_command(command)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::adb::command::local_service::ShellCommand;
+
+    use super::*;
+
+    fn init() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
+    #[test]
+    fn test_host_devices() -> Result<(), MyError> {
+        init();
+        let mut host = connect_default().unwrap();
+
+        for device_info in host.devices_long()? {
+            println!("{:?}", device_info)
+        }
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_shell_command() {
+        init();
+        let mut host = connect_default().unwrap();
+
+        host.execute_local_command(
+            "127.0.0.1:16384".to_string(),
+            ShellCommand::new("input swipe 100 100 1000 1000".to_string()),
+        )
+        .unwrap();
     }
 }

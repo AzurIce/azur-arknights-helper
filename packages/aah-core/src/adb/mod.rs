@@ -11,7 +11,7 @@ use std::{
 
 use command::local_service::ShellCommand;
 use image::{codecs::png::PngDecoder, DynamicImage};
-use log::{error, info};
+use log::{error, info, trace};
 
 use crate::adb::utils::{read_payload_to_string, read_response_status, ResponseStatus};
 
@@ -90,7 +90,7 @@ pub struct AdbTcpStream {
 
 impl AdbTcpStream {
     pub fn connect(socket_addr: SocketAddrV4) -> Result<Self, String> {
-        info!("connecting to {:?}...", socket_addr);
+        trace!("connecting to {:?}...", socket_addr);
         let stream = TcpStream::connect(socket_addr).map_err(|err| format!("{:?}", err))?;
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
@@ -99,7 +99,7 @@ impl AdbTcpStream {
             .set_write_timeout(Some(Duration::from_secs(2)))
             .map_err(|err| format!("{:?}", err))?;
         let res = Self { inner: stream };
-        info!("connected");
+        trace!("connected");
         Ok(res)
     }
 
@@ -120,21 +120,21 @@ impl AdbTcpStream {
     ) -> Result<T, String> {
         // TODO: maybe reconnect every time is a good choice?
         // TODO: no, for transport
-        info!("executing command: {:?}...", command.raw_command());
+        trace!("executing command: {:?}...", command.raw_command());
         write_request(self, command.raw_command())?;
 
         command.handle_response(self)
     }
 
     pub fn check_response_status(&mut self) -> Result<(), String> {
-        info!("checking response_status...");
+        trace!("checking response_status...");
         let status = read_response_status(self)?;
         if let ResponseStatus::Fail = status {
             let reason = read_payload_to_string(self)?;
             error!("response status is FAIL, reason: {}", reason);
             return Err(reason);
         }
-        info!("response status is OKAY");
+        trace!("response status is OKAY");
         Ok(())
     }
 }

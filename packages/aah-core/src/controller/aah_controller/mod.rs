@@ -23,9 +23,9 @@ pub struct AahController {
 }
 
 impl AahController {
-    pub fn connect<S: AsRef<str>, P: AsRef<Path>>(
-        device_serial: S,
-        res_dir: P,
+    pub fn connect(
+        device_serial: impl AsRef<str>,
+        res_dir: impl AsRef<Path>,
     ) -> Result<Self, MyError> {
         let res_dir = res_dir.as_ref().to_path_buf();
         let device_serial = device_serial.as_ref();

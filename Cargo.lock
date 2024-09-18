@@ -7,11 +7,14 @@ name = "aah"
 version = "0.1.0"
 dependencies = [
  "aah-core",
+ "aah-resource",
+ "anyhow",
  "clap",
  "env_logger",
  "git2",
  "iced",
  "reqwest 0.12.7",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]
@@ -2289,6 +2292,7 @@ dependencies = [
  "iced_core",
  "log",
  "rustc-hash 2.0.0",
+ "tokio",
  "wasm-bindgen-futures",
  "wasm-timer",
 ]

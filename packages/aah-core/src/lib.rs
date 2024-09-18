@@ -74,9 +74,9 @@ impl AAH {
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
     /// - `on_task_evt`: 任务事件的回调函数
-    pub fn connect<S: AsRef<str>, P: AsRef<Path>, F: Fn(TaskEvt) + Send + Sync + 'static>(
-        serial: S,
-        res_dir: P,
+    pub fn connect<F: Fn(TaskEvt) + Send + Sync + 'static>(
+        serial: impl AsRef<str>,
+        res_dir: impl AsRef<Path>,
         on_task_evt: F,
     ) -> Result<Self, Box<dyn Error>> {
         let res_dir = res_dir.as_ref().to_path_buf();
