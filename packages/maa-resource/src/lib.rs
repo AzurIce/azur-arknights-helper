@@ -32,7 +32,7 @@ async fn fetch_version() -> Result<Version, anyhow::Error> {
     Ok(version)
 }
 
-const RESOURCE_REPO: &str = "https://github.com/MaaAssistantArknights/MaaResource.git";
+const RESOURCE_REPO: &str = "https://github.com/MaaAssistantArknights/MaaAssistantArknights.git";
 
 fn fetch_options() -> FetchOptions<'static> {
     let mut callbacks = RemoteCallbacks::new();
