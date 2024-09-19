@@ -1,13 +1,7 @@
-[base.enter_task.ActionClickMatch.match_task]
-type = "Template"
-template = "main_base.png"
+[mission]
+enter.ByName = "enter_mission"
+exit.ByName = "back"
 
-[base.exit_task.ByName]
-name = "back"
-
-[mission.enter_task.ActionClickMatch.match_task]
-type = "Template"
-template = "main_mission.png"
-
-[mission.exit_task.ByName]
-name = "back"
+[base]
+enter.ByName = "enter_base"
+exit.ByName = "back"

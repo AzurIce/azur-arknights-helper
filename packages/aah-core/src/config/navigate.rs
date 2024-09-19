@@ -56,24 +56,16 @@ impl Default for NavigateConfig {
         map.insert(
             "base".to_string(),
             Navigate {
-                enter_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("main_base.png".to_string()),
-                })]),
-                exit_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("back.png".to_string()),
-                })]),
+                enter: Action::ByName("enter_base".to_string()),
+                exit: Action::ByName("back".to_string()),
             },
         );
 
         map.insert(
             "mission".to_string(),
             Navigate {
-                enter_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("main_mission.png".to_string()),
-                })]),
-                exit_task: Task::from_steps(vec![TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("back.png".to_string()),
-                })]),
+                enter: Action::ByName("enter_mission".to_string()),
+                exit: Action::ByName("back".to_string()),
             },
         );
 
@@ -83,8 +75,8 @@ impl Default for NavigateConfig {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Navigate {
-    pub enter_task: Task,
-    pub exit_task: Task,
+    pub enter: Action,
+    pub exit: Action,
 }
 
 #[cfg(test)]
@@ -92,6 +84,13 @@ mod test {
     use std::{error::Error, fs::OpenOptions, io::Write};
 
     use super::*;
+
+    #[test]
+    fn test_ser_default_navigate() {
+        let navigate_config = NavigateConfig::default();
+        let config_str = toml::to_string_pretty(&navigate_config).unwrap();
+        println!("{}", config_str);
+    }
 
     #[test]
     fn write_default_navigate_config() -> Result<(), Box<dyn Error>> {
