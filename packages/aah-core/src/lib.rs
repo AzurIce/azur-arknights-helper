@@ -9,6 +9,7 @@ use std::{
     sync::Mutex,
 };
 
+use anyhow::Context;
 use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig};
 use controller::{aah_controller::AahController, Controller};
 use task::TaskEvt;
@@ -42,7 +43,11 @@ pub struct AAH {
     /// 由 `navigates.toml` 加载的导航配置
     pub navigate_config: NavigateConfig,
     screen_cache: Mutex<Option<image::DynamicImage>>,
-    on_task_evt: Box<dyn Fn(TaskEvt) + Sync + Send>,
+    task_evt_tx: async_channel::Sender<TaskEvt>,
+    pub task_evt_rx: async_channel::Receiver<TaskEvt>,
+    task_evt_handler: Vec<Box<dyn Fn(TaskEvt) + Send + Sync>>,
+
+    runtime: tokio::runtime::Runtime,
 }
 
 // pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
@@ -74,38 +79,37 @@ impl AAH {
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
     /// - `on_task_evt`: 任务事件的回调函数
-    pub fn connect<F: Fn(TaskEvt) + Send + Sync + 'static>(
+    pub fn connect(
         serial: impl AsRef<str>,
         res_dir: impl AsRef<Path>,
-        on_task_evt: F,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, anyhow::Error> {
         let res_dir = res_dir.as_ref().to_path_buf();
-        // let task_config =
-        // TaskConfig::load(&res_dir).map_err(|err| format!("task config not found: {err}"))?;
-        let task_config = TaskConfig::default();
-        // let copilot_config = CopilotConfig::load(&res_dir)
-        //     .map_err(|err| format!("copilot config not found: {err}"))?;
-        let copilot_config = CopilotConfig::default();
-        // let navigate_config = NavigateConfig::load(&res_dir)
-        //     .map_err(|err| format!("navigate config not found: {err}"))?;
-        let navigate_config = NavigateConfig::default();
-        // let controller = Box::new(AdbInputController::connect(serial)?);
+        let task_config = TaskConfig::load(&res_dir).context("failed to load task config")?;
+        // let task_config = TaskConfig::default();
+        let copilot_config = CopilotConfig::load(&res_dir).context("failed to load copilot config")?;
+        // let copilot_config = CopilotConfig::default();
+        let navigate_config =
+            NavigateConfig::load(&res_dir).context("failed to load navigate config")?;
+        // let navigate_config = NavigateConfig::default();
         let controller = Box::new(AahController::connect(serial, &res_dir)?);
 
-        // let ocr_engine = init_ocr_engine(&res_dir);
-        // let default_oper_list = get_opers(&res_dir);
-        // println!("{}", default_oper_list.len());
-        Ok(Self {
-            res_dir,
-            controller,
-            task_config,
-            copilot_config,
-            navigate_config,
-            on_task_evt: Box::new(on_task_evt),
-            screen_cache: Mutex::new(None),
-            // ocr_engine,
-            // default_oper_list
-        })
+        let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
+        let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
+
+        Ok(
+            Self {
+                res_dir,
+                controller,
+                task_config,
+                copilot_config,
+                navigate_config,
+                task_evt_tx,
+                task_evt_rx,
+                task_evt_handler: vec![],
+                screen_cache: Mutex::new(None),
+                runtime,
+            },
+        )
     }
 
     /// 运行名为 `name` 的任务
@@ -134,6 +138,13 @@ impl AAH {
         copilot.run(self)?;
 
         Ok(())
+    }
+
+    pub fn register_task_evt_handler<F: Fn(TaskEvt) + Send + Sync + 'static>(
+        &mut self,
+        handler: F,
+    ) {
+        self.task_evt_handler.push(Box::new(handler));
     }
 
     /// Get screen cache or capture one. This is for internal analyzer use
@@ -213,7 +224,13 @@ impl AAH {
 
     /// 发起事件
     pub(crate) fn emit_task_evt(&self, evt: TaskEvt) {
-        (self.on_task_evt)(evt)
+        self.runtime.block_on(async {
+            self.task_evt_tx.send(evt.clone()).await.unwrap();
+        });
+        // self.task_evt_tx.send(evt.clone()).unwrap();
+        for handler in self.task_evt_handler.iter() {
+            (handler)(evt.clone());
+        }
     }
 
     /// 启动战斗分析器，直到战斗结束
@@ -230,7 +247,6 @@ impl AAH {
         }
     }
 }
-
 #[cfg(test)]
 mod test {
     use std::{
@@ -242,12 +258,12 @@ mod test {
 
     #[test]
     fn foo() {
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |evt| {
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        aah.register_task_evt_handler(|evt| {
             if let TaskEvt::BattleAnalyzerRes(res) = evt {
                 println!("{:?}", res);
             }
-        })
-        .unwrap();
+        });
         aah.start_battle_analyzer()
     }
 
@@ -255,7 +271,7 @@ mod test {
     fn test_get_tasks() {
         static S: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
         let _ = &S;
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
         println!("{:?}", aah.get_tasks());
     }
 
@@ -275,7 +291,7 @@ mod test {
 
     #[test]
     fn screenshot() {
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
+        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");

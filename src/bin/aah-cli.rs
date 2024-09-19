@@ -1,4 +1,3 @@
-
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
@@ -41,7 +40,7 @@ fn main() {
     }
 
     let command = cli.task.as_ref().unwrap();
-    let aah = AAH::connect(serial, "./resources", |_| {}).expect("failed to connect to the device");
+    let aah = AAH::connect(serial, "./resources").expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {

@@ -91,7 +91,7 @@ pub enum CopilotAction {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CopilotConfig(pub HashMap<String, Copilot>);
 impl CopilotConfig {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let config = path.join("copilots.toml");
         println!("{:?}", config);

@@ -36,6 +36,7 @@ pub enum Action {
         slope_out: f32,
     },
     ActionClickMatch {
+        #[serde(flatten)]
         match_task: MatchTask,
     },
     // Navigate

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{fmt::Debug, time::Duration};
 
 use color_print::cprintln;
 use image::DynamicImage;
@@ -20,10 +20,21 @@ pub trait Runnable {
 ///
 /// - `Log(String)`: log 信息
 /// - `Img(DynamicImage)`: 标记过的图片
+#[derive(Clone)]
 pub enum TaskEvt {
     Log(String),
     AnnotatedImg(DynamicImage),
     BattleAnalyzerRes(BattleAnalyzerOutput),
+}
+
+impl Debug for TaskEvt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TaskEvt::Log(log) => write!(f, "TaskEvt::Log({})", log),
+            TaskEvt::AnnotatedImg(_img) => write!(f, "TaskEvt::AnnotatedImg"),
+            TaskEvt::BattleAnalyzerRes(res) => write!(f, "TaskEvt::BattleAnalyzerRes({:?})", res),
+        }
+    }
 }
 
 impl Runnable for crate::config::task::Task {

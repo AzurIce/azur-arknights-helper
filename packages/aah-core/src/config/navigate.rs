@@ -9,7 +9,7 @@ use super::task::{Task, TaskStep};
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);
 impl NavigateConfig {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, Box<dyn Error>> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, anyhow::Error> {
         let path = path.as_ref();
         let config = path.join("navigates.toml");
         let config = fs::read_to_string(config)?;
