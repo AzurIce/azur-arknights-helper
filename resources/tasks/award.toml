@@ -1,0 +1,55 @@
+name = "award"
+
+[[steps]]
+
+[steps.action]
+NavigateIn = "mission"
+
+[[steps]]
+delay_sec = 0.5
+skip_if_failed = true
+retry = 1
+
+[steps.action.ActionClickMatch]
+type = "Template"
+template = "mission-week_collect-all.png"
+
+[[steps]]
+delay_sec = 0.5
+skip_if_failed = true
+retry = 1
+
+[steps.action.ActionClickMatch]
+type = "Template"
+template = "confirm.png"
+
+[[steps]]
+delay_sec = 0.5
+retry = 1
+
+[steps.action.ActionClickMatch]
+type = "Template"
+template = "mission-day_week.png"
+
+[[steps]]
+delay_sec = 0.5
+skip_if_failed = true
+retry = 1
+
+[steps.action.ActionClickMatch]
+type = "Template"
+template = "mission-week_collect-all.png"
+
+[[steps]]
+delay_sec = 0.5
+skip_if_failed = true
+retry = 1
+
+[steps.action.ActionClickMatch]
+type = "Template"
+template = "confirm.png"
+
+[[steps]]
+
+[steps.action]
+NavigateOut = "mission"
