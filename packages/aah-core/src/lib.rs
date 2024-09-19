@@ -3,7 +3,7 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::sync::{Arc, Mutex};
+use std::{fmt::Debug, sync::{Arc, Mutex}};
 
 use aah_resource::Resource;
 use controller::{aah_controller::AahController, Controller};
@@ -36,6 +36,12 @@ pub struct AAH {
     task_evt_handler: Vec<Box<dyn Fn(TaskEvt) + Send + Sync>>,
 
     runtime: tokio::runtime::Runtime,
+}
+
+impl Debug for AAH {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "AAH")
+    }
 }
 
 // pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
