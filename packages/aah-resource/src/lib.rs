@@ -134,11 +134,11 @@ impl Resource {
         info!("Fetching origin...");
         let mut fetch_options = fetch_options();
         repo.find_remote("origin")?
-            .fetch(&["main"], Some(&mut fetch_options), Some("update"))?;
+            .fetch(&["main"], Some(&mut fetch_options), None).context("failed to fetch origin")?;
 
         info!("Checking out main...");
-        repo.set_head("refs/remotes/origin/main")?;
-        repo.checkout_head(Some(CheckoutBuilder::new().force()))?;
+        repo.set_head("refs/remotes/origin/main").context("faild to set head")?;
+        repo.checkout_head(Some(CheckoutBuilder::new().force())).context("failed to checkout head")?;
 
         *self = Self::load(&self.repo_root)?;
         Ok(())
