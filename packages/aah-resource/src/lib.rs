@@ -76,7 +76,7 @@ impl Resource {
     ///
     /// open the repo and checkout to the latest main
     /// if cannot open, clone the repo to the path, then checkout to the latest main
-    pub fn try_init(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+    pub async fn try_init(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
         info!("Opening resource repo...");
         let repo = match git2::Repository::open(&root) {
             Ok(repo) => repo,
@@ -94,7 +94,9 @@ impl Resource {
         repo.checkout_head(Some(CheckoutBuilder::new().force()))
             .context("checkout head")?;
 
-        Ok(Self::load(root.as_ref())?)
+        let mut resource = Self::load(root.as_ref())?;
+        resource.update().await?;
+        Ok(resource)
     }
 
     /// Load resource from a repo root of [MaaResource](https://github.com/MaaAssistantArknights/MaaResource)
@@ -172,7 +174,7 @@ mod test {
     async fn test_try_initialize_resource() {
         init_logger();
 
-        let resource = Resource::try_init("./test/.aah/resources").unwrap();
+        let resource = Resource::try_init("./test/.aah/resources").await.unwrap();
         println!("{:?}", resource.manifest);
     }
 
