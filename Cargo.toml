@@ -17,7 +17,7 @@ image = "0.25.2"
 [dependencies]
 tokio-stream = "0.1.16"
 git2 = "0.19.0"
-iced = { version = "0.13.1", features = ["tokio"] }
+iced = { version = "0.13.1", features = ["tokio", "image"] }
 aah-core.workspace = true
 aah-resource.workspace = true
 clap = { version = "4.4.12", features = ["derive"] }
@@ -28,3 +28,4 @@ reqwest = "0.12.7"
 tokio = "1.40.0"
 anyhow = "1.0.89"
 async-channel = "2.3.1"
+image.workspace = true

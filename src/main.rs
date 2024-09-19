@@ -1,19 +1,27 @@
 mod sub;
+mod widgets;
 
+use core::task;
 use std::{
-    fmt::Debug,
+    fmt::{self, Debug, Display},
     sync::{Arc, Mutex},
     thread,
 };
 
+use ::image::DynamicImage;
 use aah_core::{task::TaskEvt, AAH};
 use aah_resource::Resource;
 use iced::{
+    color,
     futures::SinkExt,
-    widget::{button, column, container, row, text},
-    Alignment, Element, Subscription, Task,
+    widget::{
+        button, column, container, horizontal_space,
+        image::{self, Handle},
+        row, text, toggler,
+    },
+    Alignment, Element, Length, Subscription, Task,
 };
-use tracing::info;
+use tracing::error;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -22,7 +30,35 @@ enum Tab {
     Tasks,
 }
 
+impl Tab {
+    const ALL: [Tab; 2] = [Tab::Main, Tab::Tasks];
+
+    fn tab_bar(cur_tab: &Tab) -> iced::Element<Message> {
+        row(Tab::ALL.iter().map(|tab| {
+            let tab_str = tab.to_string();
+
+            if cur_tab == tab {
+                button(text(tab_str))
+            } else {
+                button(text(tab_str)).on_press(Message::SetTab(tab.clone()))
+            }
+            .into()
+        }))
+        .spacing(2)
+        .padding(2)
+        .width(Length::Fill)
+        .into()
+    }
+}
+
+impl Display for Tab {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 struct App {
+    debug: bool,
     tab: Tab,
     log: Vec<String>,
     initializing_resource: bool,
@@ -30,18 +66,25 @@ struct App {
     aah: Option<Arc<Mutex<AAH>>>,
     connecting: bool,
 
+    annotated_imgs: Vec<Handle>,
+    img_idx: usize,
+    executing_task: Option<String>,
     task_evt_listener_tx: Option<iced::futures::channel::mpsc::UnboundedSender<sub::Input>>,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
+            debug: false,
             tab: Tab::Main,
             log: vec!["Initializing Resource...".to_string()],
             initializing_resource: true,
             resource: None,
             aah: None,
             connecting: false,
+            annotated_imgs: vec![],
+            img_idx: 0,
+            executing_task: None,
             task_evt_listener_tx: None,
         }
     }
@@ -49,8 +92,14 @@ impl Default for App {
 
 #[derive(Debug, Clone)]
 enum Message {
+    PrevImg,
+    NextImg,
+
     Empty,
+    ToggleDebug(bool),
+    InitResource,
     InitResourceRes(Result<Arc<Resource>, String>),
+    CheckAndUpdateResource,
     Connect,
     Disconnect,
 
@@ -66,19 +115,58 @@ enum Message {
 
 impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
-        info!("app update message: {:?}", message);
+        // info!("app update message: {:?}", message);
         match message {
-            Message::InitResourceRes(res) => match res {
-                Ok(resource) => {
-                    self.resource = Some(resource);
-                    self.initializing_resource = false;
-                    self.log.push("Resource Initialized".to_string());
+            Message::ToggleDebug(debug) => {
+                self.debug = debug;
+            }
+            Message::PrevImg => {
+                if self.img_idx > 0 {
+                    self.img_idx -= 1;
                 }
-                Err(err) => {
-                    self.log
-                        .push(format!("Failed to initialize resource: {}", err));
+            }
+            Message::NextImg => {
+                if self.img_idx < self.annotated_imgs.len() - 1 {
+                    self.img_idx += 1;
                 }
-            },
+            }
+            // Message::CheckAndUpdateResource => {
+            //     self.checking_resource_update = true;
+            //     Task::perform(async {
+
+            //     }, f)
+            // }
+            Message::InitResource => {
+                self.initializing_resource = true;
+                Task::perform(
+                    async {
+                        Resource::try_init(".aah")
+                            .await
+                            .map(|res| Arc::new(res))
+                            .map_err(|err| {
+                                format!(
+                                    "Failed to initialize resource: {}, Caused by: {}",
+                                    err,
+                                    err.root_cause()
+                                )
+                            })
+                    },
+                    Message::InitResourceRes,
+                );
+            }
+            Message::InitResourceRes(res) => {
+                self.initializing_resource = false;
+                match res {
+                    Ok(resource) => {
+                        self.resource = Some(resource);
+                        self.log.push("Resource Initialized".to_string());
+                    }
+                    Err(err) => {
+                        self.log
+                            .push(format!("Failed to initialize resource: {}", err));
+                    }
+                }
+            }
             Message::Connect => {
                 self.connecting = true;
                 match AAH::connect("127.0.0.1:16384", self.resource.clone().unwrap()) {
@@ -119,14 +207,37 @@ impl App {
             Message::TaskEvtListenerListening => {
                 self.log.push("task_evt_listener listening".to_string());
             }
-            Message::TaskEvt(evt) => {
-                self.log.push(format!("task_evt: {:?}", evt));
-            }
+            Message::TaskEvt(evt) => match evt {
+                TaskEvt::AnnotatedImg(img) => {
+                    let handle = Handle::from_rgba(img.width(), img.height(), img.into_bytes());
+                    self.annotated_imgs.push(handle);
+                    self.img_idx = self.annotated_imgs.len() - 1;
+                }
+                TaskEvt::ExecStat { step, cur, total } => {
+                    self.log.push(format!(
+                        "executing {}: {}/{} ({:?})",
+                        self.executing_task.as_ref().unwrap_or(&"".to_string()),
+                        cur,
+                        total,
+                        step
+                    ));
+                }
+                TaskEvt::Log(s) => {
+                    self.log.push(s);
+                }
+                _ => {}
+            },
 
             Message::RunTask(task_name) => {
                 if let Some(aah) = self.aah.clone() {
+                    self.annotated_imgs.clear();
+                    self.img_idx = 0;
                     thread::spawn(move || {
-                        aah.lock().unwrap().run_task(task_name).unwrap();
+                        let res = aah.lock().unwrap().run_task(&task_name);
+                        if let Err(err) = res {
+                            error!("Failed to run task {}: {}", task_name, err);
+                            // error!("Failed to run task {}: {}, Caused by: {}", task_name, err, err.root_cause());
+                        }
                     });
                 }
             }
@@ -138,11 +249,26 @@ impl App {
     fn view(&self) -> iced::Element<Message> {
         let logs = column(self.log.iter().map(|log| text(log).into()));
 
-        let tabs = row![if self.tab == Tab::Main {
-            button("Main")
+        let resource_status = if let Some(resource) = &self.resource {
+            row![
+                text("Resource Initialized: "),
+                text(resource.manifest.last_updated.to_string()),
+            ]
+            // if self.checking_resource_update {
+            //     resource_status = resource_status.push(button("Checking Update..."));
+            // } else {
+            //     resource_status = resource_status.push(button("Check Update").on_press(Message::CheckAndUpdateResource));
+            // }
         } else {
-            button("Main").on_press(Message::SetTab(Tab::Main))
-        }];
+            row![
+                text("Resource Not Initialized: "),
+                if self.initializing_resource {
+                    button("Initializing Resource...")
+                } else {
+                    button("Initialize Resource").on_press(Message::InitResource)
+                }
+            ]
+        };
 
         let main = match self.tab {
             Tab::Main => {
@@ -172,20 +298,86 @@ impl App {
                 container(view)
             }
             Tab::Tasks => {
-                let mut view = row![];
-                // let tasks = match &self.aah {
-                //     Some(aah) => {
-                //         let tasks = aah.lock().unwrap().get_tasks();
-                //         column![
-                //             tasks.iter().map(|task| text(task).into())
-                //         ]
-                //     }
-                //     None => column![text!("No connection")],
-                // }
-                container(view)
+                if let Some(resource) = &self.resource {
+                    let tasks = column(resource.get_tasks().into_iter().map(|task_name| {
+                        row![
+                            text(task_name.clone()),
+                            horizontal_space(),
+                            if self.aah.is_none() {
+                                button("No Connection")
+                            } else if self.executing_task.as_ref() == Some(&task_name) {
+                                button("Running...")
+                            } else {
+                                button("Run").on_press(Message::RunTask(task_name.clone()))
+                            }
+                        ]
+                        .spacing(2)
+                        .width(Length::Shrink)
+                        .into()
+                    }));
+
+                    let annotated_img = if let Some(img) = self.annotated_imgs.get(self.img_idx) {
+                        container(
+                            iced::widget::image(img)
+                                .width(Length::Fill)
+                                .height(Length::Fill),
+                        )
+                    } else {
+                        container(text("No annotated image"))
+                    }
+                    .center(Length::Fill);
+
+                    let annotated_img_viewer = column![
+                        annotated_img,
+                        row![
+                            if self.img_idx > 0 {
+                                button("Prev").on_press(Message::PrevImg)
+                            } else {
+                                button("Prev")
+                            },
+                            horizontal_space(),
+                            text(format!(
+                                "{} / {}",
+                                if self.annotated_imgs.is_empty() {
+                                    0
+                                } else {
+                                    self.img_idx + 1
+                                },
+                                self.annotated_imgs.len()
+                            )),
+                            horizontal_space(),
+                            if self.img_idx + 1 < self.annotated_imgs.len() {
+                                button("Next").on_press(Message::NextImg)
+                            } else {
+                                button("Next")
+                            },
+                        ]
+                        .spacing(4)
+                        .align_y(Alignment::Center)
+                    ]
+                    .spacing(2)
+                    .align_x(Alignment::Center);
+
+                    container(row![tasks, annotated_img_viewer])
+                } else {
+                    container(text("No Resource"))
+                }
             }
-        };
-        column![tabs, main, logs].into()
+        }
+        .height(Length::Fill);
+
+        let top_bar = row![
+            resource_status,
+            horizontal_space(),
+            toggler(self.debug).on_toggle(Message::ToggleDebug)
+        ]
+        .align_y(Alignment::Center);
+        let view: Element<Message> = column![top_bar, Tab::tab_bar(&self.tab), main, logs].into();
+        if self.debug {
+            view.explain(color!(0xf06090))
+        } else {
+            view
+        }
     }
 
     fn subscription(&self) -> Subscription<Message> {

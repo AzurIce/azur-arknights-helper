@@ -1,8 +1,8 @@
-use std::{collections::HashMap, error::Error, fs, path::Path};
+use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use super::{task::{Task, TaskStep}, Action};
+use super::Action;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);

@@ -22,7 +22,13 @@ pub trait Runnable {
 /// - `Log(String)`: log 信息
 /// - `Img(DynamicImage)`: 标记过的图片
 #[derive(Clone)]
+#[non_exhaustive]
 pub enum TaskEvt {
+    ExecStat {
+        step: TaskStep,
+        cur: usize,
+        total: usize,
+    },
     Log(String),
     AnnotatedImg(DynamicImage),
     BattleAnalyzerRes(BattleAnalyzerOutput),
@@ -31,6 +37,9 @@ pub enum TaskEvt {
 impl Debug for TaskEvt {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            TaskEvt::ExecStat { step, cur, total } => {
+                write!(f, "TaskEvt::ExecStat({:?}, {}/{})", step, cur, total)
+            }
             TaskEvt::Log(log) => write!(f, "TaskEvt::Log({})", log),
             TaskEvt::AnnotatedImg(_img) => write!(f, "TaskEvt::AnnotatedImg"),
             TaskEvt::BattleAnalyzerRes(res) => write!(f, "TaskEvt::BattleAnalyzerRes({:?})", res),
@@ -42,6 +51,11 @@ impl Runnable for Task {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         for (i, step) in self.steps.iter().enumerate() {
+            aah.emit_task_evt(TaskEvt::ExecStat {
+                step: step.clone(),
+                cur: i,
+                total: self.steps.len(),
+            });
             cprintln!(
                 "<m><strong>[Task]</strong></m>: executing task {}({}/{}): {:?}",
                 self.name,
