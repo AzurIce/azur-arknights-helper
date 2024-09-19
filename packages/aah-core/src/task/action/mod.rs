@@ -1,48 +1,20 @@
-pub mod click_match;
 pub mod click;
+pub mod click_match;
 pub mod press_esc;
 pub mod press_home;
 pub mod swipe;
 
-pub use click_match::ClickMatch;
+use aah_resource::manifest::Action;
 pub use click::Click;
+pub use click_match::ClickMatch;
 pub use press_esc::PressEsc;
 pub use press_home::PressHome;
 pub use swipe::Swipe;
 
+use super::{navigate::Navigate, Runnable};
 use crate::AAH;
-use super::{match_task::MatchTask, navigate::Navigate, Runnable};
 
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
-
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Action {
-    ByName(String),
-    // Multi(Multi),
-    // Action
-    ActionPressEsc,
-    ActionPressHome,
-    ActionClick {
-        x: u32,
-        y: u32,
-    },
-    ActionSwipe {
-        p1: (u32, u32),
-        p2: (i32, i32),
-        duration: f32,
-        slope_in: f32,
-        slope_out: f32,
-    },
-    ActionClickMatch {
-        #[serde(flatten)]
-        match_task: MatchTask,
-    },
-    // Navigate
-    NavigateIn(String),
-    NavigateOut(String),
-}
 
 impl Runnable for Action {
     type Err = String;

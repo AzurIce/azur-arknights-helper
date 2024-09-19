@@ -5,16 +5,14 @@ use std::{
 };
 
 use aah_cv::template_matching::{match_template, MatchTemplateMethod};
-use aah_resource::level::get_level;
+use aah_resource::{level::get_level, manifest::MatchTask};
 use color_print::{cformat, cprintln};
 use imageproc::template_matching::find_extremes;
 
 use crate::{
-    config::copilot::{Copilot, CopilotAction, CopilotStepTime},
     task::{
         action::click_match::ClickMatch,
         battle::{Deploy, Retreat, UseSkill},
-        match_task::MatchTask,
         Runnable, TaskEvt,
     },
     utils::resource::get_template,
@@ -23,15 +21,19 @@ use crate::{
         Analyzer,
     },
 };
+use aah_resource::manifest::copilot::{Copilot, CopilotAction, CopilotStepTime};
 
 impl Runnable for Copilot {
     type Err = String;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
         let log_tag = cformat!("<strong>[CopilotTask {}]: </strong>", self.level_code);
-        let copilot_task = aah.copilot_config.get_task(&self.level_code)?;
+        let copilot_task = aah
+            .resource
+            .get_copilot(&self.level_code)
+            .ok_or(format!("failed to get copilot task: {}", self.level_code))?;
         let level = get_level(
             copilot_task.level_code.as_str(),
-            aah.res_dir.join("levels.json"),
+            aah.resource.root.join("levels.json"),
         )
         .unwrap();
 
@@ -80,8 +82,10 @@ impl Runnable for Copilot {
             }
         }
 
-        let mut battle_analyzer =
-            BattleAnalyzer::new(&aah.res_dir, copilot_task.operators.values().collect());
+        let mut battle_analyzer = BattleAnalyzer::new(
+            &aah.resource.root,
+            copilot_task.operators.values().collect(),
+        );
         // wait for battle begins
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在等待关卡开始...".to_string()));
         cprintln!("{log_tag}waiting for battle to begin...");
@@ -93,7 +97,7 @@ impl Runnable for Copilot {
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 关卡开始".to_string()));
         cprintln!("{log_tag}battle begins!");
         let skill_ready_template =
-            get_template("battle_skill-ready.png", &aah.res_dir)?.to_luma32f();
+            get_template("battle_skill-ready.png", &aah.resource.root)?.to_luma32f();
         let mut battle_analyzer_output: BattleAnalyzerOutput;
         let mut deployed_operators = HashMap::<String, (u32, u32)>::new();
         let mut auto_skill_operators = HashSet::<String>::new();

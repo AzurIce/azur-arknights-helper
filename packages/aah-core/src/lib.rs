@@ -3,14 +3,9 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::{
-    error::Error,
-    path::{Path, PathBuf},
-    sync::Mutex,
-};
+use std::sync::{Arc, Mutex};
 
-use anyhow::Context;
-use config::{copilot::CopilotConfig, navigate::NavigateConfig, task::TaskConfig};
+use aah_resource::Resource;
 use controller::{aah_controller::AahController, Controller};
 use task::TaskEvt;
 use vision::analyzer::{
@@ -24,7 +19,6 @@ use vision::analyzer::{
 use crate::task::Runnable;
 
 pub mod adb;
-pub mod config;
 pub mod controller;
 pub mod copilot;
 pub mod task;
@@ -33,15 +27,9 @@ pub mod vision;
 
 /// AAH 的实例
 pub struct AAH {
-    pub res_dir: PathBuf,
     /// [`controller`] 承担设备控制相关操作（比如触摸、截图等）
     pub controller: Box<dyn Controller + Sync + Send>,
-    /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
-    pub task_config: TaskConfig,
-    /// 由 `copilots.toml` 和 `copilots` 目录加载的任务配置
-    pub copilot_config: CopilotConfig,
-    /// 由 `navigates.toml` 加载的导航配置
-    pub navigate_config: NavigateConfig,
+    resource: Arc<Resource>,
     screen_cache: Mutex<Option<image::DynamicImage>>,
     task_evt_tx: async_channel::Sender<TaskEvt>,
     pub task_evt_rx: async_channel::Receiver<TaskEvt>,
@@ -81,35 +69,24 @@ impl AAH {
     /// - `on_task_evt`: 任务事件的回调函数
     pub fn connect(
         serial: impl AsRef<str>,
-        res_dir: impl AsRef<Path>,
+        resource: Arc<Resource>,
     ) -> Result<Self, anyhow::Error> {
-        let res_dir = res_dir.as_ref().to_path_buf();
-        let task_config = TaskConfig::load(&res_dir).context("failed to load task config")?;
-        // let task_config = TaskConfig::default();
-        let copilot_config = CopilotConfig::load(&res_dir).context("failed to load copilot config")?;
-        // let copilot_config = CopilotConfig::default();
-        let navigate_config =
-            NavigateConfig::load(&res_dir).context("failed to load navigate config")?;
-        // let navigate_config = NavigateConfig::default();
-        let controller = Box::new(AahController::connect(serial, &res_dir)?);
+        let controller = Box::new(AahController::connect(serial, &resource.root)?);
 
         let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
-        let runtime = tokio::runtime::Builder::new_current_thread().build().unwrap();
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
 
-        Ok(
-            Self {
-                res_dir,
-                controller,
-                task_config,
-                copilot_config,
-                navigate_config,
-                task_evt_tx,
-                task_evt_rx,
-                task_evt_handler: vec![],
-                screen_cache: Mutex::new(None),
-                runtime,
-            },
-        )
+        Ok(Self {
+            resource,
+            controller,
+            task_evt_tx,
+            task_evt_rx,
+            task_evt_handler: vec![],
+            screen_cache: Mutex::new(None),
+            runtime,
+        })
     }
 
     /// 运行名为 `name` 的任务
@@ -118,7 +95,7 @@ impl AAH {
     pub fn run_task<S: AsRef<str>>(&self, name: S) -> Result<(), String> {
         let name = name.as_ref().to_string();
 
-        let task = self.task_config.0.get(&name).ok_or("failed to get task")?;
+        let task = self.resource.get_task(name).ok_or("failed to get task")?;
 
         task.run(self)
     }
@@ -130,9 +107,8 @@ impl AAH {
         let name = name.as_ref().to_string();
 
         let copilot = self
-            .copilot_config
-            .0
-            .get(&name)
+            .resource
+            .get_copilot(name)
             .ok_or("failed to get copilot")?;
 
         copilot.run(self)?;
@@ -189,37 +165,23 @@ impl AAH {
     }
 
     /// 重新加载 resources 中的配置
-    pub fn reload_resources(&mut self) -> Result<(), String> {
-        let task_config = TaskConfig::load(&self.res_dir)
-            .map_err(|err| format!("task config not found: {err}"))?;
-        let navigate_config = NavigateConfig::load(&self.res_dir)
-            .map_err(|err| format!("navigate config not found: {err}"))?;
-        self.task_config = task_config;
-        self.navigate_config = navigate_config;
-        Ok(())
-    }
+    // pub fn reload_resources(&mut self) -> Result<(), String> {
+    //     let task_config = TaskConfig::load(&self.res_dir)
+    //         .map_err(|err| format!("task config not found: {err}"))?;
+    //     let navigate_config = NavigateConfig::load(&self.res_dir)
+    //         .map_err(|err| format!("navigate config not found: {err}"))?;
+    //     self.task_config = task_config;
+    //     self.navigate_config = navigate_config;
+    //     Ok(())
+    // }
 
     /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
     ///
     /// 通过该函数进行的分析只包含 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
     pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
         // self.default_oper_list.clone() cost 52s
-        let mut analyzer = DeployAnalyzer::new(&self.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+        let mut analyzer = DeployAnalyzer::new(&self.resource.root, EXAMPLE_DEPLOY_OPERS.to_vec());
         analyzer.analyze(self)
-    }
-
-    /// 获取所有任务名称
-    pub fn get_tasks(&self) -> Vec<String> {
-        self.task_config.0.keys().map(|s| s.to_string()).collect()
-    }
-
-    /// 获取所有任务名称
-    pub fn get_copilots(&self) -> Vec<String> {
-        self.copilot_config
-            .0
-            .keys()
-            .map(|s| s.to_string())
-            .collect()
     }
 
     /// 发起事件
@@ -240,7 +202,7 @@ impl AAH {
     /// 出于性能考虑，目前待部署区只设置了识别 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
     /// TODO: self.default_oper_list.clone() cost 52s
     pub fn start_battle_analyzer(&self) {
-        let mut analyzer = BattleAnalyzer::new(&self.res_dir, EXAMPLE_DEPLOY_OPERS.to_vec());
+        let mut analyzer = BattleAnalyzer::new(&self.resource.root, EXAMPLE_DEPLOY_OPERS.to_vec());
         while analyzer.battle_state != BattleState::Completed {
             let output = analyzer.analyze(self).unwrap();
             self.emit_task_evt(TaskEvt::BattleAnalyzerRes(output));
@@ -258,7 +220,8 @@ mod test {
 
     #[test]
     fn foo() {
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let mut aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
         aah.register_task_evt_handler(|evt| {
             if let TaskEvt::BattleAnalyzerRes(res) = evt {
                 println!("{:?}", res);
@@ -271,8 +234,9 @@ mod test {
     fn test_get_tasks() {
         static S: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
         let _ = &S;
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
-        println!("{:?}", aah.get_tasks());
+        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
+        println!("{:?}", aah.resource.get_tasks());
     }
 
     fn save_screenshot<P: AsRef<Path>, S: AsRef<str>>(aah: &mut AAH, path: P, name: S) {
@@ -291,7 +255,8 @@ mod test {
 
     #[test]
     fn screenshot() {
-        let mut aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let mut aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");
         // save_screenshot(dir, "wakeup.png");

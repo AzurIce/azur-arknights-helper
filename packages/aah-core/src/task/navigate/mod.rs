@@ -19,11 +19,11 @@ impl Runnable for Navigate {
             Navigate::NavigateOut(name) => name,
         };
 
-        let navigate = aah.navigate_config.get_navigate(name)?;
+        let navigate = aah.resource.get_navigate(name).ok_or(format!("navigate {} not found", name))?;
 
         let action = match self {
-            Navigate::NavigateIn(_) => navigate.enter,
-            Navigate::NavigateOut(_) => navigate.exit,
+            Navigate::NavigateIn(_) => &navigate.enter,
+            Navigate::NavigateOut(_) => &navigate.exit,
         };
         action.run(aah).map(|_| ())
     }

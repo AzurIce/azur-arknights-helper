@@ -1,9 +1,10 @@
 use std::{fmt::Debug, time::Duration};
 
+use aah_resource::manifest::task::{Task, TaskStep};
 use color_print::cprintln;
 use image::DynamicImage;
 
-use crate::{config::task::TaskStep, vision::analyzer::battle::BattleAnalyzerOutput, AAH};
+use crate::{vision::analyzer::battle::BattleAnalyzerOutput, AAH};
 
 pub mod action;
 pub mod battle;
@@ -37,7 +38,7 @@ impl Debug for TaskEvt {
     }
 }
 
-impl Runnable for crate::config::task::Task {
+impl Runnable for Task {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         for (i, step) in self.steps.iter().enumerate() {

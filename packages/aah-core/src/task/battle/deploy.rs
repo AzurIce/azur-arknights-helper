@@ -1,10 +1,9 @@
-use aah_resource::level::Level;
+use aah_resource::{level::Level, manifest::Action};
 
-use crate::{
-    config::{
-        copilot::Direction,
-        task::{Task, TaskStep},
-    }, task::action::Action, vision::utils::Rect
+use crate::vision::utils::Rect;
+use aah_resource::manifest::{
+    copilot::Direction,
+    task::{Task, TaskStep},
 };
 
 pub struct Deploy;

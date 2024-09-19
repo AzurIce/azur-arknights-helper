@@ -1,7 +1,10 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
+use std::sync::Arc;
+
 use aah_core::AAH;
+use aah_resource::Resource;
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -40,7 +43,8 @@ fn main() {
     }
 
     let command = cli.task.as_ref().unwrap();
-    let aah = AAH::connect(serial, "./resources").expect("failed to connect to the device");
+    let resource = Resource::load("./resources").expect("failed to load resource");
+    let aah = AAH::connect(serial, Arc::new(resource)).expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {

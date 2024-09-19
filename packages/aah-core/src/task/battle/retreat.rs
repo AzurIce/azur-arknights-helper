@@ -1,6 +1,4 @@
-use aah_resource::level::Level;
-
-use crate::{config::task::{Task, TaskStep}, task::action::Action};
+use aah_resource::{level::Level, manifest::{task::{Task, TaskStep}, Action}};
 
 pub struct Retreat;
 

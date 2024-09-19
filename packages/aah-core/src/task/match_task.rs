@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use aah_resource::manifest::MatchTask;
 
 use crate::{
     vision::{
@@ -9,16 +9,6 @@ use crate::{
 };
 
 use super::{Runnable, TaskEvt};
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "type", content = "template")]
-pub enum MatchTask {
-    Template(String), // template_filename
-                      // Ocr(String),      // text
-}
-
-#[cfg(test)]
-mod test {}
 
 // TODO: add optional roi field
 
@@ -31,7 +21,7 @@ impl Runnable for MatchTask {
         let res = match self {
             Self::Template(template_filename) => {
                 let mut analyzer =
-                    SingleMatchAnalyzer::new(&aah.res_dir, template_filename.to_string());
+                    SingleMatchAnalyzer::new(&aah.resource.root, template_filename.to_string());
                 let output = analyzer.analyze(aah)?;
 
                 aah.emit_task_evt(TaskEvt::Log(format!(
