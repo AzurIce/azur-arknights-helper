@@ -1,20 +1,21 @@
+name = "1-4"
 level_code = "1-4"
 
 [operators]
-lancet = "char_285_medic2"
-rangers = "char_503_rang"
-yato = "char_502_nblade"
-melantha = "char_208_melan"
-noir_corne = "char_500_noirc"
 durin = "char_501_durin"
+spot = "char_284_spot"
+lancet = "char_285_medic2"
+yato = "char_502_nblade"
+noir_corne = "char_500_noirc"
+rangers = "char_503_rang"
 ansel = "char_212_ansel"
 myrtle = "char_151_myrtle"
-spot = "char_284_spot"
+melantha = "char_208_melan"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "myrtle"
 position = [
     2,
@@ -23,15 +24,15 @@ position = [
 direction = "Right"
 
 [[steps]]
-
-[steps.AutoSkill]
 time = "Asap"
+
+[steps.action.AutoSkill]
 operator = "myrtle"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "yato"
 position = [
     3,
@@ -40,9 +41,9 @@ position = [
 direction = "Right"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "noir_corne"
 position = [
     4,
@@ -51,9 +52,9 @@ position = [
 direction = "Right"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "melantha"
 position = [
     2,
@@ -62,9 +63,9 @@ position = [
 direction = "Down"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "ansel"
 position = [
     5,
@@ -73,9 +74,9 @@ position = [
 direction = "Up"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "rangers"
 position = [
     1,
@@ -84,9 +85,9 @@ position = [
 direction = "Down"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "durin"
 position = [
     5,
@@ -95,18 +96,18 @@ position = [
 direction = "Up"
 
 [[steps]]
-
-[steps.Retreat]
 time = "Asap"
+
+[steps.action.Retreat]
 operator = "yato"
 
 [[steps]]
-
-[steps.Deploy]
 time = "Asap"
+
+[steps.action.Deploy]
 operator = "spot"
 position = [
     3,
     1,
 ]
-direction = "Right"
+direction = "Up"

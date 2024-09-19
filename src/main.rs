@@ -147,7 +147,7 @@ fn main() -> iced::Result {
                             .await
                             .unwrap()
                             .map(|res| Arc::new(res))
-                            .map_err(|err| format!("Failed to initialize resource: {}", err))
+                            .map_err(|err| format!("Failed to initialize resource: {}, Caused by: {}", err, err.root_cause()))
                     },
                     Message::InitResourceRes,
                 ),
