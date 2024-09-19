@@ -2,9 +2,7 @@ use std::{collections::HashMap, error::Error, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::task::{action::Action, match_task::MatchTask};
-
-use super::task::{Task, TaskStep};
+use super::{task::{Task, TaskStep}, Action};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);

@@ -1,30 +1,42 @@
 mod sub;
 
-use std::{fmt::Debug, sync::Arc};
+use std::{
+    fmt::Debug,
+    sync::{Arc, Mutex},
+    thread,
+};
 
 use aah_core::{task::TaskEvt, AAH};
 use aah_resource::Resource;
 use iced::{
     futures::SinkExt,
-    widget::{button, column, text},
-    Subscription, Task,
+    widget::{button, column, container, row, text},
+    Alignment, Element, Subscription, Task,
 };
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
+#[derive(Debug, Clone, Eq, PartialEq)]
+enum Tab {
+    Main,
+    Tasks,
+}
+
 struct App {
+    tab: Tab,
     log: Vec<String>,
     initializing_resource: bool,
     resource: Option<Arc<Resource>>,
-    aah: Option<AAH>,
+    aah: Option<Arc<Mutex<AAH>>>,
     connecting: bool,
 
-    task_evt_listener_tx: Option<iced::futures::channel::mpsc::Sender<sub::Input>>,
+    task_evt_listener_tx: Option<iced::futures::channel::mpsc::UnboundedSender<sub::Input>>,
 }
 
 impl Default for App {
     fn default() -> Self {
         Self {
+            tab: Tab::Main,
             log: vec!["Initializing Resource...".to_string()],
             initializing_resource: true,
             resource: None,
@@ -42,9 +54,13 @@ enum Message {
     Connect,
     Disconnect,
 
+    RunTask(String),
+
+    SetTab(Tab),
+
     /// for task_evt_listener
     TaskEvt(TaskEvt),
-    TaskEvtListenerReady(iced::futures::channel::mpsc::Sender<sub::Input>),
+    TaskEvtListenerReady(iced::futures::channel::mpsc::UnboundedSender<sub::Input>),
     TaskEvtListenerListening,
 }
 
@@ -65,14 +81,16 @@ impl App {
             },
             Message::Connect => {
                 self.connecting = true;
-                match AAH::connect("127.0.0.1:16384", &self.resource.as_ref().unwrap().root) {
+                match AAH::connect("127.0.0.1:16384", self.resource.clone().unwrap()) {
                     Ok(aah) => {
-                        self.aah = Some(aah);
+                        self.aah = Some(Arc::new(Mutex::new(aah)));
                         self.log.push("connected to 127.0.0.1:16384".to_string());
                     }
-                    Err(err) => {
-                        self.log.push(format!("Failed to connect: {}, Caused by: {}", err, err.root_cause()))
-                    }
+                    Err(err) => self.log.push(format!(
+                        "Failed to connect: {}, Caused by: {}",
+                        err,
+                        err.root_cause()
+                    )),
                 }
                 self.connecting = false;
             }
@@ -80,13 +98,19 @@ impl App {
                 self.aah = None;
                 self.log.push("disconnected".to_string());
             }
+            Message::SetTab(tab) => {
+                self.tab = tab;
+            }
             // task_evt_listener stuff
-            Message::TaskEvtListenerReady(mut tx) => {
-                self.log.push("task_evt_listener ready, starting listener".to_string());
-                // self.task_evt_listener_tx = Some(tx);
+            Message::TaskEvtListenerReady(tx) => {
+                self.log
+                    .push("task_evt_listener ready, starting listener".to_string());
+                self.task_evt_listener_tx = Some(tx);
+
                 if let Some(aah) = &self.aah {
-                    let rx = aah.task_evt_rx.clone();
-                    Task::perform(
+                    let mut tx = self.task_evt_listener_tx.as_ref().unwrap().clone();
+                    let rx = aah.lock().unwrap().task_evt_rx.clone();
+                    return Task::perform(
                         async move { tx.send(sub::Input::StartListenToTaskEvt(rx)).await },
                         |_| Message::Empty,
                     );
@@ -98,6 +122,14 @@ impl App {
             Message::TaskEvt(evt) => {
                 self.log.push(format!("task_evt: {:?}", evt));
             }
+
+            Message::RunTask(task_name) => {
+                if let Some(aah) = self.aah.clone() {
+                    thread::spawn(move || {
+                        aah.lock().unwrap().run_task(task_name).unwrap();
+                    });
+                }
+            }
             _ => {}
         }
         Task::none()
@@ -106,19 +138,54 @@ impl App {
     fn view(&self) -> iced::Element<Message> {
         let logs = column(self.log.iter().map(|log| text(log).into()));
 
-        let mut main = column![];
-        if self.resource.is_some() {
-            if self.aah.is_none() {
-                if self.connecting {
-                    main = main.push(button("Connecting..."));
-                } else {
-                    main = main.push(button("Connect").on_press(Message::Connect));
+        let tabs = row![if self.tab == Tab::Main {
+            button("Main")
+        } else {
+            button("Main").on_press(Message::SetTab(Tab::Main))
+        }];
+
+        let main = match self.tab {
+            Tab::Main => {
+                let tasks = match &self.aah {
+                    Some(aah) => {
+                        column![
+                            button("start_up").on_press(Message::RunTask("start_up".to_string())),
+                            button("award").on_press(Message::RunTask("award".to_string())),
+                        ]
+                    }
+                    None => column![text!("No connection")],
                 }
-            } else {
-                main = main.push(button("Disconnect").on_press(Message::Disconnect));
+                .spacing(2);
+
+                let mut view = column![tasks].align_x(Alignment::Center).spacing(4);
+                if self.resource.is_some() {
+                    if self.aah.is_none() {
+                        if self.connecting {
+                            view = view.push(button("Connecting..."));
+                        } else {
+                            view = view.push(button("Connect").on_press(Message::Connect));
+                        }
+                    } else {
+                        view = view.push(button("Disconnect").on_press(Message::Disconnect));
+                    }
+                }
+                container(view)
             }
-        }
-        column![main, logs].into()
+            Tab::Tasks => {
+                let mut view = row![];
+                // let tasks = match &self.aah {
+                //     Some(aah) => {
+                //         let tasks = aah.lock().unwrap().get_tasks();
+                //         column![
+                //             tasks.iter().map(|task| text(task).into())
+                //         ]
+                //     }
+                //     None => column![text!("No connection")],
+                // }
+                container(view)
+            }
+        };
+        column![tabs, main, logs].into()
     }
 
     fn subscription(&self) -> Subscription<Message> {
@@ -132,6 +199,10 @@ impl App {
         Subscription::none()
     }
 }
+
+// fn task(task: String, resource: Arc<Resource>) -> Element<Message> {
+//     resource.
+// }
 
 fn main() -> iced::Result {
     init_logger();
@@ -147,7 +218,13 @@ fn main() -> iced::Result {
                             .await
                             .unwrap()
                             .map(|res| Arc::new(res))
-                            .map_err(|err| format!("Failed to initialize resource: {}, Caused by: {}", err, err.root_cause()))
+                            .map_err(|err| {
+                                format!(
+                                    "Failed to initialize resource: {}, Caused by: {}",
+                                    err,
+                                    err.root_cause()
+                                )
+                            })
                     },
                     Message::InitResourceRes,
                 ),

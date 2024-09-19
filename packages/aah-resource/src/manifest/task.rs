@@ -4,8 +4,8 @@ use serde_with::skip_serializing_none;
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, error::Error, fs};
 
-use crate::task::action::Action;
-use crate::task::match_task::MatchTask;
+use super::Action;
+use super::MatchTask;
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -244,7 +244,8 @@ mod test {
 
     #[test]
     fn test_ser_task() {
-        let task = startup_task();
+        // let task = startup_task();
+        let task = award_task();
         let config = toml::to_string_pretty(&task).unwrap();
         println!("{}", config);
     }

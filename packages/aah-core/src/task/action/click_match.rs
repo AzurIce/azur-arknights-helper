@@ -1,10 +1,6 @@
-use crate::{
-    task::{
-        match_task::MatchTask,
-        Runnable,
-    },
-    AAH,
-};
+use aah_resource::manifest::MatchTask;
+
+use crate::{task::Runnable, AAH};
 
 pub struct ClickMatch {
     match_task: MatchTask,

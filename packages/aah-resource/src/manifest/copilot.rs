@@ -218,7 +218,7 @@ pub fn example_copilot_task() -> Copilot {
 
 #[cfg(test)]
 mod test {
-    use crate::config::copilot::example_copilot_task;
+    use super::example_copilot_task;
 
     #[test]
     fn test_serde() {

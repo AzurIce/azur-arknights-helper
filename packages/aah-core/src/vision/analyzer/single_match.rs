@@ -146,14 +146,19 @@ impl Analyzer for SingleMatchAnalyzer {
 
 #[cfg(test)]
 mod test {
+    use std::sync::Arc;
+
+    use aah_resource::Resource;
+
     use super::*;
     use crate::AAH;
 
     #[test]
     fn test_single_match_analyzer() {
-        let aah = AAH::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let resource = Resource::load("../../resources").unwrap();
+        let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource)).unwrap();
         let mut analyzer =
-            SingleMatchAnalyzer::new(&aah.res_dir, "start_start.png").roi((0.3, 0.75), (0.6, 1.0));
+            SingleMatchAnalyzer::new(&aah.resource.root, "start_start.png").roi((0.3, 0.75), (0.6, 1.0));
         let output = analyzer.analyze(&aah).unwrap();
         println!("{:?}", output.res.rect);
     }

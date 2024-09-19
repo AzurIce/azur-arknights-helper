@@ -1,3 +1,4 @@
+#![feature(path_file_prefix)]
 //! This crate is for handling game resources.
 pub mod avatar;
 pub mod level;
@@ -14,7 +15,12 @@ use git2::{
     build::{CheckoutBuilder, RepoBuilder},
     FetchOptions, ProxyOptions, RemoteCallbacks,
 };
-use manifest::Manifest;
+use manifest::{
+    copilot::{Copilot, CopilotConfig},
+    navigate::{Navigate, NavigateConfig},
+    task::{Task, TaskConfig},
+    Manifest,
+};
 use tracing::{info, warn};
 
 // https://docs.github.com/en/rest/repos/contents
@@ -56,8 +62,8 @@ fn fetch_options() -> FetchOptions<'static> {
     let mut fetch_options = FetchOptions::new();
     fetch_options
         .remote_callbacks(callbacks)
-        .proxy_options(proxy_options)
-        .depth(1);
+        .proxy_options(proxy_options);
+    // .depth(1);
     fetch_options
 }
 
@@ -69,6 +75,43 @@ pub struct Resource {
     pub repo_root: PathBuf,
     pub root: PathBuf,
     pub manifest: Manifest,
+    /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
+    pub task_config: TaskConfig,
+    /// 由 `copilots.toml` 和 `copilots` 目录加载的任务配置
+    pub copilot_config: CopilotConfig,
+    /// 由 `navigates.toml` 加载的导航配置
+    pub navigate_config: NavigateConfig,
+}
+
+impl Resource {
+    pub fn get_task(&self, name: impl AsRef<str>) -> Option<&Task> {
+        let name = name.as_ref().to_string();
+        self.task_config.0.get(&name)
+    }
+
+    pub fn get_copilot(&self, name: impl AsRef<str>) -> Option<&Copilot> {
+        let name = name.as_ref().to_string();
+        self.copilot_config.0.get(&name)
+    }
+
+    pub fn get_navigate(&self, name: impl AsRef<str>) -> Option<&Navigate> {
+        let name = name.as_ref().to_string();
+        self.navigate_config.0.get(&name)
+    }
+
+    /// 获取所有 Task 名称
+    pub fn get_tasks(&self) -> Vec<String> {
+        self.task_config.0.keys().map(|s| s.to_string()).collect()
+    }
+
+    /// 获取所有 Copilot 名称
+    pub fn get_copilots(&self) -> Vec<String> {
+        self.copilot_config
+            .0
+            .keys()
+            .map(|s| s.to_string())
+            .collect()
+    }
 }
 
 impl Resource {
@@ -111,10 +154,18 @@ impl Resource {
         let manifest = fs::read_to_string(root.join("manifest.toml"))?;
         let manifest = toml::from_str(&manifest)?;
 
+        let task_config = TaskConfig::load(&root).context("failed to load task config")?;
+        let copilot_config = CopilotConfig::load(&root).context("failed to load copilot config")?;
+        let navigate_config =
+            NavigateConfig::load(&root).context("failed to load navigate config")?;
+
         Ok(Self {
             repo_root,
             root,
             manifest,
+            task_config,
+            copilot_config,
+            navigate_config,
         })
     }
 
@@ -134,11 +185,14 @@ impl Resource {
         info!("Fetching origin...");
         let mut fetch_options = fetch_options();
         repo.find_remote("origin")?
-            .fetch(&["main"], Some(&mut fetch_options), None).context("failed to fetch origin")?;
+            .fetch(&["main"], Some(&mut fetch_options), None)
+            .context("failed to fetch origin")?;
 
         info!("Checking out main...");
-        repo.set_head("refs/remotes/origin/main").context("faild to set head")?;
-        repo.checkout_head(Some(CheckoutBuilder::new().force())).context("failed to checkout head")?;
+        repo.set_head("refs/remotes/origin/main")
+            .context("faild to set head")?;
+        repo.checkout_head(Some(CheckoutBuilder::new().force()))
+            .context("failed to checkout head")?;
 
         *self = Self::load(&self.repo_root)?;
         Ok(())
