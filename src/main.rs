@@ -143,7 +143,7 @@ fn main() -> iced::Result {
                 App::default(),
                 Task::perform(
                     async {
-                        tokio::task::spawn_blocking(|| Resource::try_init(".aah"))
+                        tokio::task::spawn(Resource::try_init(".aah"))
                             .await
                             .unwrap()
                             .map(|res| Arc::new(res))

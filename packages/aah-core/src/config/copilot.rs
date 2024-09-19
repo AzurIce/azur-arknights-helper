@@ -66,7 +66,7 @@ impl Display for Direction {
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub enum CopilotStepTime {
     DeltaSec(f32),
-    /// As Soom As Possible
+    /// As Soon As Possible
     Asap,
 }
 
