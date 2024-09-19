@@ -1,23 +1,20 @@
 mod sub;
 mod widgets;
 
-use core::task;
 use std::{
     fmt::{self, Debug, Display},
     sync::{Arc, Mutex},
     thread,
 };
 
-use ::image::DynamicImage;
 use aah_core::{task::TaskEvt, AAH};
 use aah_resource::Resource;
 use iced::{
     color,
     futures::SinkExt,
     widget::{
-        button, column, container, horizontal_space,
-        image::{self, Handle},
-        row, text, toggler,
+        button, column, container, horizontal_rule, horizontal_space, image::Handle, row, text,
+        text_editor, toggler,
     },
     Alignment, Element, Length, Subscription, Task,
 };
@@ -38,10 +35,11 @@ impl Tab {
             let tab_str = tab.to_string();
 
             if cur_tab == tab {
-                button(text(tab_str))
+                Element::from(button(text(tab_str)))
             } else {
-                button(text(tab_str)).on_press(Message::SetTab(tab.clone()))
+                Element::from(button(text(tab_str)).on_press(CloneMessage::SetTab(tab.clone())))
             }
+            .map(Message::CloneMessage)
             .into()
         }))
         .spacing(2)
@@ -60,7 +58,8 @@ impl Display for Tab {
 struct App {
     debug: bool,
     tab: Tab,
-    log: Vec<String>,
+    log_content: text_editor::Content,
+
     initializing_resource: bool,
     resource: Option<Arc<Resource>>,
     aah: Option<Arc<Mutex<AAH>>>,
@@ -77,7 +76,7 @@ impl Default for App {
         Self {
             debug: false,
             tab: Tab::Main,
-            log: vec!["Initializing Resource...".to_string()],
+            log_content: text_editor::Content::new(),
             initializing_resource: true,
             resource: None,
             aah: None,
@@ -91,16 +90,46 @@ impl Default for App {
 }
 
 #[derive(Debug, Clone)]
-enum Message {
+enum CloneMessage {
+    InitResource,
+    RunTask(String),
+    Connect,
+    Disconnect,
     PrevImg,
     NextImg,
+    SetTab(Tab),
+    LogEdit(text_editor::Action),
+}
 
+impl From<CloneMessage> for Message {
+    fn from(msg: CloneMessage) -> Self {
+        match msg {
+            CloneMessage::InitResource => Message::InitResource,
+            CloneMessage::RunTask(task_name) => Message::RunTask(task_name),
+            CloneMessage::Connect => Message::Connect,
+            CloneMessage::Disconnect => Message::Disconnect,
+            CloneMessage::PrevImg => Message::PrevImg,
+            CloneMessage::NextImg => Message::NextImg,
+            CloneMessage::SetTab(tab) => Message::SetTab(tab),
+            CloneMessage::LogEdit(action) => Message::LogEdit(action),
+        }
+    }
+}
+
+#[derive(Debug)]
+enum Message {
+    CloneMessage(CloneMessage),
+    LogEdit(text_editor::Action),
+
+    PrevImg,
+    NextImg,
     Empty,
     ToggleDebug(bool),
     InitResource,
     InitResourceRes(Result<Arc<Resource>, String>),
     CheckAndUpdateResource,
     Connect,
+    ConnectRes(Result<AAH, String>),
     Disconnect,
 
     RunTask(String),
@@ -114,20 +143,45 @@ enum Message {
 }
 
 impl App {
+    fn prev_img(&mut self) {
+        if self.img_idx > 0 {
+            self.img_idx -= 1;
+        }
+    }
+
+    fn next_img(&mut self) {
+        if self.img_idx < self.annotated_imgs.len() - 1 {
+            self.img_idx += 1;
+        }
+    }
+
+    fn toggle_debug(&mut self, debug: bool) {
+        self.debug = debug;
+    }
+
+    fn log(&mut self, s: impl AsRef<str>) {
+        let s = s.as_ref().to_string();
+        self.log_content
+            .perform(text_editor::Action::Move(text_editor::Motion::DocumentEnd));
+        self.log_content
+            .perform(text_editor::Action::Edit(text_editor::Edit::Paste(
+                Arc::new(format!("{}\n", s)),
+            )));
+    }
+
     fn update(&mut self, message: Message) -> Task<Message> {
+        let message = match message {
+            Message::CloneMessage(msg) => msg.into(),
+            _ => message,
+        };
         // info!("app update message: {:?}", message);
         match message {
-            Message::ToggleDebug(debug) => {
-                self.debug = debug;
-            }
-            Message::PrevImg => {
-                if self.img_idx > 0 {
-                    self.img_idx -= 1;
-                }
-            }
-            Message::NextImg => {
-                if self.img_idx < self.annotated_imgs.len() - 1 {
-                    self.img_idx += 1;
+            Message::ToggleDebug(debug) => self.toggle_debug(debug),
+            Message::PrevImg => self.prev_img(),
+            Message::NextImg => self.next_img(),
+            Message::LogEdit(action) => {
+                if !action.is_edit() {
+                    self.log_content.perform(action);
                 }
             }
             // Message::CheckAndUpdateResource => {
@@ -138,7 +192,8 @@ impl App {
             // }
             Message::InitResource => {
                 self.initializing_resource = true;
-                Task::perform(
+                self.log("Initializing Resource...");
+                return Task::perform(
                     async {
                         Resource::try_init(".aah")
                             .await
@@ -159,40 +214,49 @@ impl App {
                 match res {
                     Ok(resource) => {
                         self.resource = Some(resource);
-                        self.log.push("Resource Initialized".to_string());
+                        self.log("Resource Initialized");
                     }
                     Err(err) => {
-                        self.log
-                            .push(format!("Failed to initialize resource: {}", err));
+                        self.log(format!("Failed to initialize resource: {}", err));
                     }
                 }
             }
             Message::Connect => {
                 self.connecting = true;
-                match AAH::connect("127.0.0.1:16384", self.resource.clone().unwrap()) {
+                let resource = self.resource.clone().unwrap();
+                return Task::perform(
+                    async move {
+                        AAH::connect("127.0.0.1:16384", resource).map_err(|err| {
+                            format!(
+                                "Failed to connect: {}, Caused by: {}",
+                                err,
+                                err.root_cause()
+                            )
+                        })
+                    },
+                    Message::ConnectRes,
+                );
+            }
+            Message::ConnectRes(res) => {
+                match res {
                     Ok(aah) => {
                         self.aah = Some(Arc::new(Mutex::new(aah)));
-                        self.log.push("connected to 127.0.0.1:16384".to_string());
+                        self.log("connected to 127.0.0.1:16384");
                     }
-                    Err(err) => self.log.push(format!(
-                        "Failed to connect: {}, Caused by: {}",
-                        err,
-                        err.root_cause()
-                    )),
+                    Err(err) => self.log(err),
                 }
                 self.connecting = false;
             }
             Message::Disconnect => {
                 self.aah = None;
-                self.log.push("disconnected".to_string());
+                self.log("disconnected");
             }
             Message::SetTab(tab) => {
                 self.tab = tab;
             }
             // task_evt_listener stuff
             Message::TaskEvtListenerReady(tx) => {
-                self.log
-                    .push("task_evt_listener ready, starting listener".to_string());
+                self.log("task_evt_listener ready, starting listener");
                 self.task_evt_listener_tx = Some(tx);
 
                 if let Some(aah) = &self.aah {
@@ -205,7 +269,7 @@ impl App {
                 }
             }
             Message::TaskEvtListenerListening => {
-                self.log.push("task_evt_listener listening".to_string());
+                self.log("task_evt_listener listening");
             }
             Message::TaskEvt(evt) => match evt {
                 TaskEvt::AnnotatedImg(img) => {
@@ -214,7 +278,7 @@ impl App {
                     self.img_idx = self.annotated_imgs.len() - 1;
                 }
                 TaskEvt::ExecStat { step, cur, total } => {
-                    self.log.push(format!(
+                    self.log(format!(
                         "executing {}: {}/{} ({:?})",
                         self.executing_task.as_ref().unwrap_or(&"".to_string()),
                         cur,
@@ -223,7 +287,7 @@ impl App {
                     ));
                 }
                 TaskEvt::Log(s) => {
-                    self.log.push(s);
+                    self.log(s);
                 }
                 _ => {}
             },
@@ -247,54 +311,28 @@ impl App {
     }
 
     fn view(&self) -> iced::Element<Message> {
-        let logs = column(self.log.iter().map(|log| text(log).into()));
-
-        let resource_status = if let Some(resource) = &self.resource {
-            row![
-                text("Resource Initialized: "),
-                text(resource.manifest.last_updated.to_string()),
-            ]
-            // if self.checking_resource_update {
-            //     resource_status = resource_status.push(button("Checking Update..."));
-            // } else {
-            //     resource_status = resource_status.push(button("Check Update").on_press(Message::CheckAndUpdateResource));
-            // }
-        } else {
-            row![
-                text("Resource Not Initialized: "),
-                if self.initializing_resource {
-                    button("Initializing Resource...")
-                } else {
-                    button("Initialize Resource").on_press(Message::InitResource)
-                }
-            ]
-        };
-
         let main = match self.tab {
             Tab::Main => {
                 let tasks = match &self.aah {
                     Some(aah) => {
                         column![
-                            button("start_up").on_press(Message::RunTask("start_up".to_string())),
-                            button("award").on_press(Message::RunTask("award".to_string())),
+                            Element::from(
+                                button("start_up")
+                                    .on_press(CloneMessage::RunTask("start_up".to_string()))
+                            )
+                            .map(Message::CloneMessage),
+                            Element::from(
+                                button("award")
+                                    .on_press(CloneMessage::RunTask("award".to_string()))
+                            )
+                            .map(Message::CloneMessage),
                         ]
                     }
                     None => column![text!("No connection")],
                 }
                 .spacing(2);
 
-                let mut view = column![tasks].align_x(Alignment::Center).spacing(4);
-                if self.resource.is_some() {
-                    if self.aah.is_none() {
-                        if self.connecting {
-                            view = view.push(button("Connecting..."));
-                        } else {
-                            view = view.push(button("Connect").on_press(Message::Connect));
-                        }
-                    } else {
-                        view = view.push(button("Disconnect").on_press(Message::Disconnect));
-                    }
-                }
+                let view = column![tasks].align_x(Alignment::Center).spacing(4);
                 container(view)
             }
             Tab::Tasks => {
@@ -304,17 +342,22 @@ impl App {
                             text(task_name.clone()),
                             horizontal_space(),
                             if self.aah.is_none() {
-                                button("No Connection")
+                                Element::from(button("No Connection"))
                             } else if self.executing_task.as_ref() == Some(&task_name) {
-                                button("Running...")
+                                Element::from(button("Running..."))
                             } else {
-                                button("Run").on_press(Message::RunTask(task_name.clone()))
+                                Element::from(
+                                    button("Run")
+                                        .on_press(CloneMessage::RunTask(task_name.clone())),
+                                )
                             }
+                            .map(Message::CloneMessage)
                         ]
+                        .align_y(Alignment::Center)
                         .spacing(2)
-                        .width(Length::Shrink)
                         .into()
-                    }));
+                    }))
+                    .spacing(2);
 
                     let annotated_img = if let Some(img) = self.annotated_imgs.get(self.img_idx) {
                         container(
@@ -331,10 +374,11 @@ impl App {
                         annotated_img,
                         row![
                             if self.img_idx > 0 {
-                                button("Prev").on_press(Message::PrevImg)
+                                Element::from(button("Prev").on_press(CloneMessage::PrevImg))
                             } else {
-                                button("Prev")
-                            },
+                                Element::from(button("Prev"))
+                            }
+                            .map(Message::CloneMessage),
                             horizontal_space(),
                             text(format!(
                                 "{} / {}",
@@ -347,10 +391,11 @@ impl App {
                             )),
                             horizontal_space(),
                             if self.img_idx + 1 < self.annotated_imgs.len() {
-                                button("Next").on_press(Message::NextImg)
+                                Element::from(button("Next").on_press(CloneMessage::NextImg))
                             } else {
-                                button("Next")
-                            },
+                                Element::from(button("Next"))
+                            }
+                            .map(Message::CloneMessage)
                         ]
                         .spacing(4)
                         .align_y(Alignment::Center)
@@ -358,7 +403,14 @@ impl App {
                     .spacing(2)
                     .align_x(Alignment::Center);
 
-                    container(row![tasks, annotated_img_viewer])
+                    container(
+                        row![
+                            tasks.width(Length::FillPortion(1)),
+                            annotated_img_viewer.width(Length::FillPortion(3))
+                        ]
+                        .padding(2)
+                        .spacing(2),
+                    )
                 } else {
                     container(text("No Resource"))
                 }
@@ -366,13 +418,66 @@ impl App {
         }
         .height(Length::Fill);
 
-        let top_bar = row![
-            resource_status,
-            horizontal_space(),
-            toggler(self.debug).on_toggle(Message::ToggleDebug)
+        let resource_status = if let Some(resource) = &self.resource {
+            row![
+                text("Resource Initialized: "),
+                text(resource.manifest.last_updated.to_string()),
+            ]
+            // if self.checking_resource_update {
+            //     resource_status = resource_status.push(button("Checking Update..."));
+            // } else {
+            //     resource_status = resource_status.push(button("Check Update").on_press(Message::CheckAndUpdateResource));
+            // }
+        } else {
+            row![
+                text("Resource Not Initialized: "),
+                if self.initializing_resource {
+                    Element::from(button("Initializing Resource..."))
+                } else {
+                    Element::from(
+                        button("Initialize Resource").on_press(CloneMessage::InitResource),
+                    )
+                }
+                .map(Message::CloneMessage)
+            ]
+        };
+
+        let mut top_bar = row![].align_y(Alignment::Center).spacing(2).padding(2);
+        if self.resource.is_some() {
+            top_bar = top_bar.push(
+                if self.aah.is_none() {
+                    if self.connecting {
+                        Element::from(button("Connecting..."))
+                    } else {
+                        Element::from(button("Connect").on_press(CloneMessage::Connect))
+                    }
+                } else {
+                    Element::from(button("Disconnect").on_press(CloneMessage::Disconnect))
+                }
+                .map(Message::CloneMessage),
+            );
+        }
+
+        top_bar = top_bar.push(resource_status);
+        top_bar = top_bar.push(horizontal_space());
+        top_bar = top_bar.push(toggler(self.debug).on_toggle(Message::ToggleDebug));
+
+        // let logs = column(self.log.iter().map(|log| text(log).into()));
+
+        let view: Element<Message> = column![
+            top_bar,
+            horizontal_rule(1),
+            Tab::tab_bar(&self.tab),
+            main,
+            Element::from(
+                text_editor(&self.log_content)
+                    .on_action(CloneMessage::LogEdit)
+                    .height(Length::Fixed(200.0))
+            )
+            .map(Message::CloneMessage)
         ]
-        .align_y(Alignment::Center);
-        let view: Element<Message> = column![top_bar, Tab::tab_bar(&self.tab), main, logs].into();
+        .padding(2)
+        .into();
         if self.debug {
             view.explain(color!(0xf06090))
         } else {
@@ -401,27 +506,7 @@ fn main() -> iced::Result {
 
     iced::application("azur-arknights-helper", App::update, App::view)
         .subscription(App::subscription)
-        .run_with(|| {
-            (
-                App::default(),
-                Task::perform(
-                    async {
-                        tokio::task::spawn(Resource::try_init(".aah"))
-                            .await
-                            .unwrap()
-                            .map(|res| Arc::new(res))
-                            .map_err(|err| {
-                                format!(
-                                    "Failed to initialize resource: {}, Caused by: {}",
-                                    err,
-                                    err.root_cause()
-                                )
-                            })
-                    },
-                    Message::InitResourceRes,
-                ),
-            )
-        })
+        .run_with(|| (App::default(), Task::done(Message::InitResource)))
 }
 
 fn init_logger() {
