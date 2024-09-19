@@ -21,10 +21,10 @@ impl Runnable for Navigate {
 
         let navigate = aah.navigate_config.get_navigate(name)?;
 
-        let task = match self {
-            Navigate::NavigateIn(_) => navigate.enter_task,
-            Navigate::NavigateOut(_) => navigate.exit_task,
+        let action = match self {
+            Navigate::NavigateIn(_) => navigate.enter,
+            Navigate::NavigateOut(_) => navigate.exit,
         };
-        task.run(aah).map(|_| ())
+        action.run(aah).map(|_| ())
     }
 }

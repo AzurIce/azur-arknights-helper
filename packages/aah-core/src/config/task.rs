@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::{collections::HashMap, error::Error, fs};
 
 use crate::task::action::Action;
@@ -85,6 +85,22 @@ impl TaskStep {
     }
 }
 
+fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
+    let mut task_files = vec![];
+    if let Ok(read_dir) = fs::read_dir(path) {
+        for entry in read_dir {
+            let entry = entry.unwrap();
+            let file_type = entry.file_type().unwrap();
+            if file_type.is_dir() {
+                task_files.extend(get_task_files(entry.path()));
+            } else if file_type.is_file() {
+                task_files.push(entry.path());
+            }
+        }
+    }
+    task_files
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TaskConfig(pub HashMap<String, Task>);
 impl TaskConfig {
@@ -95,17 +111,11 @@ impl TaskConfig {
         let task_config = fs::read_to_string(task_config)?;
         let mut task_config = toml::from_str::<TaskConfig>(&task_config)?;
 
-        if let Ok(read_dir) = fs::read_dir(path.join("tasks")) {
-            for entry in read_dir {
-                let entry = entry.unwrap();
-                if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
-                    continue;
-                }
-                if let Ok(task) = fs::read_to_string(entry.path()) {
-                    let task = toml::from_str::<Task>(&task)?;
+        for task_file in get_task_files(path.join("tasks")) {
+            if let Ok(task) = fs::read_to_string(task_file) {
+                let task = toml::from_str::<Task>(&task)?;
 
-                    task_config.0.insert(task.name.to_string(), task);
-                }
+                task_config.0.insert(task.name.to_string(), task);
             }
         }
         Ok(task_config)
