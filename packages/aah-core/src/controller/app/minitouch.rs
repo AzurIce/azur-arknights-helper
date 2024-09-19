@@ -6,8 +6,8 @@ use std::{
     time::Duration,
 };
 
-use color_print::cprintln;
-use log::info;
+use color_print::{cformat, cprintln};
+use log::{info, trace};
 
 use crate::{
     adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
@@ -146,7 +146,7 @@ impl App for MiniTouch {
                         .strip_suffix("\n")
                         .unwrap()
                         .to_string();
-                    info!("readed info: {}", buf);
+                    trace!("readed info: {}", buf);
                     if buf.starts_with('^') {
                         let params = &buf.split(' ').skip(1).collect::<Vec<&str>>();
                         let max_contact = u32::from_str_radix(params[0], 10).unwrap();

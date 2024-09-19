@@ -1,0 +1,11 @@
+[press_esc]
+name = "press_esc"
+
+[[press_esc.steps]]
+action = "ActionPressEsc"
+
+[press_home]
+name = "press_home"
+
+[[press_home.steps]]
+action = "ActionPressHome"

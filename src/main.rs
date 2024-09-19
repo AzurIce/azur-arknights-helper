@@ -1,8 +1,11 @@
+mod sub;
+
 use std::{fmt::Debug, sync::Arc};
 
 use aah_core::{task::TaskEvt, AAH};
 use aah_resource::Resource;
 use iced::{
+    futures::SinkExt,
     widget::{button, column, text},
     Subscription, Task,
 };
@@ -15,6 +18,8 @@ struct App {
     resource: Option<Arc<Resource>>,
     aah: Option<AAH>,
     connecting: bool,
+
+    task_evt_listener_tx: Option<iced::futures::channel::mpsc::Sender<sub::Input>>,
 }
 
 impl Default for App {
@@ -25,20 +30,27 @@ impl Default for App {
             resource: None,
             aah: None,
             connecting: false,
+            task_evt_listener_tx: None,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 enum Message {
+    Empty,
     InitResourceRes(Result<Arc<Resource>, String>),
     Connect,
     Disconnect,
+
+    /// for task_evt_listener
+    TaskEvt(TaskEvt),
+    TaskEvtListenerReady(iced::futures::channel::mpsc::Sender<sub::Input>),
+    TaskEvtListenerListening,
 }
 
 impl App {
     fn update(&mut self, message: Message) -> Task<Message> {
-        info!("message: {:?}", message);
+        info!("app update message: {:?}", message);
         match message {
             Message::InitResourceRes(res) => match res {
                 Ok(resource) => {
@@ -53,26 +65,38 @@ impl App {
             },
             Message::Connect => {
                 self.connecting = true;
-                match AAH::connect(
-                    "127.0.0.1:16384",
-                    &self.resource.as_ref().unwrap().root,
-                    |evt| match evt {
-                        TaskEvt::Log(s) => {
-                            info!("{}", s);
-                        }
-                        _ => {}
-                    },
-                ) {
+                match AAH::connect("127.0.0.1:16384", &self.resource.as_ref().unwrap().root) {
                     Ok(aah) => {
                         self.aah = Some(aah);
                         self.log.push("connected to 127.0.0.1:16384".to_string());
                     }
-                    Err(err) => self.log.push(format!("Failed to connect: {}", err)),
+                    Err(err) => {
+                        self.log.push(format!("Failed to connect: {}, Caused by: {}", err, err.root_cause()))
+                    }
                 }
+                self.connecting = false;
             }
             Message::Disconnect => {
                 self.aah = None;
                 self.log.push("disconnected".to_string());
+            }
+            // task_evt_listener stuff
+            Message::TaskEvtListenerReady(mut tx) => {
+                self.log.push("task_evt_listener ready, starting listener".to_string());
+                // self.task_evt_listener_tx = Some(tx);
+                if let Some(aah) = &self.aah {
+                    let rx = aah.task_evt_rx.clone();
+                    Task::perform(
+                        async move { tx.send(sub::Input::StartListenToTaskEvt(rx)).await },
+                        |_| Message::Empty,
+                    );
+                }
+            }
+            Message::TaskEvtListenerListening => {
+                self.log.push("task_evt_listener listening".to_string());
+            }
+            Message::TaskEvt(evt) => {
+                self.log.push(format!("task_evt: {:?}", evt));
             }
             _ => {}
         }
@@ -86,7 +110,7 @@ impl App {
         if self.resource.is_some() {
             if self.aah.is_none() {
                 if self.connecting {
-                    main = main.push(text("Connecting..."));
+                    main = main.push(button("Connecting..."));
                 } else {
                     main = main.push(button("Connect").on_press(Message::Connect));
                 }
@@ -98,6 +122,13 @@ impl App {
     }
 
     fn subscription(&self) -> Subscription<Message> {
+        if self.aah.is_some() {
+            return Subscription::run(sub::task_evt_listener).map(|msg| match msg {
+                sub::Event::Ready(tx) => Message::TaskEvtListenerReady(tx),
+                sub::Event::ListeningToTaskEvt => Message::TaskEvtListenerListening,
+                sub::Event::TaskEvt(evt) => Message::TaskEvt(evt),
+            });
+        }
         Subscription::none()
     }
 }

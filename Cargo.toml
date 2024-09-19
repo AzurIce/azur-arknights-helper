@@ -15,6 +15,7 @@ image = "0.25.2"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+tokio-stream = "0.1.16"
 git2 = "0.19.0"
 iced = { version = "0.13.0", features = ["tokio"] }
 aah-core.workspace = true
@@ -26,3 +27,4 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 reqwest = "0.12.7"
 tokio = "1.40.0"
 anyhow = "1.0.89"
+async-channel = "2.3.1"

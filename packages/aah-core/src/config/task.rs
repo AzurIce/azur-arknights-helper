@@ -88,7 +88,7 @@ impl TaskStep {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TaskConfig(pub HashMap<String, Task>);
 impl TaskConfig {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn Error>> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let task_config = path.join("tasks.toml");
         println!("{:?}", task_config);
@@ -130,6 +130,81 @@ impl Default for TaskConfig {
     }
 }
 
+fn startup_task() -> Task {
+    Task {
+        name: "start_up".to_string(),
+        desc: Some("start up to the main screen".to_string()),
+        steps: vec![
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("start_start.png".to_string()),
+            })
+            .retry(-1),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("wakeup_wakeup.png".to_string()),
+            })
+            .retry(-1),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("confirm.png".to_string()),
+            })
+            .deplay_sec_f32(6.0)
+            .retry(3)
+            .skip_if_failed(),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("qiandao_close.png".to_string()),
+            })
+            .deplay_sec_f32(2.0)
+            .retry(2)
+            .skip_if_failed(),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("notice_close.png".to_string()),
+            })
+            .deplay_sec_f32(2.0)
+            .retry(2)
+            .skip_if_failed(),
+        ],
+    }
+}
+
+fn award_task() -> Task {
+    Task {
+        name: "award".to_string(),
+        desc: None,
+        steps: vec![
+            TaskStep::action(Action::NavigateIn("mission".to_string())),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("mission-week_collect-all.png".to_string()),
+            })
+            .deplay_sec_f32(0.5)
+            .retry(1)
+            .skip_if_failed(),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("confirm.png".to_string()),
+            })
+            .deplay_sec_f32(0.5)
+            .retry(1)
+            .skip_if_failed(),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("mission-day_week.png".to_string()),
+            })
+            .deplay_sec_f32(0.5)
+            .retry(1),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("mission-week_collect-all.png".to_string()),
+            })
+            .deplay_sec_f32(0.5)
+            .retry(1)
+            .skip_if_failed(),
+            TaskStep::action(Action::ActionClickMatch {
+                match_task: MatchTask::Template("confirm.png".to_string()),
+            })
+            .deplay_sec_f32(0.5)
+            .retry(1)
+            .skip_if_failed(),
+            TaskStep::action(Action::NavigateOut("mission".to_string())),
+        ],
+    }
+}
+
 pub fn default_tasks() -> Vec<Task> {
     vec![
         Task {
@@ -141,75 +216,6 @@ pub fn default_tasks() -> Vec<Task> {
             name: "press_home".to_string(),
             desc: None,
             steps: vec![TaskStep::action(Action::ActionPressHome)],
-        },
-        Task {
-            name: "start_up".to_string(),
-            desc: Some("start up to the main screen".to_string()),
-            steps: vec![
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("start_start.png".to_string()),
-                })
-                .retry(-1),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("wakeup_wakeup.png".to_string()),
-                })
-                .retry(-1),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("confirm.png".to_string()),
-                })
-                .deplay_sec_f32(6.0)
-                .retry(3)
-                .skip_if_failed(),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("qiandao_close.png".to_string()),
-                })
-                .deplay_sec_f32(2.0)
-                .retry(2)
-                .skip_if_failed(),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("notice_close.png".to_string()),
-                })
-                .deplay_sec_f32(2.0)
-                .retry(2)
-                .skip_if_failed(),
-            ],
-        },
-        Task {
-            name: "award".to_string(),
-            desc: None,
-            steps: vec![
-                TaskStep::action(Action::NavigateIn("mission".to_string())),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("mission-week_collect-all.png".to_string()),
-                })
-                .deplay_sec_f32(0.5)
-                .retry(1)
-                .skip_if_failed(),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("confirm.png".to_string()),
-                })
-                .deplay_sec_f32(0.5)
-                .retry(1)
-                .skip_if_failed(),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("mission-day_week.png".to_string()),
-                })
-                .deplay_sec_f32(0.5)
-                .retry(1),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("mission-week_collect-all.png".to_string()),
-                })
-                .deplay_sec_f32(0.5)
-                .retry(1)
-                .skip_if_failed(),
-                TaskStep::action(Action::ActionClickMatch {
-                    match_task: MatchTask::Template("confirm.png".to_string()),
-                })
-                .deplay_sec_f32(0.5)
-                .retry(1)
-                .skip_if_failed(),
-                TaskStep::action(Action::NavigateOut("mission".to_string())),
-            ],
         },
     ]
 }
@@ -224,6 +230,13 @@ mod test {
     fn test_load_config() {
         let config = TaskConfig::load("../../resources").unwrap();
         println!("{:#?}", config)
+    }
+
+    #[test]
+    fn test_ser_task() {
+        let task = startup_task();
+        let config = toml::to_string_pretty(&task).unwrap();
+        println!("{}", config);
     }
 
     #[test]
@@ -253,13 +266,6 @@ mod test {
         //     let config: TaskConfig = toml::from_str(&config)?;
         //     println!("{:?}", config);
         // }
-        Ok(())
-    }
-
-    #[test]
-    fn test_load_task_config() -> Result<(), Box<dyn Error>> {
-        let task = TaskConfig::load("../../resources")?;
-        println!("{:?}", task);
         Ok(())
     }
 }
