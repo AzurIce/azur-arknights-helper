@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
 
 use std::path::{Path, PathBuf};
-use std::{collections::HashMap, error::Error, fs};
+use std::{collections::HashMap, fs};
 
 use super::Action;
 use super::MatchTask;

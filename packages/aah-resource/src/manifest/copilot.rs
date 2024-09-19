@@ -1,7 +1,6 @@
 use core::fmt;
 use std::{
     collections::HashMap,
-    error::Error,
     fmt::{Display, Formatter},
     fs,
     path::Path,
