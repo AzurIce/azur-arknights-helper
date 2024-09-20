@@ -21,11 +21,17 @@ pub struct SingleMatchAnalyzerOutput {
     pub annotated_screen: Box<DynamicImage>,
 }
 
+/// To find the best result where the template fits in the screen
 pub struct SingleMatchAnalyzer {
-    template: DynamicImage,
+    /// filename in `resources/templates`
     template_filename: String,
+    /// Whether should use cache instead of capture a new screen
     use_cache: bool,
-    roi: [(f32, f32); 2], // topleft and bottomright
+    /// Region of intrest (top left and bottom right)
+    roi: [(f32, f32); 2],
+
+    /// this is loaded from `template_filename`
+    template: DynamicImage,
 }
 
 impl SingleMatchAnalyzer {
