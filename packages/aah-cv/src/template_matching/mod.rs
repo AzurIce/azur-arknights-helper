@@ -1,11 +1,10 @@
 use std::{
     fmt::Display,
-    path::Path,
     sync::{Arc, Mutex, OnceLock},
 };
 
 use bytemuck::{Pod, Zeroable};
-use image::{GenericImageView, ImageBuffer, Luma};
+use image::{ImageBuffer, Luma};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
     BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
@@ -564,7 +563,7 @@ mod test {
     use crate::utils::save_luma32f;
 
     use super::*;
-    use std::{cmp::Ordering, error::Error, fs, time::Instant};
+    use std::{error::Error, fs, path::Path, time::Instant};
 
     #[test]
     fn foo() -> Result<(), Box<dyn Error>> {

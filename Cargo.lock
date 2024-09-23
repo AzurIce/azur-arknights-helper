@@ -80,7 +80,6 @@ name = "aah-resource"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "base64 0.22.1",
  "bytes",
  "git2",
  "image 0.25.2",

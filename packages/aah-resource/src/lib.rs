@@ -15,7 +15,6 @@ use std::{
 };
 
 use anyhow::Context;
-use base64::{prelude::BASE64_STANDARD, Engine};
 use bytes::Bytes;
 use git2::{
     build::{CheckoutBuilder, RepoBuilder},

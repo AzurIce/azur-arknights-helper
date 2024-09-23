@@ -3,9 +3,12 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::{fmt::Debug, sync::{Arc, Mutex}};
+use std::{
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 
-use aah_resource::{LocalResource, Resource};
+use aah_resource::Resource;
 use controller::{aah_controller::AahController, Controller};
 use task::TaskEvt;
 use vision::analyzer::{
@@ -221,6 +224,8 @@ mod test {
         path::Path,
         sync::{Mutex, OnceLock},
     };
+
+    use aah_resource::LocalResource;
 
     use super::*;
 
