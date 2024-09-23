@@ -1,41 +1,25 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
+use vfs::VfsPath;
 
 use super::Action;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);
 impl NavigateConfig {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, anyhow::Error> {
-        let path = path.as_ref();
-        let config = path.join("navigates.toml");
-        let config = fs::read_to_string(config)?;
-        let mut config = toml::from_str::<NavigateConfig>(&config)?;
-
-        if let Ok(read_dir) = fs::read_dir(path.join("navigates")) {
-            for entry in read_dir {
-                let entry = entry.unwrap();
-                if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
-                    continue;
-                }
-                if let Ok(navigate) = fs::read_to_string(entry.path()) {
-                    if let Ok(navigate) = toml::from_str::<Navigate>(&navigate) {
-                        config.0.insert(
-                            entry
-                                .path()
-                                .file_prefix()
-                                .and_then(|s| s.to_str())
-                                .unwrap()
-                                .to_string(),
-                            navigate,
-                        );
-                    }
-                }
-            }
-        }
+    pub fn load_from_vfs_path(path: VfsPath) -> Result<NavigateConfig, anyhow::Error> {
+        let config = path.read_to_string()?;
+        let config = toml::from_str::<NavigateConfig>(&config)?;
         Ok(config)
     }
+
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, anyhow::Error> {
+        let config = fs::read_to_string(path)?;
+        let config = toml::from_str::<NavigateConfig>(&config)?;
+        Ok(config)
+    }
+
     pub fn get_navigate<S: AsRef<str>>(&self, name: S) -> Result<Navigate, String> {
         self.0
             .get(name.as_ref())
