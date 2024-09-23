@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+use vfs::{FileSystem, VfsPath};
 
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs};
@@ -85,6 +86,22 @@ impl TaskStep {
     }
 }
 
+fn get_task_files_from_vfs_path(path: VfsPath) -> Vec<VfsPath> {
+    let mut task_files = vec![];
+    if let Ok(read_dir) = path.read_dir() {
+        for entry in read_dir {
+            if entry.is_dir().is_ok_and(|v| v) {
+                task_files.extend(get_task_files_from_vfs_path(entry));
+            } else if entry.is_file().is_ok_and(|v| v)
+                && entry.extension() == Some("toml".to_string())
+            {
+                task_files.push(entry);
+            }
+        }
+    }
+    task_files
+}
+
 fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
     let mut task_files = vec![];
     if let Ok(read_dir) = fs::read_dir(path) {
@@ -104,14 +121,26 @@ fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TaskConfig(pub HashMap<String, Task>);
 impl TaskConfig {
+    /// load from the root of fs
+    /// 
+    /// `path` is the root folder of tasks
+    pub fn load_from_vfs_path(path: VfsPath) -> Result<Self, anyhow::Error> {
+        let mut task_config = TaskConfig(HashMap::new());
+
+        for task_file in get_task_files_from_vfs_path(path.join("tasks").unwrap()) {
+            if let Ok(task) = task_file.read_to_string() {
+                let task = toml::from_str::<Task>(&task)?;
+
+                task_config.0.insert(task.name.to_string(), task);
+            }
+        }
+        Ok(task_config)
+    }
+
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
-        let task_config = path.join("tasks.toml");
-        println!("{:?}", task_config);
-        let task_config = fs::read_to_string(task_config)?;
-        let mut task_config = toml::from_str::<TaskConfig>(&task_config)?;
-
-        for task_file in get_task_files(path.join("tasks")) {
+        let mut task_config = TaskConfig(HashMap::new());
+        for task_file in get_task_files(path) {
             if let Ok(task) = fs::read_to_string(task_file) {
                 let task = toml::from_str::<Task>(&task)?;
 

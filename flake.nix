@@ -15,7 +15,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-utils.url = "github:numtide/flake-utils";
-    nur.url = github:nix-community/NUR;
+    nur.url = "github:nix-community/NUR";
   };
 
   outputs = { self, nur, nixpkgs, rust-overlay, flake-utils, ... }:
@@ -34,7 +34,7 @@
           buildInputs = with pkgs; [
             clang
             llvmPackages_16.bintools
-            # openssl
+            openssl
             pkg-config
           ] ++ [
             rust-tools

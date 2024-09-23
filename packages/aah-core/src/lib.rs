@@ -5,7 +5,7 @@
 
 use std::{fmt::Debug, sync::{Arc, Mutex}};
 
-use aah_resource::Resource;
+use aah_resource::{LocalResource, Resource};
 use controller::{aah_controller::AahController, Controller};
 use task::TaskEvt;
 use vision::analyzer::{
@@ -77,7 +77,7 @@ impl AAH {
         serial: impl AsRef<str>,
         resource: Arc<Resource>,
     ) -> Result<Self, anyhow::Error> {
-        let controller = Box::new(AahController::connect(serial, &resource.root)?);
+        let controller = Box::new(AahController::connect(serial, &resource.root())?);
 
         let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -226,7 +226,7 @@ mod test {
 
     #[test]
     fn foo() {
-        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let resource = Arc::new(LocalResource::load("../../resources").unwrap().into());
         let mut aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
         aah.register_task_evt_handler(|evt| {
             if let TaskEvt::BattleAnalyzerRes(res) = evt {
@@ -240,7 +240,7 @@ mod test {
     fn test_get_tasks() {
         static S: OnceLock<Mutex<Option<AAH>>> = OnceLock::new();
         let _ = &S;
-        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let resource = Arc::new(LocalResource::load("../../resources").unwrap().into());
         let aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
         println!("{:?}", aah.resource.get_tasks());
     }
@@ -261,7 +261,7 @@ mod test {
 
     #[test]
     fn screenshot() {
-        let resource = Arc::new(Resource::load("../../resources").unwrap());
+        let resource = Arc::new(LocalResource::load("../../resources").unwrap().into());
         let mut aah = AAH::connect("127.0.0.1:16384", resource).unwrap();
         let dir = "../../resources/templates/MUMU-1920x1080";
         // save_screenshot(dir, "start.png");

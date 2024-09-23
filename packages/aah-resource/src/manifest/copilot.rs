@@ -7,6 +7,7 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use vfs::VfsPath;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Copilot {
@@ -90,14 +91,29 @@ pub enum CopilotAction {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CopilotConfig(pub HashMap<String, Copilot>);
 impl CopilotConfig {
+    pub fn load_from_vfs_path(path: VfsPath) -> Result<Self, anyhow::Error> {
+        let mut config = CopilotConfig(HashMap::new());
+
+        if let Ok(read_dir) = path.read_dir() {
+            for path in read_dir.filter(|p| p.extension().is_some_and(|ext| ext.as_str() == "toml"))
+            {
+                if let Ok(task) = path.read_to_string() {
+                    let task = toml::from_str::<Copilot>(&task)?;
+
+                    config.0.insert(
+                        task.name.clone(),
+                        task,
+                    );
+                }
+            }
+        }
+        Ok(config)
+    }
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
-        let config = path.join("copilots.toml");
-        println!("{:?}", config);
-        let config = fs::read_to_string(config)?;
-        let mut config = toml::from_str::<CopilotConfig>(&config)?;
+        let mut config = CopilotConfig(HashMap::new());
 
-        if let Ok(read_dir) = fs::read_dir(path.join("copilots")) {
+        if let Ok(read_dir) = fs::read_dir(path) {
             for entry in read_dir {
                 let entry = entry.unwrap();
                 if entry.path().extension().and_then(|s| s.to_str()) != Some("toml") {
@@ -107,12 +123,7 @@ impl CopilotConfig {
                     let task = toml::from_str::<Copilot>(&task)?;
 
                     config.0.insert(
-                        entry
-                            .path()
-                            .file_prefix()
-                            .and_then(|s| s.to_str())
-                            .unwrap()
-                            .to_string(),
+                        task.name.clone(),
                         task,
                     );
                 }
