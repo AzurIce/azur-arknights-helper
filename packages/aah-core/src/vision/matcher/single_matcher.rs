@@ -227,7 +227,7 @@ mod test {
         let engine = Arc::new(engine);
 
         let image = get_device_image(Device::MUMU, "episode-13-levels.png").unwrap();
-        let image = image.crop_imm(1440, 800, 480, 280);
+        let image = image.crop_imm(1423, 982, 98, 123);
         image.save("./test.png").unwrap();
         let matcher = SingleMatcher::Ocr { image: image.to_luma32f(), text: "text".to_string(), engine };
         let res = matcher.result();

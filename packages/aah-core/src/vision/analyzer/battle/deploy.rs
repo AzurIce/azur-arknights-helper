@@ -62,7 +62,7 @@ impl DeployAnalyzer {
 
         // ccorr_normed 0.9
         let multi_match_analyzer =
-            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png", None, None)
+            MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png")
                 .roi((0.0, 0.75), (1.0, 1.0));
         Self {
             use_cache: false,
@@ -189,7 +189,6 @@ mod test {
                 // "char_1032_excu2",
                 // "char_1035_wisdel",
                 // "char_311_mudrok",
-
                 "char_1016_agoat2",
                 "char_213_mostma",
                 "char_377_gdglow",
@@ -208,11 +207,17 @@ mod test {
         // let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
         let image = image::open("./assets/5-10-resumed.png").unwrap();
         let output = analyzer.analyze_image(&image).unwrap();
-        output.annotated_screen.save("./assets/output-5-10-resumed.png").unwrap();
+        output
+            .annotated_screen
+            .save("./assets/output-5-10-resumed.png")
+            .unwrap();
         println!("{:?}", output.deploy_cards);
         let image = image::open("./assets/5-10-paused.png").unwrap();
         let output = analyzer.analyze_image(&image).unwrap();
-        output.annotated_screen.save("./assets/output-5-10-paused.png").unwrap();
+        output
+            .annotated_screen
+            .save("./assets/output-5-10-paused.png")
+            .unwrap();
         println!("{:?}", output.deploy_cards);
     }
 }
