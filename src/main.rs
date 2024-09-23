@@ -195,7 +195,7 @@ impl App {
                 self.log("Initializing Resource...");
                 return Task::perform(
                     async {
-                        Resource::try_init(".aah")
+                        Resource::try_init(".aah/resources")
                             .await
                             .map(|res| Arc::new(res))
                             .map_err(|err| {

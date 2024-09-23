@@ -43,8 +43,14 @@ fn main() {
     }
 
     let command = cli.task.as_ref().unwrap();
-    let resource = Resource::load("./resources").expect("failed to load resource");
-    let aah = AAH::connect(serial, Arc::new(resource)).expect("failed to connect to the device");
+    let resource = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(Resource::try_init("./resources"))
+        .expect("failed to load resource");
+    let aah =
+        AAH::connect(serial, Arc::new(resource.into())).expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {
