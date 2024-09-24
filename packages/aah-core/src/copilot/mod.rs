@@ -11,7 +11,7 @@ use imageproc::template_matching::find_extremes;
 
 use crate::{
     task::{
-        action::click_match::ClickMatch,
+        action::click_match_template::ClickMatchTemplate,
         battle::{Deploy, Retreat, UseSkill},
         Runnable, TaskEvt,
     },
@@ -49,7 +49,7 @@ impl Runnable for Copilot {
 
         cprintln!("{log_tag}clicking start-pre...");
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start-pre...".to_string()));
-        let start_pre = ClickMatch::new(MatchTask::Template("level_start-pre.png".to_string()));
+        let start_pre = ClickMatchTemplate::new(MatchTask::Template("level_start-pre.png".to_string()));
         match start_pre.run(aah) {
             Ok(_) => {
                 aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start-pre".to_string()));
@@ -68,7 +68,7 @@ impl Runnable for Copilot {
 
         cprintln!("{log_tag}clicking start...");
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start...".to_string()));
-        let start_pre = ClickMatch::new(MatchTask::Template("formation_start.png".to_string()));
+        let start_pre = ClickMatchTemplate::new(MatchTask::Template("formation_start.png".to_string()));
         match start_pre.run(aah) {
             Ok(_) => {
                 aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start".to_string()));

@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::{task::Runnable, AAH};
 
+pub trait Navigatable {
+    fn navigate_in(&self, aah: &crate::AAH);
+    fn navigate_out(&self, aah: &crate::AAH);
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Navigate {
     NavigateIn(String),
@@ -19,7 +24,10 @@ impl Runnable for Navigate {
             Navigate::NavigateOut(name) => name,
         };
 
-        let navigate = aah.resource.get_navigate(name).ok_or(format!("navigate {} not found", name))?;
+        let navigate = aah
+            .resource
+            .get_navigate(name)
+            .ok_or(format!("navigate {} not found", name))?;
 
         let action = match self {
             Navigate::NavigateIn(_) => &navigate.enter,

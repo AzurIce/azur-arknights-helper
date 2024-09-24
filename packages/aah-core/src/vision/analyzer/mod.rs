@@ -6,6 +6,7 @@ pub mod battle;
 pub mod multi_match;
 pub mod single_match;
 pub mod levels;
+pub mod matching;
 // mod ocr;
 
 /// [`Analyzer`] 可以调用 [`AAH`] 的 API，返回分析结果 [`Analyzer::Output`]
