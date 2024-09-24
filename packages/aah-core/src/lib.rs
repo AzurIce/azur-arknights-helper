@@ -4,8 +4,7 @@
 #![feature(path_file_prefix)]
 
 use std::{
-    fmt::Debug,
-    sync::{Arc, Mutex},
+    fmt::Debug, ops::Deref, sync::{Arc, Mutex}
 };
 
 use aah_resource::Resource;
@@ -43,6 +42,13 @@ pub struct AAH {
     ocr_engine: OcrEngine,
 
     runtime: tokio::runtime::Runtime,
+}
+
+impl Deref for AAH {
+    type Target = Box<dyn Controller + Sync + Send>;
+    fn deref(&self) -> &Self::Target {
+        &self.controller
+    }
 }
 
 impl Debug for AAH {

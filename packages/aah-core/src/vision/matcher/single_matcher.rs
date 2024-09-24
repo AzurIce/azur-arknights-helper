@@ -29,6 +29,7 @@ pub enum SingleMatcher {
     Template {
         image: ImageBuffer<Luma<f32>, Vec<f32>>,
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
+        method: Option<MatchTemplateMethod>,
         threshold: Option<f32>,
     },
     Ocr {
@@ -46,10 +47,19 @@ impl SingleMatcher {
             Self::Template {
                 image,
                 template,
+                method,
                 threshold,
             } => {
                 // let down_scaled_template = template;
-                let method = MatchTemplateMethod::SumOfSquaredDifference;
+                let method = method.unwrap_or(MatchTemplateMethod::SumOfSquaredDifference);
+                let threshold = threshold.unwrap_or(match method {
+                    MatchTemplateMethod::SumOfSquaredDifference => SSE_THRESHOLD,
+                    MatchTemplateMethod::SumOfSquaredDifferenceNormed => SSE_NORMED_THRESHOLD,
+                    MatchTemplateMethod::CrossCorrelation => CCORR_THRESHOLD,
+                    MatchTemplateMethod::CrossCorrelationNormed => CCORR_NORMED_THRESHOLD,
+                    MatchTemplateMethod::CorrelationCoefficient => CCOEFF_THRESHOLD,
+                    MatchTemplateMethod::CorrelationCoefficientNormed => CCOEFF_THRESHOLD,
+                });
                 // cprintln!(
                 //     "<dim>{log_tag}image: {}x{}, template: {}x{}, method: {:?}, matching...</dim>",
                 //     image.width(),
@@ -60,7 +70,7 @@ impl SingleMatcher {
                 // );
 
                 // TODO: deal with scale problem, maybe should do it when screen cap stage
-                let start_time = Instant::now();
+                // let start_time = Instant::now();
                 let res = match_template(image, template, method, false);
 
                 // Normalize
@@ -79,21 +89,6 @@ impl SingleMatcher {
                     .iter()
                     .map(|x| (x - min) / (max - min))
                     .collect::<Vec<f32>>();
-                // let min = res
-                //     .data
-                //     .iter()
-                //     .min_by(|a, b| a.partial_cmp(b).unwrap())
-                //     .unwrap();
-                // let max = res
-                //     .data
-                //     .iter()
-                //     .max_by(|a, b| a.partial_cmp(b).unwrap())
-                //     .unwrap();
-                // let data = res
-                //     .data
-                //     .iter()
-                //     .map(|x| (x - min) / (max - min))
-                //     .collect::<Vec<f32>>();
 
                 let matched_img = ImageBuffer::from_vec(
                     res.width(),
@@ -101,12 +96,6 @@ impl SingleMatcher {
                     data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
                 )
                 .unwrap();
-                // let matched_img = ImageBuffer::from_vec(
-                //     res.width,
-                //     res.height,
-                //     data.iter().map(|p| (p * 255.0) as u8).collect::<Vec<u8>>(),
-                // )
-                // .unwrap();
                 let matched_img = DynamicImage::ImageLuma8(matched_img);
 
                 let extrems = find_extremes(&res);
@@ -117,23 +106,15 @@ impl SingleMatcher {
                 // );
 
                 let success = match method {
-                    MatchTemplateMethod::SumOfSquaredDifference => {
-                        extrems.min_value <= threshold.unwrap_or(SSE_THRESHOLD)
+                    MatchTemplateMethod::SumOfSquaredDifference
+                    | MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
+                        extrems.min_value <= threshold
                     }
-                    MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
-                        extrems.min_value <= threshold.unwrap_or(SSE_NORMED_THRESHOLD)
-                    }
-                    MatchTemplateMethod::CrossCorrelation => {
-                        extrems.max_value >= threshold.unwrap_or(CCORR_THRESHOLD)
-                    }
-                    MatchTemplateMethod::CrossCorrelationNormed => {
-                        extrems.max_value >= threshold.unwrap_or(CCORR_NORMED_THRESHOLD)
-                    }
-                    MatchTemplateMethod::CorrelationCoefficient => {
-                        extrems.max_value >= threshold.unwrap_or(CCOEFF_THRESHOLD)
-                    }
-                    MatchTemplateMethod::CorrelationCoefficientNormed => {
-                        extrems.max_value >= threshold.unwrap_or(CCOEFF_NORMED_THRESHOLD)
+                    MatchTemplateMethod::CrossCorrelation
+                    | MatchTemplateMethod::CrossCorrelationNormed
+                    | MatchTemplateMethod::CorrelationCoefficient
+                    | MatchTemplateMethod::CorrelationCoefficientNormed => {
+                        extrems.max_value >= threshold
                     }
                 };
 
@@ -220,16 +201,25 @@ mod test {
     #[test]
     fn test_ocr() {
         let engine = OcrEngine::new(OcrEngineParams {
-            detection_model: Some(Model::load_file("../../resources/models/text-detection.rten").unwrap()),
-            recognition_model: Some(Model::load_file("../../resources/models/text-recognition.rten").unwrap()),
+            detection_model: Some(
+                Model::load_file("../../resources/models/text-detection.rten").unwrap(),
+            ),
+            recognition_model: Some(
+                Model::load_file("../../resources/models/text-recognition.rten").unwrap(),
+            ),
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
         let engine = Arc::new(engine);
 
         let image = get_device_image(Device::MUMU, "episode-13-levels.png").unwrap();
         let image = image.crop_imm(1423, 982, 98, 123);
         image.save("./test.png").unwrap();
-        let matcher = SingleMatcher::Ocr { image: image.to_luma32f(), text: "text".to_string(), engine };
+        let matcher = SingleMatcher::Ocr {
+            image: image.to_luma32f(),
+            text: "text".to_string(),
+            engine,
+        };
         let res = matcher.result();
         // println!("{:?}", res);
     }
@@ -281,6 +271,7 @@ mod test {
             image: image.to_luma32f(),
             template: template.to_luma32f(),
             threshold: None,
+            method: None,
         }
         .result();
         println!("{:?}", res.rect);
