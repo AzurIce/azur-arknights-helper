@@ -1,9 +1,6 @@
-use std::time::Instant;
-
-use aah_cv::template_matching::MatchTemplateMethod;
 use image::{DynamicImage, GenericImageView};
-use log::trace;
-use ocrs::{ImageSource, TextLine};
+use ocrs::ImageSource;
+use regex::Regex;
 
 use crate::vision::utils::{draw_box, Rect};
 
@@ -25,7 +22,7 @@ impl LevelAnalyzer {
 impl Analyzer for LevelAnalyzer {
     type Output = LevelAnalyzerOutput;
     fn analyze(&mut self, aah: &crate::AAH) -> Result<Self::Output, String> {
-        let screen = aah.screen_cap_and_cache()?;
+        let _ = aah.screen_cap_and_cache()?;
 
         println!("Multimatching levels_crystal");
         // let t = Instant::now();
@@ -67,19 +64,34 @@ impl Analyzer for LevelAnalyzer {
                 .iter()
                 .zip(rects.iter())
                 .filter_map(|(text, rect)| match text {
-                    Some(text) => Some((text, rect)),
+                    Some(text) => {
+                        let text = text.to_string();
+                        if let Some(cap) = Regex::new(r#"[a-zA-Z\d]+-[a-zA-Z\d]+(?:-[a-zA-Z\d])*"#)
+                            .unwrap()
+                            .captures(&text)
+                        {
+                            let text = cap.get(0).unwrap().as_str().to_string();
+                            Some((text, rect))
+                        } else {
+                            None
+                        }
+                    }
                     None => None,
                 })
-                .collect::<Vec<_>>();
-            if let Some((text, rect)) = texts.first() {
+                .collect::<Vec<(String, _)>>();
+
+            // for (text, rect) in &texts {
+            //     println!("{} {:?}", text, rect)
+            // }
+
+            if let Some((text, _rect)) = texts.first() {
                 let level_code_rect = Rect {
                     x,
                     y,
                     width,
                     height,
                 };
-                levels.push((text.to_string(), level_code_rect.clone()));
-                // println!("{} {:?}", text, rect)
+                levels.push((text.to_owned(), level_code_rect.clone()));
             }
         }
 
@@ -103,11 +115,8 @@ mod test {
 
     #[test]
     fn test_level_analyzer() {
-        println!("Loading resource...");
         let resource = LocalResource::load("../../resources").unwrap();
-        println!("Resource loaded, connecting...");
         let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource.into())).unwrap();
-        println!("Connected...");
         let mut analyzer = LevelAnalyzer::new();
         println!("Analyzing...");
         let t = Instant::now();

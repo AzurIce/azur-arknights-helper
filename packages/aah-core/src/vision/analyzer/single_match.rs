@@ -1,5 +1,6 @@
 use std::{path::Path, time::Instant};
 
+use aah_cv::template_matching::MatchTemplateMethod;
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
 
@@ -8,7 +9,7 @@ use crate::{
     utils::resource::get_template,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
-        utils::{draw_box, Rect},
+        utils::{binarize_image, draw_box, Rect},
     },
     AAH,
 };
@@ -32,6 +33,9 @@ pub struct SingleMatchAnalyzer {
 
     /// this is loaded from `template_filename`
     template: DynamicImage,
+    method: Option<MatchTemplateMethod>,
+    threshold: Option<f32>,
+    binarize_threshold: Option<u8>,
 }
 
 impl SingleMatchAnalyzer {
@@ -42,7 +46,20 @@ impl SingleMatchAnalyzer {
             template_filename: template_filename.as_ref().to_string(),
             use_cache: false,
             roi: [(0.0, 0.0), (1.0, 1.0)],
+            method: None,
+            threshold: None,
+            binarize_threshold: None,
         }
+    }
+
+    pub fn method(mut self, method: MatchTemplateMethod) -> Self {
+        self.method = Some(method);
+        self
+    }
+
+    pub fn threshold(mut self, threshold: f32) -> Self {
+        self.threshold = Some(threshold);
+        self
     }
 
     pub fn use_cache(mut self) -> Self {
@@ -52,6 +69,11 @@ impl SingleMatchAnalyzer {
 
     pub fn roi(mut self, tl: (f32, f32), br: (f32, f32)) -> Self {
         self.roi = [tl, br];
+        self
+    }
+
+    pub fn binarize_threshold(mut self, binarize_threshold: u8) -> Self {
+        self.binarize_threshold = Some(binarize_threshold);
         self
     }
 
@@ -96,11 +118,23 @@ impl SingleMatchAnalyzer {
             self.template.clone()
         };
 
+        // Binarize
+        let (binarized, template) = match self.binarize_threshold {
+            Some(threshold) => (
+                binarize_image(&cropped, threshold),
+                binarize_image(&template, threshold),
+            ),
+            None => (cropped, template),
+        };
+        // binarized.save("./binarized.png").unwrap();
+        // template.save("./binarized_template.png").unwrap();
+
         // Match
         let res = SingleMatcher::Template {
-            image: cropped.to_luma32f(), // ! cropped
+            image: binarized.to_luma32f(), // ! cropped
             template: template.to_luma32f(),
-            threshold: None,
+            threshold: self.threshold,
+            method: self.method,
         }
         .result();
         let res = SingleMatcherResult {
@@ -163,8 +197,8 @@ mod test {
     fn test_single_match_analyzer() {
         let resource = LocalResource::load("../../resources").unwrap().into();
         let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource)).unwrap();
-        let mut analyzer =
-            SingleMatchAnalyzer::new(&aah.resource.root, "start_start.png").roi((0.3, 0.75), (0.6, 1.0));
+        let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "start_start.png")
+            .roi((0.3, 0.75), (0.6, 1.0));
         let output = analyzer.analyze(&aah).unwrap();
         println!("{:?}", output.res.rect);
     }
