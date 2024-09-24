@@ -1,4 +1,8 @@
-use std::{path::Path, time::Instant};
+use std::{
+    ops::{Range, RangeInclusive},
+    path::Path,
+    time::Instant,
+};
 
 use aah_cv::template_matching::MatchTemplateMethod;
 use color_print::{cformat, cprintln};
@@ -9,7 +13,7 @@ use crate::{
     utils::resource::get_template,
     vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
-        utils::{binarize_image, draw_box, Rect},
+        utils::{binarize_image, draw_box, mask_image, Rect},
     },
     AAH,
 };
@@ -25,28 +29,52 @@ pub struct MultiMatchAnalyzerOutput {
 pub struct MultiMatchAnalyzer {
     template_filename: String,
     template: DynamicImage,
+    color_mask: (RangeInclusive<u8>, RangeInclusive<u8>, RangeInclusive<u8>),
     binarize_threshold: Option<u8>,
+    method: Option<MatchTemplateMethod>,
     threshold: Option<f32>,
     use_cache: bool,
     roi: [(f32, f32); 2], // topleft and bottomright
 }
 
 impl MultiMatchAnalyzer {
-    pub fn new<S: AsRef<str>, P: AsRef<Path>>(
-        res_dir: P,
-        template_filename: S,
-        binarize_threshold: Option<u8>,
-        threshold: Option<f32>,
-    ) -> Self {
+    pub fn new(res_dir: impl AsRef<Path>, template_filename: impl AsRef<str>) -> Self {
         let template = get_template(&template_filename, &res_dir).unwrap();
         Self {
             template_filename: template_filename.as_ref().to_string(),
             template,
-            binarize_threshold,
-            threshold,
+            color_mask: (0..=255, 0..=255, 0..=255),
+            binarize_threshold: None,
+            method: None,
+            threshold: None,
             use_cache: false,
             roi: [(0.0, 0.0), (1.0, 1.0)], // topleft and bottomright
         }
+    }
+
+    pub fn color_mask(
+        mut self,
+        mask_r: RangeInclusive<u8>,
+        mask_g: RangeInclusive<u8>,
+        mask_b: RangeInclusive<u8>,
+    ) -> Self {
+        self.color_mask = (mask_r, mask_g, mask_b);
+        self
+    }
+
+    pub fn method(mut self, method: MatchTemplateMethod) -> Self {
+        self.method = Some(method);
+        self
+    }
+
+    pub fn binarize_threshold(mut self, binarize_threshold: u8) -> Self {
+        self.binarize_threshold = Some(binarize_threshold);
+        self
+    }
+
+    pub fn threshold(mut self, threshold: f32) -> Self {
+        self.threshold = Some(threshold);
+        self
     }
 
     pub fn use_cache(mut self) -> Self {
@@ -105,18 +133,28 @@ impl MultiMatchAnalyzer {
             self.template.clone()
         };
 
+        // Color mask
+        let (masked, template) = (
+            mask_image(&cropped, self.color_mask.clone()),
+            mask_image(&template, self.color_mask.clone()),
+        );
+        masked.save("./masked.png").unwrap();
+        template.save("./masked_template.png").unwrap();
+
         // Binarize
-        let (cropped, template) = match self.binarize_threshold {
+        let (binarized, template) = match self.binarize_threshold {
             Some(threshold) => (
-                binarize_image(&cropped, threshold),
+                binarize_image(&masked, threshold),
                 binarize_image(&template, threshold),
             ),
-            None => (cropped.clone(), template),
+            None => (masked.clone(), template),
         };
+        // binarized.save("./binarized.png").unwrap();
+        // template.save("./binarized_template.png").unwrap();
 
         // Match
         let res = MultiMatcher::Template {
-            image: cropped.to_luma32f(), // use cropped
+            image: binarized.to_luma32f(), // use cropped
             template: template.to_luma32f(),
             method: MatchTemplateMethod::CrossCorrelationNormed,
             threshold: self.threshold,
@@ -180,12 +218,8 @@ mod test {
     fn test_multi_template_match_analyzer() {
         // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
-        let mut analyzer = MultiMatchAnalyzer::new(
-            "../../resources",
-            "battle_deploy-card-cost1.png",
-            None,
-            None,
-        );
+        let mut analyzer =
+            MultiMatchAnalyzer::new("../../resources", "battle_deploy-card-cost1.png");
         let output = analyzer.analyze_image(&image).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.res.rects);

@@ -3,10 +3,15 @@
 #![feature(associated_type_defaults)]
 #![feature(path_file_prefix)]
 
-use std::{fmt::Debug, sync::{Arc, Mutex}};
+use std::{
+    fmt::Debug,
+    sync::{Arc, Mutex},
+};
 
-use aah_resource::{LocalResource, Resource};
+use aah_resource::Resource;
 use controller::{aah_controller::AahController, Controller};
+use ocrs::{OcrEngine, OcrEngineParams};
+use rten::Model;
 use task::TaskEvt;
 use vision::analyzer::{
     battle::{
@@ -34,6 +39,8 @@ pub struct AAH {
     task_evt_tx: async_channel::Sender<TaskEvt>,
     pub task_evt_rx: async_channel::Receiver<TaskEvt>,
     task_evt_handler: Vec<Box<dyn Fn(TaskEvt) + Send + Sync>>,
+
+    ocr_engine: OcrEngine,
 
     runtime: tokio::runtime::Runtime,
 }
@@ -83,6 +90,12 @@ impl AAH {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap();
+        
+        let ocr_engine = OcrEngine::new(OcrEngineParams {
+            detection_model: Some(Model::load_file("../../resources/models/text-detection.rten").unwrap()),
+            recognition_model: Some(Model::load_file("../../resources/models/text-recognition.rten").unwrap()),
+            ..Default::default()
+        }).unwrap();
 
         Ok(Self {
             resource,
@@ -91,6 +104,8 @@ impl AAH {
             task_evt_rx,
             task_evt_handler: vec![],
             screen_cache: Mutex::new(None),
+
+            ocr_engine,
             runtime,
         })
     }
@@ -221,6 +236,8 @@ mod test {
         path::Path,
         sync::{Mutex, OnceLock},
     };
+
+    use aah_resource::LocalResource;
 
     use super::*;
 
