@@ -1,12 +1,12 @@
 pub mod click;
-pub mod click_match;
+pub mod click_match_template;
 pub mod press_esc;
 pub mod press_home;
 pub mod swipe;
 
 use aah_resource::manifest::Action;
 pub use click::Click;
-pub use click_match::ClickMatch;
+pub use click_match_template::ClickMatchTemplate;
 pub use press_esc::PressEsc;
 pub use press_home::PressHome;
 pub use swipe::Swipe;
@@ -39,7 +39,7 @@ impl Runnable for Action {
                 *slope_out,
             )
             .run(aah),
-            Action::ActionClickMatch { match_task } => ClickMatch::new(match_task.clone()).run(aah),
+            Action::ActionClickMatch { match_task } => ClickMatchTemplate::new(match_task.clone()).run(aah),
             Action::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah),
             Action::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah),
         }

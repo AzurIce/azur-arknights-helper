@@ -10,7 +10,7 @@ use crate::vision::{
 };
 
 use super::{
-    action::{Click, ClickMatch},
+    action::{Click, ClickMatchTemplate},
     Runnable,
 };
 
@@ -62,7 +62,7 @@ impl Runnable for ChooseLevel {
     type Err = anyhow::Error;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
         aah.emit_task_evt(super::TaskEvt::Log("entering terminal page".to_string()));
-        ClickMatch::new(MatchTask::Template("main_terminal.png".to_string()))
+        ClickMatchTemplate::new(MatchTask::Template("main_terminal.png".to_string()))
             .run(aah)
             .map_err(|err| anyhow::anyhow!(err))?;
 
@@ -123,7 +123,7 @@ mod test {
     fn test_choose_level() {
         let resource = LocalResource::load("../../resources").unwrap();
         let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource.into())).unwrap();
-        let task = ChooseLevel::new("CE-6");
+        let task = ChooseLevel::new("CE-5");
         task.run(&aah).unwrap();
     }
 }

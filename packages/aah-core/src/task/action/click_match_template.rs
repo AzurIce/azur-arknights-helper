@@ -2,17 +2,17 @@ use aah_resource::manifest::MatchTask;
 
 use crate::{task::Runnable, AAH};
 
-pub struct ClickMatch {
+pub struct ClickMatchTemplate {
     match_task: MatchTask,
 }
 
-impl ClickMatch {
+impl ClickMatchTemplate {
     pub fn new(match_task: MatchTask) -> Self {
         Self { match_task }
     }
 }
 
-impl Runnable for ClickMatch {
+impl Runnable for ClickMatchTemplate {
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         aah.controller
