@@ -1,10 +1,11 @@
-use std::time::Instant;
+use std::{sync::Arc, time::Instant};
 
 // use aah_cv::{find_extremes, match_template, MatchTemplateMethod};
 use aah_cv::template_matching::{match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
-use image::{DynamicImage, ImageBuffer, Luma};
+use image::{DynamicImage, EncodableLayout, ImageBuffer, Luma};
 use imageproc::template_matching::find_extremes;
+use ocrs::{ImageSource, OcrEngine};
 
 use crate::vision::{
     matcher::{
@@ -30,11 +31,11 @@ pub enum SingleMatcher {
         template: ImageBuffer<Luma<f32>, Vec<f32>>,
         threshold: Option<f32>,
     },
-    // Ocr {
-    //     image: NdTensorBase<f32, Vec<f32>, 3>,
-    //     text: String,
-    // engine: &'a OcrEngine,
-    // },
+    Ocr {
+        image: ImageBuffer<Luma<f32>, Vec<f32>>,
+        text: String,
+        engine: Arc<OcrEngine>,
+    },
 }
 
 impl SingleMatcher {
@@ -166,6 +167,40 @@ impl SingleMatcher {
                     matched_img: Box::new(matched_img),
                 }
             }
+            SingleMatcher::Ocr {
+                image,
+                text,
+                engine,
+            } => {
+                let image_source =
+                    ImageSource::from_bytes(image.as_bytes(), image.dimensions()).unwrap();
+                let ocr_input = engine.prepare_input(image_source).unwrap();
+
+                let word_rects = engine.detect_words(&ocr_input).unwrap();
+                let text_lines = engine.find_text_lines(&ocr_input, &word_rects);
+                let text = engine.recognize_text(&ocr_input, &text_lines).unwrap();
+                for (text, rect) in text
+                    .iter()
+                    .zip(text_lines.iter())
+                    .filter_map(|(text, rect)| match text {
+                        Some(text) => Some((text, rect)),
+                        None => None,
+                    })
+                {
+                    println!("{} {:?}", text, rect)
+                }
+
+                let rect = Some(Rect {
+                    x: 0,
+                    y: 0,
+                    width: 0,
+                    height: 0,
+                });
+                SingleMatcherResult {
+                    rect,
+                    matched_img: Box::new(image.clone().into()),
+                }
+            }
         }
     }
 }
@@ -173,9 +208,31 @@ impl SingleMatcher {
 #[cfg(test)]
 mod test {
 
+    use std::sync::Arc;
+
+    use ocrs::{OcrEngine, OcrEngineParams};
+    use rten::Model;
+
     use crate::vision::matcher::test::{get_device_image, get_device_template_prepared, Device};
 
     use super::SingleMatcher;
+
+    #[test]
+    fn test_ocr() {
+        let engine = OcrEngine::new(OcrEngineParams {
+            detection_model: Some(Model::load_file("../../resources/models/text-detection.rten").unwrap()),
+            recognition_model: Some(Model::load_file("../../resources/models/text-recognition.rten").unwrap()),
+            ..Default::default()
+        }).unwrap();
+        let engine = Arc::new(engine);
+
+        let image = get_device_image(Device::MUMU, "episode-13-levels.png").unwrap();
+        let image = image.crop_imm(1423, 982, 98, 123);
+        image.save("./test.png").unwrap();
+        let matcher = SingleMatcher::Ocr { image: image.to_luma32f(), text: "text".to_string(), engine };
+        let res = matcher.result();
+        // println!("{:?}", res);
+    }
 
     #[test]
     fn test_devices() {

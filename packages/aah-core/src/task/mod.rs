@@ -29,6 +29,9 @@ pub enum TaskEvt {
         cur: usize,
         total: usize,
     },
+    MatchTaskRes {
+
+    },
     Log(String),
     AnnotatedImg(DynamicImage),
     BattleAnalyzerRes(BattleAnalyzerOutput),
@@ -43,6 +46,7 @@ impl Debug for TaskEvt {
             TaskEvt::Log(log) => write!(f, "TaskEvt::Log({})", log),
             TaskEvt::AnnotatedImg(_img) => write!(f, "TaskEvt::AnnotatedImg"),
             TaskEvt::BattleAnalyzerRes(res) => write!(f, "TaskEvt::BattleAnalyzerRes({:?})", res),
+            TaskEvt::MatchTaskRes { .. } => write!(f, "TaskEvt::MatchTaskRes")
         }
     }
 }

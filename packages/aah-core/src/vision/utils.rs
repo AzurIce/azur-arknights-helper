@@ -1,4 +1,6 @@
-use image::{DynamicImage, GenericImage, Luma, Rgba};
+use std::ops::RangeInclusive;
+
+use image::{DynamicImage, GenericImage, Luma, Rgb, Rgba};
 use serde::Serialize;
 
 #[derive(Debug, Serialize, Clone)]
@@ -38,6 +40,36 @@ pub fn binarize_image(image: &DynamicImage, threshold: u8) -> DynamicImage {
         *pixel = Luma([binary_value]);
     }
     DynamicImage::ImageLuma8(image)
+}
+
+pub fn mask_image(image: &DynamicImage, color_mask: (RangeInclusive<u8>, RangeInclusive<u8>, RangeInclusive<u8>)) -> DynamicImage {
+    let color_mask = &color_mask;
+    let mut image = image.to_rgb8();
+    for (_, _, pixel) in image.enumerate_pixels_mut() {
+        let Rgb([r, g, b]) = *pixel;
+
+        let r = if color_mask.0.start() <= &r && &r <= color_mask.0.end() {
+            r
+        } else {
+            0
+        };
+        let g = if color_mask.1.start() <= &g && &g <= color_mask.1.end() {
+            g
+        } else {
+            0
+        };
+        let b = if color_mask.2.start() <= &b && &b <= color_mask.2.end() {
+            b
+        } else {
+            0
+        };
+        // let r = r.clamp(*color_mask.0.start(), *color_mask.0.end());
+        // let g = g.clamp(*color_mask.1.start(), *color_mask.1.end());
+        // let b = b.clamp(*color_mask.2.start(), *color_mask.2.end());
+
+        *pixel = Rgb([r, g, b]);
+    }
+    DynamicImage::ImageRgb8(image)
 }
 
 pub fn draw_box(
