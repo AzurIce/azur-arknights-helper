@@ -2,6 +2,5 @@ name = "back"
 desc = "press back button"
 
 [[steps]]
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "back.png"

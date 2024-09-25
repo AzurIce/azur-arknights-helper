@@ -4,17 +4,29 @@ pub mod press_esc;
 pub mod press_home;
 pub mod swipe;
 
-use aah_resource::manifest::Action;
 pub use click::Click;
 pub use click_match_template::ClickMatchTemplate;
 pub use press_esc::PressEsc;
 pub use press_home::PressHome;
+use serde::{Deserialize, Serialize};
 pub use swipe::Swipe;
 
 use super::{navigate::Navigate, Runnable};
 use crate::AAH;
 
-use std::time::Duration;
+/// Action is the basic executable unit
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum Action {
+    ByName(String),
+    ActionPressEsc(PressEsc),
+    ActionPressHome(PressHome),
+    ActionClick(Click),
+    ActionSwipe(Swipe),
+    ActionClickMatchTemplate(ClickMatchTemplate),
+    // Navigate
+    NavigateIn(String),
+    NavigateOut(String),
+}
 
 impl Runnable for Action {
     type Err = String;
@@ -22,24 +34,13 @@ impl Runnable for Action {
         match self {
             Action::ByName(name) => aah.run_task(name),
             // BuiltinTask::Multi(task) => task.run(aah),
-            Action::ActionPressEsc => PressEsc.run(aah),
-            Action::ActionPressHome => PressHome.run(aah),
-            Action::ActionClick { x, y } => Click::new(*x, *y).run(aah),
-            Action::ActionSwipe {
-                p1,
-                p2,
-                duration,
-                slope_in,
-                slope_out,
-            } => Swipe::new(
-                *p1,
-                *p2,
-                Duration::from_secs_f32(*duration),
-                *slope_in,
-                *slope_out,
-            )
-            .run(aah),
-            Action::ActionClickMatch { match_task } => ClickMatchTemplate::new(match_task.clone()).run(aah),
+            Action::ActionPressEsc(action) => action.run(aah),
+            Action::ActionPressHome(action) => action.run(aah),
+            Action::ActionClick(action) => action.run(aah),
+            Action::ActionSwipe(action) => action.run(aah),
+            Action::ActionClickMatchTemplate(action) => action
+                .run(aah)
+                .map_err(|err| format!("{err}, caused by: {}", err.root_cause())),
             Action::NavigateIn(navigate) => Navigate::NavigateIn(navigate.clone()).run(aah),
             Action::NavigateOut(navigate) => Navigate::NavigateOut(navigate.clone()).run(aah),
         }

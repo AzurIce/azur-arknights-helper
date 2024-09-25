@@ -1,19 +1,12 @@
 use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
-use vfs::VfsPath;
 
-use super::Action;
+use crate::task::action::Action;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct NavigateConfig(pub HashMap<String, Navigate>);
 impl NavigateConfig {
-    pub fn load_from_vfs_path(path: VfsPath) -> Result<NavigateConfig, anyhow::Error> {
-        let config = path.read_to_string()?;
-        let config = toml::from_str::<NavigateConfig>(&config)?;
-        Ok(config)
-    }
-
     pub fn load<P: AsRef<Path>>(path: P) -> Result<NavigateConfig, anyhow::Error> {
         let config = fs::read_to_string(path)?;
         let config = toml::from_str::<NavigateConfig>(&config)?;

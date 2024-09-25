@@ -1,6 +1,5 @@
 name = "enter_base"
 
 [[steps]]
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "main_base.png"

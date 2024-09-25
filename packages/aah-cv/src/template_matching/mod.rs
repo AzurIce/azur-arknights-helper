@@ -5,6 +5,7 @@ use std::{
 
 use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, Luma};
+use serde::{Deserialize, Serialize};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
     BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
@@ -66,7 +67,7 @@ pub fn find_matches(
     matches
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum MatchTemplateMethod {
     SumOfSquaredDifference,
     SumOfSquaredDifferenceNormed,

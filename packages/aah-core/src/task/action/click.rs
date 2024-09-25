@@ -1,8 +1,20 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{task::Runnable, AAH};
 
+use super::Action;
+
+/// An action for clicking the specific coordinate on the screen
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Click {
     x: u32,
     y: u32,
+}
+
+impl Into<Action> for Click {
+    fn into(self) -> Action {
+        Action::ActionClick(self)
+    }
 }
 
 impl Click {

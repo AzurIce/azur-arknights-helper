@@ -2,10 +2,14 @@ use std::ops::RangeInclusive;
 
 use aah_cv::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 
 use crate::vision::utils::{binarize_image, mask_image};
 
 /// The generic options for matching
+#[derive(Serialize, Deserialize)]
+#[skip_serializing_none]
 pub struct MatchOptions {
     /// The matching method
     pub(crate) method: Option<MatchTemplateMethod>,

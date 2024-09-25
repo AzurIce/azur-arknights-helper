@@ -1,7 +1,5 @@
 use std::{thread, time::Duration};
 
-use aah_cv::template_matching::MatchTemplateMethod;
-use aah_resource::manifest::MatchTask;
 use anyhow::Context;
 
 use crate::vision::{
@@ -62,7 +60,7 @@ impl Runnable for ChooseLevel {
     type Err = anyhow::Error;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
         aah.emit_task_evt(super::TaskEvt::Log("entering terminal page".to_string()));
-        ClickMatchTemplate::new(MatchTask::Template("main_terminal.png".to_string()))
+        ClickMatchTemplate::new("main_terminal.png")
             .run(aah)
             .map_err(|err| anyhow::anyhow!(err))?;
 
@@ -95,9 +93,11 @@ impl Runnable for ChooseLevel {
 mod test {
     use std::sync::Arc;
 
-    use aah_resource::LocalResource;
-
-    use crate::{task::{choose_level::analyze_levels, Runnable}, AAH};
+    use crate::{
+        resource::LocalResource,
+        task::{choose_level::analyze_levels, Runnable},
+        AAH,
+    };
 
     use super::{match_levels_resources_lmb, ChooseLevel};
 

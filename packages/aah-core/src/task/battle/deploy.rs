@@ -1,9 +1,11 @@
-use aah_resource::{level::Level, manifest::Action};
+use std::time::Duration;
 
-use crate::vision::utils::Rect;
-use aah_resource::manifest::{
+use aah_resource::level::Level;
+
+use crate::{
     copilot::Direction,
-    task::{Task, TaskStep},
+    task::{action::Swipe, Task, TaskStep},
+    vision::utils::Rect,
 };
 
 pub struct Deploy;
@@ -25,20 +27,20 @@ impl Deploy {
             Direction::Left => (tile_pos.0 as i32 - swipe_delta, tile_pos.1 as i32),
         };
         let task = Task::from_steps(vec![
-            TaskStep::action(Action::ActionSwipe {
-                p1: (deploy_card_rect.x, deploy_card_rect.y),
-                p2: (tile_pos.0 as i32, tile_pos.1 as i32),
-                duration: 0.2,
-                slope_in: 0.0,
-                slope_out: 0.0,
-            }),
-            TaskStep::action(Action::ActionSwipe {
-                p1: tile_pos,
-                p2: swipe_end,
-                duration: 0.2,
-                slope_in: 0.0,
-                slope_out: 0.0,
-            })
+            TaskStep::action(Swipe::new(
+                (deploy_card_rect.x, deploy_card_rect.y),
+                (tile_pos.0 as i32, tile_pos.1 as i32),
+                Duration::from_secs_f32(0.2),
+                0.0,
+                0.0,
+            )),
+            TaskStep::action(Swipe::new(
+                tile_pos,
+                swipe_end,
+                Duration::from_secs_f32(0.2),
+                0.0,
+                0.0,
+            ))
             .deplay_sec_f32(0.2),
         ])
         .with_name("Deploy");

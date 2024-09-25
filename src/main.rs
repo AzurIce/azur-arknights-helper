@@ -7,8 +7,7 @@ use std::{
     thread,
 };
 
-use aah_core::{task::TaskEvt, AAH};
-use aah_resource::Resource;
+use aah_core::{task::TaskEvt, AAH, resource::Resource};
 use iced::{
     color,
     futures::SinkExt,
