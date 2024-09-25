@@ -9,7 +9,7 @@ pub struct PressHome;
 
 impl Into<Action> for PressHome {
     fn into(self) -> Action {
-        Action::ActionPressHome(self)
+        Action::PressHome(self)
     }
 }
 
