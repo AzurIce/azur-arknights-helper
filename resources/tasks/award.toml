@@ -2,15 +2,15 @@ name = "award"
 
 [[steps]]
 
-[steps.action]
-NavigateIn = "mission"
+[steps.action.NavigateIn]
+to = "mission"
 
 [[steps]]
 delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "mission-week_collect-all.png"
 
 [[steps]]
@@ -18,14 +18,14 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "confirm.png"
 
 [[steps]]
 delay_sec = 0.5
 retry = 1
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "mission-day_week.png"
 
 [[steps]]
@@ -33,7 +33,7 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "mission-week_collect-all.png"
 
 [[steps]]
@@ -41,10 +41,10 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "confirm.png"
 
 [[steps]]
 
-[steps.action]
-NavigateOut = "mission"
+[steps.action.NavigateOut]
+from = "mission"

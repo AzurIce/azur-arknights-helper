@@ -13,7 +13,7 @@ pub struct Click {
 
 impl Into<Action> for Click {
     fn into(self) -> Action {
-        Action::ActionClick(self)
+        Action::Click(self)
     }
 }
 

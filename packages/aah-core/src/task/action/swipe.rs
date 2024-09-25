@@ -36,7 +36,7 @@ pub struct Swipe {
 
 impl Into<Action> for Swipe {
     fn into(self) -> Action {
-        Action::ActionSwipe(self)
+        Action::Swipe(self)
     }
 }
 

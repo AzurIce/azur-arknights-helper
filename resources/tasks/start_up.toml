@@ -3,26 +3,26 @@ desc = "start_up to the main screen"
 
 [[steps]]
 retry = -1 # keep retry until success
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "start_start.png"
 
 [[steps]]
 retry = -1 # keep retry until success
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "wakeup_wakeup.png"
 
 [[steps]]
 delay_sec = 6.0
 skip_if_failed = true
 retry = 3
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "confirm.png"
 
 [[steps]]
 delay_sec = 2.0
 skip_if_failed = true
 retry = 2
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "qiandao_close.png"
 
 [[steps]]
@@ -30,5 +30,5 @@ delay_sec = 2.0
 skip_if_failed = true
 retry = 2
 
-[steps.action.ActionClickMatchTemplate]
+[steps.action.ClickMatchTemplate]
 template = "notice_close.png"

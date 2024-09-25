@@ -9,7 +9,7 @@ pub struct PressEsc;
 
 impl Into<Action> for PressEsc {
     fn into(self) -> Action {
-        Action::ActionPressEsc(self)
+        Action::PressEsc(self)
     }
 }
 

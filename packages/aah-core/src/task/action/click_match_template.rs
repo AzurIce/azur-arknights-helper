@@ -15,7 +15,7 @@ pub struct ClickMatchTemplate {
 
 impl Into<Action> for ClickMatchTemplate {
     fn into(self) -> Action {
-        Action::ActionClickMatchTemplate(self)
+        Action::ClickMatchTemplate(self)
     }
 }
 
