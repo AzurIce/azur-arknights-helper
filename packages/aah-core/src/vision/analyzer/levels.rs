@@ -105,18 +105,15 @@ impl Analyzer for LevelAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use std::{sync::Arc, time::Instant};
+    use std::time::Instant;
 
-    use aah_resource::LocalResource;
-
-    use crate::{vision::analyzer::Analyzer, AAH};
+    use crate::{test::aah_for_test, vision::analyzer::Analyzer};
 
     use super::LevelAnalyzer;
 
     #[test]
     fn test_level_analyzer() {
-        let resource = LocalResource::load("../../resources").unwrap();
-        let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource.into())).unwrap();
+        let aah = aah_for_test();
         let mut analyzer = LevelAnalyzer::new();
         println!("Analyzing...");
         let t = Instant::now();

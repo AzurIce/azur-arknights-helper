@@ -3,8 +3,7 @@
 
 use std::sync::Arc;
 
-use aah_core::AAH;
-use aah_resource::Resource;
+use aah_core::{resource::Resource, AAH};
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]

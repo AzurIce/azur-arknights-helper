@@ -33,6 +33,7 @@ dependencies = [
  "aah-resource",
  "anyhow",
  "async-channel",
+ "bytes",
  "color-print",
  "crossbeam-channel",
  "env_logger 0.10.2",
@@ -48,8 +49,11 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_with",
+ "time",
  "tokio",
  "toml",
+ "tracing-subscriber",
+ "zip",
 ]
 
 [[package]]
@@ -72,6 +76,7 @@ dependencies = [
  "num",
  "pollster",
  "rustfft",
+ "serde",
  "wgpu",
 ]
 

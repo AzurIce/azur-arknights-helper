@@ -1,6 +1,17 @@
+use serde::{Deserialize, Serialize};
+
 use crate::{task::Runnable, AAH};
 
+use super::Action;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PressHome;
+
+impl Into<Action> for PressHome {
+    fn into(self) -> Action {
+        Action::ActionPressHome(self)
+    }
+}
 
 impl Runnable for PressHome {
     type Err = String;

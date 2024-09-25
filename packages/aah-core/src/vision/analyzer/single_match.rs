@@ -25,9 +25,9 @@ pub struct SingleMatchAnalyzerOutput {
 pub struct SingleMatchAnalyzer {
     /// filename in `resources/templates`
     template_filename: String,
+    options: MatchOptions,
     /// this is loaded from `template_filename`
     template: DynamicImage,
-    options: MatchOptions,
 }
 
 impl SingleMatchAnalyzer {
@@ -154,17 +154,12 @@ impl Analyzer for SingleMatchAnalyzer {
 
 #[cfg(test)]
 mod test {
-    use std::sync::Arc;
-
-    use aah_resource::LocalResource;
-
     use super::*;
-    use crate::AAH;
+    use crate::test::aah_for_test;
 
     #[test]
     fn test_single_match_analyzer() {
-        let resource = LocalResource::load("../../resources").unwrap().into();
-        let aah = AAH::connect("127.0.0.1:16384", Arc::new(resource)).unwrap();
+        let aah = aah_for_test();
         let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "start_start.png")
             .roi((0.3, 0.75), (0.6, 1.0));
         let output = analyzer.analyze(&aah).unwrap();

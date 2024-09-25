@@ -5,7 +5,7 @@ use std::{
 };
 
 use aah_cv::template_matching::{match_template, MatchTemplateMethod};
-use aah_resource::{level::get_level, manifest::MatchTask};
+use aah_resource::level::get_level;
 use color_print::{cformat, cprintln};
 use imageproc::template_matching::find_extremes;
 
@@ -21,7 +21,88 @@ use crate::{
         Analyzer,
     },
 };
-use aah_resource::manifest::copilot::{Copilot, CopilotAction, CopilotStepTime};
+use std::fmt::{self, Display, Formatter};
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Copilot {
+    pub name: String,
+    pub level_code: String,
+    pub operators: HashMap<String, String>,
+    pub steps: Vec<CopilotStep>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CopilotStep {
+    pub time: CopilotStepTime,
+    pub action: CopilotAction,
+}
+
+impl CopilotStep {
+    pub fn from_action(action: CopilotAction) -> Self {
+        Self {
+            time: CopilotStepTime::Asap,
+            action,
+        }
+    }
+
+    pub fn with_time(mut self, time: CopilotStepTime) -> Self {
+        self.time = time;
+        self
+    }
+}
+
+// #[derive(Debug, Serialize, Deserialize, Clone)]
+// pub struct CopilotTask {
+//     pub level_code: String,
+//     pub operators: HashMap<String, String>,
+//     pub steps: Vec<CopilotAction>,
+// }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum Direction {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
+impl Display for Direction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Direction::Left => "left",
+            Direction::Up => "up",
+            Direction::Right => "right",
+            Direction::Down => "down",
+        })
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+pub enum CopilotStepTime {
+    DeltaSec(f32),
+    /// As Soon As Possible
+    Asap,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum CopilotAction {
+    Deploy {
+        operator: String,
+        position: (u32, u32),
+        direction: Direction,
+    },
+    AutoSkill {
+        operator: String,
+    },
+    StopAutoSkill {
+        operator: String,
+    },
+    Retreat {
+        operator: String,
+    },
+}
 
 impl Runnable for Copilot {
     type Err = String;
@@ -49,7 +130,7 @@ impl Runnable for Copilot {
 
         cprintln!("{log_tag}clicking start-pre...");
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start-pre...".to_string()));
-        let start_pre = ClickMatchTemplate::new(MatchTask::Template("level_start-pre.png".to_string()));
+        let start_pre = ClickMatchTemplate::new("level_start-pre.png");
         match start_pre.run(aah) {
             Ok(_) => {
                 aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start-pre".to_string()));
@@ -68,7 +149,7 @@ impl Runnable for Copilot {
 
         cprintln!("{log_tag}clicking start...");
         aah.emit_task_evt(TaskEvt::Log("[INFO]: 正在点击 start...".to_string()));
-        let start_pre = ClickMatchTemplate::new(MatchTask::Template("formation_start.png".to_string()));
+        let start_pre = ClickMatchTemplate::new("formation_start.png");
         match start_pre.run(aah) {
             Ok(_) => {
                 aah.emit_task_evt(TaskEvt::Log("[INFO]: 已点击 start".to_string()));

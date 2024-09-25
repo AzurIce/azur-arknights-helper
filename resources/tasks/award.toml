@@ -10,8 +10,7 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "mission-week_collect-all.png"
 
 [[steps]]
@@ -19,16 +18,14 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "confirm.png"
 
 [[steps]]
 delay_sec = 0.5
 retry = 1
 
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "mission-day_week.png"
 
 [[steps]]
@@ -36,8 +33,7 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "mission-week_collect-all.png"
 
 [[steps]]
@@ -45,8 +41,7 @@ delay_sec = 0.5
 skip_if_failed = true
 retry = 1
 
-[steps.action.ActionClickMatch]
-type = "Template"
+[steps.action.ActionClickMatchTemplate]
 template = "confirm.png"
 
 [[steps]]

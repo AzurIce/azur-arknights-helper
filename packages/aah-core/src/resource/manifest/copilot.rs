@@ -1,114 +1,12 @@
-use core::fmt;
-use std::{
-    collections::HashMap,
-    fmt::{Display, Formatter},
-    fs,
-    path::Path,
-};
+use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
-use vfs::VfsPath;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Copilot {
-    pub name: String,
-    pub level_code: String,
-    pub operators: HashMap<String, String>,
-    pub steps: Vec<CopilotStep>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CopilotStep {
-    pub time: CopilotStepTime,
-    pub action: CopilotAction,
-}
-
-impl CopilotStep {
-    pub fn from_action(action: CopilotAction) -> Self {
-        Self {
-            time: CopilotStepTime::Asap,
-            action,
-        }
-    }
-
-    pub fn with_time(mut self, time: CopilotStepTime) -> Self {
-        self.time = time;
-        self
-    }
-}
-
-// #[derive(Debug, Serialize, Deserialize, Clone)]
-// pub struct CopilotTask {
-//     pub level_code: String,
-//     pub operators: HashMap<String, String>,
-//     pub steps: Vec<CopilotAction>,
-// }
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum Direction {
-    Left,
-    Up,
-    Right,
-    Down,
-}
-
-impl Display for Direction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Direction::Left => "left",
-            Direction::Up => "up",
-            Direction::Right => "right",
-            Direction::Down => "down",
-        })
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-pub enum CopilotStepTime {
-    DeltaSec(f32),
-    /// As Soon As Possible
-    Asap,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub enum CopilotAction {
-    Deploy {
-        operator: String,
-        position: (u32, u32),
-        direction: Direction,
-    },
-    AutoSkill {
-        operator: String,
-    },
-    StopAutoSkill {
-        operator: String,
-    },
-    Retreat {
-        operator: String,
-    },
-}
+use crate::copilot::{Copilot, CopilotAction, CopilotStep, Direction};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CopilotConfig(pub HashMap<String, Copilot>);
 impl CopilotConfig {
-    pub fn load_from_vfs_path(path: VfsPath) -> Result<Self, anyhow::Error> {
-        let mut config = CopilotConfig(HashMap::new());
-
-        if let Ok(read_dir) = path.read_dir() {
-            for path in read_dir.filter(|p| p.extension().is_some_and(|ext| ext.as_str() == "toml"))
-            {
-                if let Ok(task) = path.read_to_string() {
-                    let task = toml::from_str::<Copilot>(&task)?;
-
-                    config.0.insert(
-                        task.name.clone(),
-                        task,
-                    );
-                }
-            }
-        }
-        Ok(config)
-    }
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
         let mut config = CopilotConfig(HashMap::new());
@@ -122,10 +20,7 @@ impl CopilotConfig {
                 if let Ok(task) = fs::read_to_string(entry.path()) {
                     let task = toml::from_str::<Copilot>(&task)?;
 
-                    config.0.insert(
-                        task.name.clone(),
-                        task,
-                    );
+                    config.0.insert(task.name.clone(), task);
                 }
             }
         }

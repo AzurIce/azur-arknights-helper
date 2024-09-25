@@ -4,10 +4,11 @@
 #![feature(path_file_prefix)]
 
 use std::{
-    fmt::Debug, ops::Deref, sync::{Arc, Mutex}
+    fmt::Debug,
+    ops::Deref,
+    sync::{Arc, Mutex},
 };
 
-use aah_resource::Resource;
 use controller::{aah_controller::AahController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
@@ -25,9 +26,12 @@ use crate::task::Runnable;
 pub mod adb;
 pub mod controller;
 pub mod copilot;
+pub mod resource;
 pub mod task;
 pub mod utils;
 pub mod vision;
+
+use resource::Resource;
 
 /// AAH 的实例
 pub struct AAH {
@@ -57,29 +61,6 @@ impl Debug for AAH {
     }
 }
 
-// pub fn init_ocr_engine<P: AsRef<Path>>(res_dir: P) -> OcrEngine {
-//     let res_dir = res_dir.as_ref();
-//     let detection_model_path = res_dir
-//         .join("models")
-//         .join("ocrs")
-//         .join("text-detection.rten");
-//     let rec_model_path = res_dir
-//         .join("models")
-//         .join("ocrs")
-//         .join("text-recognition.rten");
-
-//     let detection_model = Model::load_file(detection_model_path).unwrap();
-//     let recognition_model = Model::load_file(rec_model_path).unwrap();
-
-//     let engine = OcrEngine::new(OcrEngineParams {
-//         detection_model: Some(detection_model),
-//         recognition_model: Some(recognition_model),
-//         ..Default::default()
-//     })
-//     .unwrap();
-//     engine
-// }
-
 impl AAH {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
     ///
@@ -93,15 +74,20 @@ impl AAH {
         let controller = Box::new(AahController::connect(serial, &resource.root())?);
 
         let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
+        let ocr_engine = OcrEngine::new(OcrEngineParams {
+            detection_model: Some(
+                Model::load_file(resource.root.join("models/text-detection.rten"))?,
+            ),
+            recognition_model: Some(
+                Model::load_file(resource.root.join("models/text-recognition.rten"))?,
+            ),
+            ..Default::default()
+        })
+        .unwrap();
+
         let runtime = tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap();
-        
-        let ocr_engine = OcrEngine::new(OcrEngineParams {
-            detection_model: Some(Model::load_file("../../resources/models/text-detection.rten").unwrap()),
-            recognition_model: Some(Model::load_file("../../resources/models/text-recognition.rten").unwrap()),
-            ..Default::default()
-        }).unwrap();
 
         Ok(Self {
             resource,
@@ -243,9 +229,18 @@ mod test {
         sync::{Mutex, OnceLock},
     };
 
-    use aah_resource::LocalResource;
+    use resource::LocalResource;
 
     use super::*;
+    use std::sync::Arc;
+
+    use crate::AAH;
+
+    /// An AAH instance using [`LocalResource`], and connected to `127.0.0.1:16384`
+    pub fn aah_for_test() -> AAH {
+        let resource = LocalResource::load("../../resources").unwrap();
+        AAH::connect("127.0.0.1:16384", Arc::new(resource.into())).unwrap()
+    }
 
     #[test]
     fn foo() {
