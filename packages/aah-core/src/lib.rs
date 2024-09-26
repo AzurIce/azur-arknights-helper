@@ -25,7 +25,6 @@ use crate::task::Runnable;
 
 pub mod adb;
 pub mod controller;
-pub mod copilot;
 pub mod resource;
 pub mod task;
 pub mod utils;

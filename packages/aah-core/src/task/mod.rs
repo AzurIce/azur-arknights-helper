@@ -11,6 +11,7 @@ use crate::{vision::analyzer::battle::BattleAnalyzerOutput, AAH};
 pub mod action;
 pub mod battle;
 pub mod choose_level;
+pub mod copilot;
 
 pub trait Runnable {
     type Res = ();
