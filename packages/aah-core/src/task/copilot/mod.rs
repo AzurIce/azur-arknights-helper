@@ -105,6 +105,7 @@ pub enum CopilotAction {
 }
 
 impl Runnable for Copilot {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
         let log_tag = cformat!("<strong>[CopilotTask {}]: </strong>", self.level_code);

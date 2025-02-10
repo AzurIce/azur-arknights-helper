@@ -50,6 +50,7 @@ impl Into<Action> for NavigateOut {
 }
 
 impl Runnable for NavigateIn {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         thread::sleep(Duration::from_secs_f32(0.5)); // TODO: get this elegant (refactor the structure)
@@ -63,6 +64,7 @@ impl Runnable for NavigateIn {
 }
 
 impl Runnable for NavigateOut {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         thread::sleep(Duration::from_secs_f32(0.5)); // TODO: get this elegant (refactor the structure)

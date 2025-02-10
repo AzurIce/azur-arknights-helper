@@ -28,6 +28,7 @@ impl ClickMatchTemplate {
 }
 
 impl Runnable for ClickMatchTemplate {
+    type Res = ();
     type Err = anyhow::Error;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, self.template.clone());
@@ -37,7 +38,7 @@ impl Runnable for ClickMatchTemplate {
         let rect = output
             .res
             .rect
-            .ok_or(anyhow::anyhow!("failed to match {}", self.template))?;
+            .ok_or(anyhow::anyhow!("failed to match {}", self.template))?.into();
         aah.controller
             .click_in_rect(rect)
             .map_err(|err| anyhow::anyhow!("controller error: {:?}", err))

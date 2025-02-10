@@ -14,6 +14,7 @@ impl Into<Action> for PressHome {
 }
 
 impl Runnable for PressHome {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         aah.controller

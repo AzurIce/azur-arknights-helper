@@ -6,12 +6,12 @@ use std::{
     time::Duration,
 };
 
-use color_print::{cformat, cprintln};
-use log::{info, trace};
+use color_print::cprintln;
+use log::trace;
 
 use crate::{
     adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
-    controller::Toucher,
+    Toucher,
 };
 
 use super::App;

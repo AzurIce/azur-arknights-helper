@@ -11,6 +11,17 @@ pub struct Rect {
     pub height: u32,
 }
 
+impl Into<aah_controller::Rect> for Rect {
+    fn into(self) -> aah_controller::Rect {
+        aah_controller::Rect {
+            x: self.x,
+            y: self.y,
+            width: self.width,
+            height: self.height,
+        }
+    }
+}
+
 pub fn rgb_to_hsv_v(pixel: &Rgba<u8>) -> u8 {
     let r = pixel[0];
     let g = pixel[1];

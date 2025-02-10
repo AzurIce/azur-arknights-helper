@@ -14,8 +14,8 @@ pub mod choose_level;
 pub mod copilot;
 
 pub trait Runnable {
-    type Res = ();
-    type Err = ();
+    type Res;
+    type Err;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err>;
 }
 
@@ -131,6 +131,7 @@ impl Debug for TaskEvt {
 }
 
 impl Runnable for Task {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         for (i, step) in self.steps.iter().enumerate() {

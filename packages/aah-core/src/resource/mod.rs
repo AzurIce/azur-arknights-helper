@@ -18,7 +18,7 @@ use manifest::{
     Manifest,
 };
 
-use crate::{copilot::Copilot, task::Task};
+use crate::{task::copilot::Copilot, task::Task};
 
 // https://docs.github.com/en/rest/repos/contents
 const RESOURCE_ROOT_URL: &str =
