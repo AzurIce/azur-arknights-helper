@@ -11,7 +11,7 @@ use std::{
 
 use command::local_service::ShellCommand;
 use image::{codecs::png::PngDecoder, DynamicImage};
-use log::{error, info, trace};
+use log::{error, trace};
 
 use crate::adb::utils::{read_payload_to_string, read_response_status, ResponseStatus};
 
@@ -168,6 +168,7 @@ pub fn connect<S: AsRef<str>>(serial: S) -> Result<Device, MyError> {
 }
 
 #[allow(unused)]
+/// An device which can be used to execute adb commands
 pub struct Device {
     /// The Adb host which is using to access this device
     host: Mutex<Host>,
@@ -215,6 +216,9 @@ impl Device {
         // let bytes = self
         //     .execute_command_by_process("exec-out screencap -p")
         //     .expect("failed to screencap");
+
+        // INFO: Using tcp stream to communicate with adb server directly
+        // INFO: is about 100ms faster than using process
         let mut adb_tcp_stream = self.connect_adb_tcp_stream()?;
         let bytes = adb_tcp_stream
             .execute_command(local_service::ScreenCap::new())
@@ -271,6 +275,8 @@ mod test {
 
     #[test]
     fn test_screencap() {
+        // by process cost: 938.7667ms, 3066595
+        // by socket cost: 841.6327ms, 3069330
         let device = connect("127.0.0.1:16384").unwrap();
 
         let start = Instant::now();

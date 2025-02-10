@@ -4,7 +4,6 @@ use aah_cv::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
 
 use crate::{
-    controller::DEFAULT_HEIGHT,
     utils::resource::get_template,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
@@ -12,6 +11,7 @@ use crate::{
     },
     AAH,
 };
+use aah_controller::DEFAULT_HEIGHT;
 
 use super::{matching::MatchOptions, Analyzer};
 

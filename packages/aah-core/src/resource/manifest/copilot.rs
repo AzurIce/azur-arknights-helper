@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::copilot::{Copilot, CopilotAction, CopilotStep, Direction};
+use crate::task::copilot::{Copilot, CopilotAction, CopilotStep, Direction};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CopilotConfig(pub HashMap<String, Copilot>);

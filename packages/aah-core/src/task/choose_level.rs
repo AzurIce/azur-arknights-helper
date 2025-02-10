@@ -57,6 +57,7 @@ fn analyze_levels(aah: &crate::AAH) -> Result<Vec<(String, Rect)>, anyhow::Error
 }
 
 impl Runnable for ChooseLevel {
+    type Res = ();
     type Err = anyhow::Error;
     fn run(&self, aah: &crate::AAH) -> Result<Self::Res, Self::Err> {
         aah.emit_task_evt(super::TaskEvt::Log("entering terminal page".to_string()));
@@ -69,12 +70,12 @@ impl Runnable for ChooseLevel {
             aah.emit_task_evt(super::TaskEvt::Log(
                 "entering terminal-resource page".to_string(),
             ));
-            let rect = match_terminal_resource(aah)?;
+            let rect = match_terminal_resource(aah)?.into();
             aah.click_in_rect(rect)?;
             thread::sleep(Duration::from_millis(800));
 
             aah.emit_task_evt(super::TaskEvt::Log("entering levels-lmb page".to_string()));
-            let rect = match_levels_resources_lmb(aah)?;
+            let rect = match_levels_resources_lmb(aah)?.into();
             aah.click_in_rect(rect)?;
             thread::sleep(Duration::from_millis(800));
 

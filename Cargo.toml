@@ -7,6 +7,7 @@ edition = "2021"
 members = ["packages/*"]
 
 [workspace.dependencies]
+aah-controller = { path = "packages/aah-controller" }
 aah-core = { path = "packages/aah-core" }
 aah-cv = { path = "packages/aah-cv" }
 aah-resource = { path = "packages/aah-resource" }

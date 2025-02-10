@@ -8,11 +8,15 @@ use color_print::cprintln;
 
 use crate::{
     adb::{self, MyError},
-    controller::{app::App, Toucher},
+    app::App,
+    Toucher,
 };
 
 use super::{app::minitouch::MiniTouch, Controller};
 
+/// An implementation of [`crate::Controller`]
+///
+/// This uses minitouch to do the touch events
 pub struct AahController {
     pub inner: adb::Device,
     width: u32,
@@ -149,7 +153,7 @@ impl Controller for AahController {
 mod test {
     use std::{thread::sleep, time::Duration};
 
-    use crate::controller::Controller;
+    use crate::Controller;
 
     use super::AahController;
 

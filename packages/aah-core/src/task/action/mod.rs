@@ -37,6 +37,7 @@ pub enum Action {
 }
 
 impl Runnable for Action {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         match self {

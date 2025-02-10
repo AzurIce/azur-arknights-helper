@@ -14,6 +14,7 @@ impl Into<Action> for PressEsc {
 }
 
 impl Runnable for PressEsc {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         aah.controller

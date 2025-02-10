@@ -59,6 +59,7 @@ impl Swipe {
 }
 
 impl Runnable for Swipe {
+    type Res = ();
     type Err = String;
     fn run(&self, aah: &AAH) -> Result<Self::Res, Self::Err> {
         aah.controller

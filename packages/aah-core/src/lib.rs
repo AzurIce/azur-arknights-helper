@@ -1,7 +1,7 @@
 //! This crate is the core of [AzurIce/AzurArknightsHelper](https://github.com/AzurIce/AzurArknightsHelper)
 //!
-#![feature(associated_type_defaults)]
-#![feature(path_file_prefix)]
+// #![feature(associated_type_defaults)]
+// #![feature(path_file_prefix)]
 
 use std::{
     fmt::Debug,
@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use controller::{aah_controller::AahController, Controller};
+use aah_controller::{aah_controller::AahController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
@@ -23,8 +23,6 @@ use vision::analyzer::{
 
 use crate::task::Runnable;
 
-pub mod adb;
-pub mod controller;
 pub mod resource;
 pub mod task;
 pub mod utils;

@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+aah-controller.workspace = true
 aah-cv.workspace = true
 aah-resource.workspace = true
 image.workspace = true

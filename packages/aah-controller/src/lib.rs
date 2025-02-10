@@ -1,12 +1,23 @@
+//! aah-controller contains the basic device manuplating functions like
+//! adb connecting, touch, swipe, adb command executing, etc.
+
 use std::time::Duration;
 
 use image::DynamicImage;
 
-use crate::{adb::MyError, vision::utils::Rect};
+use crate::adb::MyError;
 
-// pub mod adb_input_controller;
 pub mod aah_controller;
+pub mod adb;
 pub mod app;
+
+#[derive(Debug, Clone, Copy)]
+pub struct Rect {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
 
 /// 默认宽高
 pub const DEFAULT_WIDTH: u32 = 1920;
@@ -29,7 +40,9 @@ pub trait Controller {
         self.click(x, y)
     }
 
-    /// click in rect scaled to 1920x1080
+    /// A scaled version of [`Controller::click_in_rect`].
+    ///
+    /// This scaled the coord from 1920x1080 to the actual size by simply dividing [`Controller::scale_factor`]
     fn click_in_rect_scaled(&self, rect_scaled: Rect) -> Result<(), MyError> {
         let scale_fector = self.scale_factor();
         let rect = Rect {
@@ -43,6 +56,9 @@ pub trait Controller {
 
     fn click(&self, x: u32, y: u32) -> Result<(), MyError>;
 
+    /// A scaled version of [`Controller::click`].
+    ///
+    /// This scaled the coord from 1920x1080 to the actual size by simply dividing [`Controller::scale_factor`]
     fn click_scaled(&self, x_scaled: u32, y_scaled: u32) -> Result<(), MyError> {
         let scale_factor = self.scale_factor();
         let (x, y) = (
@@ -61,6 +77,9 @@ pub trait Controller {
         slope_out: f32,
     ) -> Result<(), MyError>;
 
+    /// A scaled version of [`Controller::swipe`].
+    ///
+    /// This scaled the coord from 1920x1080 to the actual size by simply dividing [`Controller::scale_factor`]
     fn swipe_scaled(
         &self,
         start_scaled: (u32, u32),
@@ -89,10 +108,15 @@ pub trait Controller {
         )
     }
 
+    /// Get the raw screencap data in bytes
     fn raw_screencap(&self) -> Result<Vec<u8>, MyError>;
 
+    /// Get the decoded screencap image
     fn screencap(&self) -> Result<image::DynamicImage, MyError>;
 
+    /// A scaled version of [`Controller::swipe`].
+    ///
+    /// This scaled the screenshot image to [`DEFAULT_HEIGHT`]
     fn screencap_scaled(&self) -> Result<image::DynamicImage, MyError> {
         let screen = self.screencap()?;
         let screen = if screen.height() != DEFAULT_HEIGHT {
