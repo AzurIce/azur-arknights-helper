@@ -1,5 +1,4 @@
 use std::{
-    path::Path,
     sync::{Arc, Mutex},
     time::Duration,
 };
