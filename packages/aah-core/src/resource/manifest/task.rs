@@ -3,9 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs};
 
-use crate::task::action::{
-    Action, ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome,
-};
+use crate::task::action::{ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome};
 use crate::task::{Task, TaskStep};
 
 fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
@@ -65,19 +63,19 @@ fn startup_task() -> Task {
         name: "start_up".to_string(),
         desc: Some("start up to the main screen".to_string()),
         steps: vec![
-            TaskStep::action(ClickMatchTemplate::new("start_start.png")).retry(-1),
-            TaskStep::action(ClickMatchTemplate::new("wakeup_wakeup.png")).retry(-1),
-            TaskStep::action(ClickMatchTemplate::new("confirm.png"))
-                .deplay_sec_f32(6.0)
-                .retry(3)
+            TaskStep::from_action(ClickMatchTemplate::new("start_start.png")).with_retry(-1),
+            TaskStep::from_action(ClickMatchTemplate::new("wakeup_wakeup.png")).with_retry(-1),
+            TaskStep::from_action(ClickMatchTemplate::new("confirm.png"))
+                .with_delay(6.0)
+                .with_retry(3)
                 .skip_if_failed(),
-            TaskStep::action(ClickMatchTemplate::new("qiandao_close.png"))
-                .deplay_sec_f32(2.0)
-                .retry(2)
+            TaskStep::from_action(ClickMatchTemplate::new("qiandao_close.png"))
+                .with_delay(2.0)
+                .with_retry(2)
                 .skip_if_failed(),
-            TaskStep::action(ClickMatchTemplate::new("notice_close.png"))
-                .deplay_sec_f32(2.0)
-                .retry(2)
+            TaskStep::from_action(ClickMatchTemplate::new("notice_close.png"))
+                .with_delay(2.0)
+                .with_retry(2)
                 .skip_if_failed(),
         ],
     }
@@ -89,27 +87,27 @@ fn award_task() -> Task {
         name: "award".to_string(),
         desc: None,
         steps: vec![
-            TaskStep::action(NavigateIn::new("mission")),
-            TaskStep::action(ClickMatchTemplate::new("mission-week_collect-all.png"))
-                .deplay_sec_f32(0.5)
-                .retry(1)
+            TaskStep::from_action(NavigateIn::new("mission")),
+            TaskStep::from_action(ClickMatchTemplate::new("mission-week_collect-all.png"))
+                .with_delay(0.5)
+                .with_retry(1)
                 .skip_if_failed(),
-            TaskStep::action(ClickMatchTemplate::new("confirm.png"))
-                .deplay_sec_f32(0.5)
-                .retry(1)
+            TaskStep::from_action(ClickMatchTemplate::new("confirm.png"))
+                .with_delay(0.5)
+                .with_retry(1)
                 .skip_if_failed(),
-            TaskStep::action(ClickMatchTemplate::new("mission-day_week.png"))
-                .deplay_sec_f32(0.5)
-                .retry(1),
-            TaskStep::action(ClickMatchTemplate::new("mission-week_collect-all.png"))
-                .deplay_sec_f32(0.5)
-                .retry(1)
+            TaskStep::from_action(ClickMatchTemplate::new("mission-day_week.png"))
+                .with_delay(0.5)
+                .with_retry(1),
+            TaskStep::from_action(ClickMatchTemplate::new("mission-week_collect-all.png"))
+                .with_delay(0.5)
+                .with_retry(1)
                 .skip_if_failed(),
-            TaskStep::action(ClickMatchTemplate::new("confirm.png"))
-                .deplay_sec_f32(0.5)
-                .retry(1)
+            TaskStep::from_action(ClickMatchTemplate::new("confirm.png"))
+                .with_delay(0.5)
+                .with_retry(1)
                 .skip_if_failed(),
-            TaskStep::action(NavigateOut::new("mission")),
+            TaskStep::from_action(NavigateOut::new("mission")),
         ],
     }
 }
@@ -119,12 +117,12 @@ pub fn default_tasks() -> Vec<Task> {
         Task {
             name: "press_esc".to_string(),
             desc: None,
-            steps: vec![TaskStep::action(PressEsc)],
+            steps: vec![TaskStep::from_action(PressEsc)],
         },
         Task {
             name: "press_home".to_string(),
             desc: None,
-            steps: vec![TaskStep::action(PressHome)],
+            steps: vec![TaskStep::from_action(PressHome)],
         },
     ]
 }

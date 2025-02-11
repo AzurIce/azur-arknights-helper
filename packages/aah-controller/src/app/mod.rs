@@ -1,4 +1,4 @@
-pub mod minicap;
+// pub mod minicap;
 pub mod minitouch;
 
 use std::path::Path;
@@ -6,17 +6,17 @@ use std::path::Path;
 use crate::adb::Device;
 
 pub trait App {
-    fn check(device: &Device) -> Result<(), String>;
-    fn push<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<(), String>;
-    fn prepare<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<(), String> {
+    fn check(device: &Device) -> anyhow::Result<()>;
+    fn push(device: &Device) -> anyhow::Result<()>;
+    fn prepare(device: &Device) -> anyhow::Result<()> {
         if Self::check(device).is_err() {
-            Self::push(device, res_dir)?;
+            Self::push(device)?;
             Self::check(device)?;
         }
         Ok(())
     }
 
-    fn init<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<Self, String>
+    fn init(device: &Device) -> anyhow::Result<Self>
     where
         Self: Sized;
 }
