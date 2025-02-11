@@ -7,9 +7,9 @@ edition = "2021"
 
 [dependencies]
 image.workspace = true
+imageproc.workspace = true
 bytemuck = { version = "1.14.1", features = ["derive"] }
 futures-intrusive = "0.5.0"
-imageproc = "0.25.0"
 ndarray = "0.16.1"
 ndarray-csv = "0.5.2"
 nshare = "0.10.0"
