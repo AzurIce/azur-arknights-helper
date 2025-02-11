@@ -145,19 +145,19 @@ pub trait Controller {
 
 /// A toucher contains [`Toucher::click`] and [`Toucher::swipe`]
 pub trait Toucher {
-    fn click_in_rect(&mut self, rect: Rect) -> Result<(), String> {
+    fn click_in_rect(&mut self, rect: Rect) -> anyhow::Result<()> {
         let x = rand::random::<u32>() % rect.width + rect.x;
         let y = rand::random::<u32>() % rect.height + rect.y;
         self.click(x, y)
     }
 
-    fn click(&mut self, x: u32, y: u32) -> Result<(), String>;
+    fn click(&mut self, x: u32, y: u32) -> anyhow::Result<()>;
     fn click_scaled(
         &mut self,
         x_scaled: u32,
         y_scaled: u32,
         scale_factor: f32,
-    ) -> Result<(), String> {
+    ) -> anyhow::Result<()> {
         let (x, y) = (
             x_scaled as f32 * scale_factor,
             y_scaled as f32 * scale_factor,
@@ -172,7 +172,7 @@ pub trait Toucher {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), String>;
+    ) -> anyhow::Result<()>;
 
     fn swipe_scaled(
         &mut self,
@@ -182,7 +182,7 @@ pub trait Toucher {
         slope_in: f32,
         slope_out: f32,
         scale_factor: f32,
-    ) -> Result<(), String> {
+    ) -> anyhow::Result<()> {
         let (start, end) = (
             (
                 start_scaled.0 as f32 * scale_factor,

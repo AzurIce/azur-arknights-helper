@@ -6,13 +6,20 @@ use std::{
     time::Duration,
 };
 
+use anyhow::Context;
 use color_print::cprintln;
 use log::trace;
+use tempfile::{tempfile, NamedTempFile};
 
 use crate::{
     adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
     Toucher,
 };
+
+const MINITOUCH_ARM: &[u8] = include_bytes!("../../resources/minitouch/armeabi-v7a/minitouch");
+const MINITOUCH_ARM_64: &[u8] = include_bytes!("../../resources/minitouch/arm64-v8a/minitouch");
+const MINITOUCH_X86: &[u8] = include_bytes!("../../resources/minitouch/x86/minitouch");
+const MINITOUCH_X86_64: &[u8] = include_bytes!("../../resources/minitouch/x86_64/minitouch");
 
 use super::App;
 
@@ -33,12 +40,12 @@ pub struct MiniTouch {
     minitouch_stdin: ChildStdin,
     state: MiniTouchState,
 
-    cmd_tx: crossbeam_channel::Sender<Cmd>,
+    cmd_tx: async_channel::Sender<Cmd>,
 }
 
 impl Drop for MiniTouch {
     fn drop(&mut self) {
-        self.cmd_tx.send(Cmd::Stop).unwrap();
+        self.cmd_tx.send_blocking(Cmd::Stop).unwrap();
     }
 }
 
@@ -53,51 +60,59 @@ pub struct MiniTouchState {
 }
 
 impl App for MiniTouch {
-    fn check(device: &Device) -> Result<(), String> {
+    fn check(device: &Device) -> anyhow::Result<()> {
         let mut device_adb_stream = device
             .connect_adb_tcp_stream()
-            .map_err(|err| format!("minitouch connect AdbTcpStream failed: {err}"))?;
+            .map_err(|err| anyhow::anyhow!("minitouch connect AdbTcpStream failed :{err}"))?;
 
         let res = device_adb_stream
             .execute_command(ShellCommand::new(
                 "/data/local/tmp/minitouch -h".to_string(),
             ))
-            .map_err(|err| format!("minitouch test failed: {err}"))?;
+            .map_err(|err| anyhow::anyhow!("minitouch test failed: {err}"))?;
 
         cprintln!("<dim>[Minitouch]: test output: {res}</dim>");
-        if res.starts_with("Usage") {
-            Ok(())
-        } else {
-            Err("minitouch exec failed".to_string())
+        if !res.starts_with("Usage") {
+            anyhow::bail!("minitouch exec failed");
         }
+        Ok(())
     }
 
-    fn push<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<(), String> {
-        let abi = device.get_abi()?;
-        let bin_path = res_dir
-            .as_ref()
-            .join("minitouch")
-            .join(abi)
-            .join("minitouch");
+    fn push(device: &Device) -> anyhow::Result<()> {
+        let abi = device
+            .get_abi()
+            .map_err(|err| anyhow::anyhow!("get abi failed: {err}"))?;
+        let minitouch_bytes = match abi.as_str() {
+            "armeabi-v7a" => MINITOUCH_ARM,
+            "arm64-v8a" => MINITOUCH_ARM_64,
+            "x86" => MINITOUCH_X86,
+            "x86_64" => MINITOUCH_X86_64,
+            _ => anyhow::bail!("unsupported abi: {}", abi),
+        };
+        let mut tmpfile = NamedTempFile::new().context("failed to create tempfile")?;
+        tmpfile
+            .write_all(minitouch_bytes)
+            .context("failed to write minitouch to tempfile")?;
+
         let res = execute_adb_command(
             &device.serial(),
-            format!("push {} /data/local/tmp", bin_path.to_str().unwrap()).as_str(),
+            format!("push {} /data/local/tmp", tmpfile.path().to_str().unwrap()).as_str(),
         )
-        .map_err(|err| format!("minitouch push failed: {:?}", err))?;
+        .map_err(|err| anyhow::anyhow!("minitouch push failed: {:?}", err))?;
         println!("{:?}", String::from_utf8(res));
         sleep(Duration::from_millis(200));
         let res = execute_adb_command(&device.serial(), "shell chmod +x /data/local/tmp/minitouch")
-            .map_err(|err| format!("minitouch push failed: {:?}", err))?;
+            .map_err(|err| anyhow::anyhow!("minitouch push failed: {:?}", err))?;
         println!("{:?}", String::from_utf8(res));
         sleep(Duration::from_millis(200));
         Ok(())
     }
 
-    fn init<P: AsRef<Path>>(device: &Device, res_dir: P) -> Result<Self, String>
+    fn init(device: &Device) -> anyhow::Result<Self>
     where
         Self: Sized,
     {
-        Self::prepare(device, res_dir)?;
+        Self::prepare(device)?;
 
         cprintln!("<dim>[Minitouch]: spawning minitouch...</dim>");
         let mut minitouch_child = Command::new("adb")
@@ -112,19 +127,19 @@ impl App for MiniTouch {
             // .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()
-            .map_err(|err| format!("{:?}", err))?;
+            .context("failed to spawn minitouch")?;
         sleep(Duration::from_secs_f32(0.5));
 
         let child_in = minitouch_child
             .stdin
             .take()
-            .ok_or("cannot get stdin of minitouch".to_string())?;
+            .ok_or(anyhow::anyhow!("cannot get stdin of minitouch"))?;
         let child_out = minitouch_child
             .stderr
             .take()
-            .ok_or("cannot get stdout of minitouch".to_string())?;
+            .ok_or(anyhow::anyhow!("cannot get stdout of minitouch"))?;
 
-        let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<Cmd>();
+        let (cmd_tx, cmd_rx) = async_channel::unbounded::<Cmd>();
 
         let mut minitouch_state = MiniTouchState::default();
         // read info
@@ -134,7 +149,7 @@ impl App for MiniTouch {
             match reader.read_line(&mut buf) {
                 Err(err) => {
                     cprintln!("<dim>[Minitouch]: read error: {}</dim>", err);
-                    return Err("failed to read minitouch info".to_string());
+                    anyhow::bail!("failed to read minitouch info: {}", err);
                 }
                 Ok(sz) => {
                     if sz == 0 {
@@ -212,7 +227,7 @@ impl App for MiniTouch {
 
 /// A Toucher based n [MiniTouch](https://github.com/DeviceFarmer/minitouch)
 impl MiniTouch {
-    fn write_command(&mut self, command: &str) -> Result<(), String> {
+    fn write_command(&mut self, command: &str) -> anyhow::Result<()> {
         // println!("writing command: {:?}", command);
         let mut command = command.to_string();
         if !command.ends_with('\n') {
@@ -220,18 +235,18 @@ impl MiniTouch {
         }
         self.minitouch_stdin
             .write_all(command.as_bytes())
-            .map_err(|err| format!("{:?}", err))
+            .context("failed to write command")
     }
 
-    pub fn commit(&mut self) -> Result<(), String> {
+    pub fn commit(&mut self) -> anyhow::Result<()> {
         self.write_command("c")
     }
 
-    pub fn reset(&mut self) -> Result<(), String> {
+    pub fn reset(&mut self) -> anyhow::Result<()> {
         self.write_command("r")
     }
 
-    pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> Result<(), String> {
+    pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> anyhow::Result<()> {
         // let (x, y) = if self.state.flip_xy {
         //     (y, x)
         // } else {
@@ -241,7 +256,7 @@ impl MiniTouch {
         self.write_command(format!("d {contact} {y} {x} {pressure}").as_str())
     }
 
-    pub fn mv(&mut self, contact: u32, x: i32, y: i32, pressure: u32) -> Result<(), String> {
+    pub fn mv(&mut self, contact: u32, x: i32, y: i32, pressure: u32) -> anyhow::Result<()> {
         // let (x, y) = if self.state.flip_xy {
         //     (y, x)
         // } else {
@@ -251,11 +266,11 @@ impl MiniTouch {
         self.write_command(format!("m {contact} {y} {x} {pressure}").as_str())
     }
 
-    pub fn up(&mut self, contact: u32) -> Result<(), String> {
+    pub fn up(&mut self, contact: u32) -> anyhow::Result<()> {
         self.write_command(format!("u {contact}").as_str())
     }
 
-    pub fn wait(&mut self, duration: Duration) -> Result<(), String> {
+    pub fn wait(&mut self, duration: Duration) -> anyhow::Result<()> {
         self.write_command(format!("w {}", duration.as_millis()).as_str())
     }
 }
@@ -264,7 +279,7 @@ const SWIPE_DELAY_MS: u32 = 5;
 const CLICK_DELAY_MS: u32 = 50;
 
 impl Toucher for MiniTouch {
-    fn click(&mut self, x: u32, y: u32) -> Result<(), String> {
+    fn click(&mut self, x: u32, y: u32) -> anyhow::Result<()> {
         self.down(0, x, y, 0)?;
         self.commit()?;
         self.wait(Duration::from_millis(CLICK_DELAY_MS as u64))?;
@@ -280,7 +295,7 @@ impl Toucher for MiniTouch {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), String> {
+    ) -> anyhow::Result<()> {
         self.down(0, start.0, start.1, 0)?;
         self.commit()?;
 
@@ -333,7 +348,7 @@ mod test {
     fn test_minitoucher() {
         init();
         let device = connect("127.0.0.1:16384").unwrap();
-        let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
+        let mut toucher = MiniTouch::init(&device).unwrap();
         // toucher.click(10, 10).unwrap();
         // toucher.click(100, 100).unwrap();
         toucher.click(822, 762).unwrap();
@@ -344,7 +359,7 @@ mod test {
     fn test_slowly_swipe() {
         init();
         let device = connect("127.0.0.1:16384").unwrap();
-        let mut toucher = MiniTouch::init(&device, "../../resources").unwrap();
+        let mut toucher = MiniTouch::init(&device).unwrap();
         toucher
             .swipe(
                 (1780, 400),

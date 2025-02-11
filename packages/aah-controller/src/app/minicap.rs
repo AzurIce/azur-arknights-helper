@@ -18,12 +18,12 @@ use super::App;
 
 pub struct Minicap {
     screen_cache: Arc<Mutex<Option<DynamicImage>>>,
-    cmd_tx: crossbeam_channel::Sender<Cmd>,
+    cmd_tx: async_channel::Sender<Cmd>,
 }
 
 impl Drop for Minicap {
     fn drop(&mut self) {
-        self.cmd_tx.send(Cmd::Stop).unwrap();
+        self.cmd_tx.send_blocking(Cmd::Stop).unwrap();
     }
 }
 
@@ -148,8 +148,8 @@ impl App for Minicap {
             .take()
             .ok_or("cannot get stdout of minicap".to_string())?;
 
-        let (evt_tx, evt_rx) = crossbeam_channel::bounded::<Evt>(3);
-        let (cmd_tx, cmd_rx) = crossbeam_channel::unbounded::<Cmd>();
+        let (evt_tx, evt_rx) = async_channel::bounded::<Evt>(3);
+        let (cmd_tx, cmd_rx) = async_channel::unbounded::<Cmd>();
         let screen_cache = Arc::new(Mutex::new(None));
 
         let _screen_cache = screen_cache.clone();
@@ -279,7 +279,7 @@ impl App for Minicap {
                                     let orientation = header_data[22];
                                     let flag = header_data[23];
                                     evt_tx
-                                        .send(Evt::Info {
+                                        .send_blocking(Evt::Info {
                                             real_width,
                                             real_height,
                                             virtual_width,
@@ -308,7 +308,7 @@ impl App for Minicap {
                                     if let Err(err) =
                                         evt_tx.try_send(Evt::NewFrame(img_data.collect()))
                                     {
-                                        if err.is_disconnected() {
+                                        if err.is_closed() {
                                             break;
                                         }
                                     }

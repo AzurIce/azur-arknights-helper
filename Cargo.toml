@@ -11,7 +11,11 @@ aah-controller = { path = "packages/aah-controller" }
 aah-core = { path = "packages/aah-core" }
 aah-cv = { path = "packages/aah-cv" }
 aah-resource = { path = "packages/aah-resource" }
+aah-genral = { path = "packages/aah-general" }
 image = "0.25.5"
+imageproc = "0.25.0"
+anyhow = "1.0.89"
+async-channel = "2.3.1"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -19,6 +23,8 @@ image = "0.25.5"
 aah-core.workspace = true
 aah-resource.workspace = true
 image.workspace = true
+anyhow.workspace = true
+async-channel.workspace = true
 rust-embed = "8.5.0"
 tokio-stream = "0.1.17"
 iced = { version = "0.13.1", features = ["tokio", "image"] }
@@ -28,8 +34,6 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 reqwest = "0.12.7"
 tokio = "1.43.0"
-anyhow = "1.0.95"
-async-channel = "2.3.1"
 
 [build-dependencies]
 zip = "2.2.2"
