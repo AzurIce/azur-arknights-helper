@@ -11,28 +11,27 @@ aah-controller = { path = "packages/aah-controller" }
 aah-core = { path = "packages/aah-core" }
 aah-cv = { path = "packages/aah-cv" }
 aah-resource = { path = "packages/aah-resource" }
-image = "0.25.2"
+image = "0.25.5"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-rust-embed = "8.5.0"
-tokio-stream = "0.1.16"
-git2 = "0.19.0"
-iced = { version = "0.13.1", features = ["tokio", "image"] }
 aah-core.workspace = true
 aah-resource.workspace = true
-clap = { version = "4.4.12", features = ["derive"] }
-env_logger = "0.11.5"
-tracing = "0.1.40"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-reqwest = "0.12.7"
-tokio = "1.40.0"
-anyhow = "1.0.89"
-async-channel = "2.3.1"
 image.workspace = true
+rust-embed = "8.5.0"
+tokio-stream = "0.1.17"
+iced = { version = "0.13.1", features = ["tokio", "image"] }
+clap = { version = "4.5.28", features = ["derive"] }
+env_logger = "0.11.6"
+tracing = "0.1.41"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+reqwest = "0.12.7"
+tokio = "1.43.0"
+anyhow = "1.0.95"
+async-channel = "2.3.1"
 
 [build-dependencies]
-zip = "2.2.0"
+zip = "2.2.2"
 walkdir = "2.5.0"
 anyhow = "1.0.89"
