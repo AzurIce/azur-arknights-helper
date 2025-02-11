@@ -8,6 +8,7 @@ use image::DynamicImage;
 use crate::adb::MyError;
 
 pub mod aah_controller;
+pub mod adb_controller;
 pub mod adb;
 pub mod app;
 
