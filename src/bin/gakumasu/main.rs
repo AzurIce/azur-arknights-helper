@@ -26,9 +26,21 @@ fn main() {
 
     start_emulator(&config);
 
-    let aah = connect_to_device(&config).expect("failed to connect to the device");
+    let mut aah = connect_to_device(&config).expect("failed to connect to the device");
+
+    aah.controller.click(504, 209).unwrap();
+
+    // start_kuyo(&aah);
+
+    // aah.get_screen().unwrap().save("./screenshot.png").unwrap();
 
     // end_emulator(&config);
+}
+
+// MARK: Kuyo
+
+fn start_kuyo(aah: &AAH) {
+    aah.run_task("gakumasu_start_kuyo").expect("failed to start kuyo");
 }
 
 // MARK: Initialize Configuration
@@ -42,7 +54,7 @@ fn initialize_config() -> Config {
     }
 }
 
-// MARK: Start Emulator
+// MARK: Emulator
 
 fn start_emulator(config: &Config) {
     println!("[GakuMasu] Starting emulator...");
