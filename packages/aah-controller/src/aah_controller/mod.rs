@@ -29,9 +29,9 @@ pub struct AahController {
 impl AahController {
     pub fn connect(
         device_serial: impl AsRef<str>,
-        res_dir: impl AsRef<Path>,
+        // res_dir: impl AsRef<Path>,
     ) -> Result<Self, MyError> {
-        let res_dir = res_dir.as_ref().to_path_buf();
+        // let res_dir = res_dir.as_ref().to_path_buf();
         let device_serial = device_serial.as_ref();
 
         cprintln!("<blue>[AahController]</blue>: connecting to {device_serial}...");
@@ -48,7 +48,7 @@ impl AahController {
         );
 
         // let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = MiniTouch::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
+        let minitouch = MiniTouch::init(&device).map_err(|err| MyError::S(err.to_string()))?;
         let minitouch = Arc::new(Mutex::new(minitouch));
 
         let controller = Self {
@@ -85,7 +85,7 @@ impl Controller for AahController {
             .lock()
             .unwrap()
             .click(x, y)
-            .map_err(|err| MyError::S(err))?;
+            .map_err(|err| MyError::S(err.to_string()))?;
         Ok(())
     }
 
@@ -157,15 +157,15 @@ mod test {
 
     use super::AahController;
 
-    #[test]
-    fn test_minicaper() {
-        let _ = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
-        sleep(Duration::from_secs(4));
-    }
+    // #[test]
+    // fn test_minicaper() {
+    //     let _ = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
+    //     sleep(Duration::from_secs(4));
+    // }
 
     #[test]
     fn test_swipe() {
-        let controller = AahController::connect("127.0.0.1:16384", "../../resources").unwrap();
+        let controller = AahController::connect("127.0.0.1:16384").unwrap();
         controller
             .swipe(
                 (640, 360),

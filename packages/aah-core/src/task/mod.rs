@@ -21,6 +21,7 @@ pub trait Runnable {
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// 一个完整的 [`Task`] 由若干 [`TaskStep`] 组成
 pub struct Task {
     /// Task 的名称
     pub name: String,
@@ -52,6 +53,7 @@ impl Task {
 
 #[skip_serializing_none]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// TaskStep 是对 [`Action`] 的封装，可以设置一些额外的属性
 pub struct TaskStep {
     /// 在此 Step 开始前的延迟
     pub delay_sec: Option<f32>,
@@ -66,18 +68,18 @@ pub struct TaskStep {
 }
 
 impl TaskStep {
-    pub fn action(task: impl Into<Action>) -> Self {
-        let task = task.into();
+    pub fn from_action(action: impl Into<Action>) -> Self {
+        let action = action.into();
         Self {
             delay_sec: None,
             skip_if_failed: None,
             repeat: None,
             retry: None,
-            action: task,
+            action,
         }
     }
 
-    pub fn deplay_sec_f32(mut self, sec: f32) -> Self {
+    pub fn with_delay(mut self, sec: f32) -> Self {
         self.delay_sec = Some(sec);
         self
     }
@@ -87,12 +89,12 @@ impl TaskStep {
         self
     }
 
-    pub fn repeat(mut self, times: u32) -> Self {
+    pub fn with_repeat(mut self, times: u32) -> Self {
         self.repeat = Some(times);
         self
     }
 
-    pub fn retry(mut self, times: i32) -> Self {
+    pub fn with_retry(mut self, times: i32) -> Self {
         self.retry = Some(times);
         self
     }

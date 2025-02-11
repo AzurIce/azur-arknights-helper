@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use wgpu::{
     include_wgsl, util::DeviceExt, BindGroup, BindGroupDescriptor, BindGroupLayoutDescriptor,
     BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor,
-    ComputePipelineDescriptor, PipelineLayoutDescriptor,
+    PipelineLayoutDescriptor,
 };
 
 use crate::gpu::Context;
@@ -126,7 +126,7 @@ struct Matcher {
     uniform_buffer: wgpu::Buffer,
 
     bind_group_layout: wgpu::BindGroupLayout,
-    pipeline_layout: wgpu::PipelineLayout,
+    // pipeline_layout: wgpu::PipelineLayout,
     bind_group: Option<wgpu::BindGroup>,
     pipeline_ccorr: wgpu::ComputePipeline,
     pipeline_ccorr_normed: wgpu::ComputePipeline,
@@ -139,6 +139,7 @@ struct Matcher {
 impl Matcher {
     fn new() -> Self {
         let ctx = pollster::block_on(Context::new());
+        let Context { device, .. } = &ctx;
 
         let bind_group_layout = ctx
             .device
@@ -207,62 +208,63 @@ impl Matcher {
             mapped_at_creation: false,
         });
 
-        let shader_module = ctx
-            .device
-            .create_shader_module(include_wgsl!("./shaders/shader.wgsl"));
-        let pipeline_ccorr = ctx
-            .device
-            .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("Cross Correlation Pipeline"),
-                layout: Some(&pipeline_layout),
-                module: &shader_module,
-                entry_point: "main_ccorr",
-            });
+        let shader_module = device.create_shader_module(include_wgsl!("./shaders/shader.wgsl"));
+        let pipeline_ccorr = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Cross Correlation Pipeline"),
+            layout: Some(&pipeline_layout),
+            module: &shader_module,
+            entry_point: Some("main_ccorr"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
 
         let pipeline_ccorr_normed =
-            ctx.device
-                .create_compute_pipeline(&ComputePipelineDescriptor {
-                    label: Some("Cross Correlation Normed Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: "main_ccorr_normed",
-                });
-
-        let pipeline_sqdiff = ctx
-            .device
-            .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("Sum of Squared Difference Pipeline"),
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Cross Correlation Normed Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point: "main_sqdiff",
+                entry_point: Some("main_ccorr_normed"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
             });
+
+        let pipeline_sqdiff = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Sum of Squared Difference Pipeline"),
+            layout: Some(&pipeline_layout),
+            module: &shader_module,
+            entry_point: Some("main_sqdiff"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
 
         let pipeline_sqdiff_normed =
-            ctx.device
-                .create_compute_pipeline(&ComputePipelineDescriptor {
-                    label: Some("Sum of Squared Difference Normed Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: "main_sqdiff_normed",
-                });
-
-        let pipeline_ccoeff = ctx
-            .device
-            .create_compute_pipeline(&ComputePipelineDescriptor {
-                label: Some("Correlation Coefficient Pipeline"),
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Sum of Squared Difference Normed Pipeline"),
                 layout: Some(&pipeline_layout),
                 module: &shader_module,
-                entry_point: "main_ccoeff",
+                entry_point: Some("main_sqdiff_normed"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
             });
 
+        let pipeline_ccoeff = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("Correlation Coefficient Pipeline"),
+            layout: Some(&pipeline_layout),
+            module: &shader_module,
+            entry_point: Some("main_ccoeff"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            cache: None,
+        });
+
         let pipeline_ccoeff_normed =
-            ctx.device
-                .create_compute_pipeline(&ComputePipelineDescriptor {
-                    label: Some("Correlation Coefficient Normed Pipeline"),
-                    layout: Some(&pipeline_layout),
-                    module: &shader_module,
-                    entry_point: "main_ccoeff_normed",
-                });
+            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("Correlation Coefficient Normed Pipeline"),
+                layout: Some(&pipeline_layout),
+                module: &shader_module,
+                entry_point: Some("main_ccoeff_normed"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
+            });
 
         Matcher {
             ctx,
@@ -273,7 +275,7 @@ impl Matcher {
             uniform_buffer,
             bind_group_layout,
             bind_group: None,
-            pipeline_layout,
+            // pipeline_layout,
             pipeline_ccorr,
             pipeline_ccorr_normed,
             pipeline_sqdiff,
@@ -399,30 +401,34 @@ impl Matcher {
         let result_buf_sz = (result_w * result_h * size_of::<f32>() as u32) as u64;
 
         // update buffers
-        let update = prepare_buffer_init_with_image(
-            &self.ctx,
-            &mut self.input_buffer,
-            image,
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-        );
-        let update = prepare_buffer_init_with_image(
-            &self.ctx,
-            &mut self.template_buffer,
-            template,
-            BufferUsages::STORAGE | BufferUsages::COPY_DST,
-        ) || update;
-        let update = prepare_buffer_init_with_size(
-            &self.ctx,
-            &mut self.result_buffer,
-            result_buf_sz,
-            BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
-        ) || update;
-        let update = prepare_buffer_init_with_size(
-            &self.ctx,
-            &mut self.staging_buffer,
-            result_buf_sz,
-            BufferUsages::COPY_DST | BufferUsages::MAP_READ,
-        ) || update;
+        let update = [
+            prepare_buffer_init_with_image(
+                &self.ctx,
+                &mut self.input_buffer,
+                image,
+                wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            ),
+            prepare_buffer_init_with_image(
+                &self.ctx,
+                &mut self.template_buffer,
+                template,
+                BufferUsages::STORAGE | BufferUsages::COPY_DST,
+            ),
+            prepare_buffer_init_with_size(
+                &self.ctx,
+                &mut self.result_buffer,
+                result_buf_sz,
+                BufferUsages::STORAGE | BufferUsages::COPY_SRC | BufferUsages::COPY_DST,
+            ),
+            prepare_buffer_init_with_size(
+                &self.ctx,
+                &mut self.staging_buffer,
+                result_buf_sz,
+                BufferUsages::COPY_DST | BufferUsages::MAP_READ,
+            ),
+        ]
+        .iter()
+        .any(|x| *x);
 
         // update bind_group and uniforms
         if update {
@@ -451,24 +457,14 @@ impl Matcher {
                 label: Some("compute pass"),
                 timestamp_writes: None,
             });
-            match match_method {
-                MatchTemplateMethod::CrossCorrelation => pass.set_pipeline(&self.pipeline_ccorr),
-                MatchTemplateMethod::CrossCorrelationNormed => {
-                    pass.set_pipeline(&self.pipeline_ccorr_normed)
-                }
-                MatchTemplateMethod::SumOfSquaredDifference => {
-                    pass.set_pipeline(&self.pipeline_sqdiff)
-                }
-                MatchTemplateMethod::SumOfSquaredDifferenceNormed => {
-                    pass.set_pipeline(&self.pipeline_sqdiff_normed)
-                }
-                MatchTemplateMethod::CorrelationCoefficient => {
-                    pass.set_pipeline(&self.pipeline_ccoeff)
-                }
-                MatchTemplateMethod::CorrelationCoefficientNormed => {
-                    pass.set_pipeline(&self.pipeline_ccoeff_normed)
-                }
-            }
+            pass.set_pipeline(match match_method {
+                MatchTemplateMethod::CrossCorrelation => &self.pipeline_ccorr,
+                MatchTemplateMethod::CrossCorrelationNormed => &self.pipeline_ccorr_normed,
+                MatchTemplateMethod::SumOfSquaredDifference => &self.pipeline_sqdiff,
+                MatchTemplateMethod::SumOfSquaredDifferenceNormed => &self.pipeline_sqdiff_normed,
+                MatchTemplateMethod::CorrelationCoefficient => &self.pipeline_ccoeff,
+                MatchTemplateMethod::CorrelationCoefficientNormed => &self.pipeline_ccoeff_normed,
+            });
             pass.set_bind_group(0, self.bind_group.as_ref().unwrap(), &[]);
             pass.dispatch_workgroups(
                 (result_w as f32 / 8.0).ceil() as u32,

@@ -26,21 +26,21 @@ impl Deploy {
             Direction::Left => (tile_pos.0 as i32 - swipe_delta, tile_pos.1 as i32),
         };
         let task = Task::from_steps(vec![
-            TaskStep::action(Swipe::new(
+            TaskStep::from_action(Swipe::new(
                 (deploy_card_rect.x, deploy_card_rect.y),
                 (tile_pos.0 as i32, tile_pos.1 as i32),
                 Duration::from_secs_f32(0.2),
                 0.0,
                 0.0,
             )),
-            TaskStep::action(Swipe::new(
+            TaskStep::from_action(Swipe::new(
                 tile_pos,
                 swipe_end,
                 Duration::from_secs_f32(0.2),
                 0.0,
                 0.0,
             ))
-            .deplay_sec_f32(0.2),
+            .with_delay(0.2),
         ])
         .with_name("Deploy");
         task

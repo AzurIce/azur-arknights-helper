@@ -19,8 +19,7 @@ impl Context {
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
+                ..Default::default()
             })
             .await
             .unwrap();
@@ -28,14 +27,7 @@ impl Context {
         // `request_device` instantiates the feature specific connection to the GPU, defining some parameters,
         //  `features` being the available features.
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: None,
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::downlevel_defaults(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor::default(), None)
             .await
             .unwrap();
 
@@ -129,6 +121,7 @@ pub trait GpuTask {
 
     fn cs_module(&self, device: &wgpu::Device) -> wgpu::ShaderModule;
 
+    #[allow(unused)]
     fn prepare(&self, queue: &wgpu::Queue) {}
 
     fn exec(&self, cpass: &mut wgpu::ComputePass);
@@ -195,7 +188,9 @@ impl<T: Pod> GpuTaskWrapper<T> {
                 label: None,
                 layout: Some(&pipeline_layout),
                 module: &task.cs_module(&context.device),
-                entry_point: "main",
+                entry_point: Some("main"),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                cache: None,
             });
 
         let entries_builder = BindGroupEntriesBuilder::new().add_buffer(&result_buffer);
