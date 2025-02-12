@@ -8,7 +8,7 @@ use super::Controller;
 
 /// An implementation of [`crate::Controller`]
 ///
-/// This uses minitouch to do the touch events
+/// This uses pure adb to do the touch events
 pub struct AdbController {
     pub inner: adb::Device,
     width: u32,
