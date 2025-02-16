@@ -49,11 +49,11 @@ impl Controller for AdbController {
     }
 
     fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
-        if x > self.width() || y > self.height() {
-            return Err(MyError::S(
-                format!("coord out of screen (click at {}, {}; size is {}, {})", x, y, self.width(), self.height())
-            ));
-        }
+        // if x > self.width() || y > self.height() {
+        //     return Err(MyError::S(
+        //         format!("coord out of screen (click at {}, {}; size is {}, {})", x, y, self.width(), self.height())
+        //     ));
+        // }
         cprintln!(
             "<blue>[AahController]</blue>: clicking ({}, {}) using adb",
             x,
