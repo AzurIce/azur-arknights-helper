@@ -2,3 +2,7 @@ target
 .direnv
 .DS_Store
 .aah
+
+# for auto-gakumasu
+
+config.json
