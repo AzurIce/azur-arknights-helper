@@ -9,6 +9,7 @@ use crate::adb::MyError;
 
 pub mod aah_controller;
 pub mod adb_controller;
+pub mod pc_controller;
 pub mod adb;
 pub mod app;
 
@@ -202,4 +203,8 @@ pub trait Toucher {
             slope_out,
         )
     }
+}
+
+pub trait PcController {
+
 }
