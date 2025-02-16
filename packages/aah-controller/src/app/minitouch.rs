@@ -52,7 +52,7 @@ impl Drop for MiniTouch {
 #[allow(unused)]
 #[derive(Default)]
 pub struct MiniTouchState {
-    // flip_xy: bool,
+    flip_xy: bool,
     max_contact: u32,
     max_x: u32, // 横屏的 x!
     max_y: u32,
@@ -99,6 +99,17 @@ impl App for MiniTouch {
             format!("push {} /data/local/tmp", tmpfile.path().to_str().unwrap()).as_str(),
         )
         .map_err(|err| anyhow::anyhow!("minitouch push failed: {:?}", err))?;
+        println!("{:?}", String::from_utf8(res));
+        println!("renaming {:?} to minitouch...", tmpfile.path().file_name());
+        let res = execute_adb_command(
+            &device.serial(),
+            format!(
+                "shell mv /data/local/tmp/{} /data/local/tmp/minitouch",
+                tmpfile.path().file_name().unwrap().to_str().unwrap()
+            )
+            .as_str(),
+        )
+        .map_err(|err| anyhow::anyhow!("minitouch rename failed: {:?}", err))?;
         println!("{:?}", String::from_utf8(res));
         sleep(Duration::from_millis(200));
         let res = execute_adb_command(&device.serial(), "shell chmod +x /data/local/tmp/minitouch")
@@ -161,7 +172,7 @@ impl App for MiniTouch {
                         .strip_suffix("\n")
                         .unwrap()
                         .to_string();
-                    trace!("readed info: {}", buf);
+                    println!("readed info: {}", buf);
                     if buf.starts_with('^') {
                         let params = &buf.split(' ').skip(1).collect::<Vec<&str>>();
                         let max_contact = u32::from_str_radix(params[0], 10).unwrap();
@@ -169,16 +180,16 @@ impl App for MiniTouch {
                         let max_size2 = u32::from_str_radix(params[2], 10).unwrap();
                         let max_pressure = u32::from_str_radix(params[3], 10).unwrap();
 
-                        // let mut flip_xy = false;
+                        let mut flip_xy = false;
                         let (max_x, max_y) = if max_size1 > max_size2 {
                             (max_size1, max_size2)
                         } else {
-                            // flip_xy = true;
+                            flip_xy = true;
                             (max_size2, max_size1)
                         };
 
                         minitouch_state = MiniTouchState {
-                            // flip_xy,
+                            flip_xy,
                             max_contact,
                             max_x,
                             max_y,
@@ -190,12 +201,12 @@ impl App for MiniTouch {
                         // minitouch_state.max_y = max_y;
                         // minitouch_state.max_pressure = max_pressure;
                         cprintln!(
-                            "<dim>[MiniTouch]: {} {}x{} {}</dim>",
-                            // flip_xy,
+                            "<dim>[MiniTouch]: {} {}x{} {} flip: {}</dim>",
                             max_contact,
                             max_x,
                             max_y,
-                            max_pressure
+                            max_pressure,
+                            flip_xy,
                         );
                     } else if buf.starts_with('$') {
                         break;
@@ -228,7 +239,7 @@ impl App for MiniTouch {
 /// A Toucher based n [MiniTouch](https://github.com/DeviceFarmer/minitouch)
 impl MiniTouch {
     fn write_command(&mut self, command: &str) -> anyhow::Result<()> {
-        // println!("writing command: {:?}", command);
+        println!("writing command: {:?}", command);
         let mut command = command.to_string();
         if !command.ends_with('\n') {
             command.push('\n');
@@ -247,23 +258,25 @@ impl MiniTouch {
     }
 
     pub fn down(&mut self, contact: u32, x: u32, y: u32, pressure: u32) -> anyhow::Result<()> {
-        // let (x, y) = if self.state.flip_xy {
-        //     (y, x)
-        // } else {
-        //     (x, y)
-        // };
-        let y = self.state.max_y.saturating_add_signed(-(y as i32));
-        self.write_command(format!("d {contact} {y} {x} {pressure}").as_str())
+        // On MuMu emulator, the x-y is flipped and the y is also flipped (???)
+        let (x, y) = if self.state.flip_xy {
+            (self.state.max_y.saturating_add_signed(-(y as i32)), x)
+        } else {
+            (x, y)
+        };
+        // let y = self.state.max_y.saturating_add_signed(-(y as i32));
+        self.write_command(format!("d {contact} {x} {y} {pressure}").as_str())
     }
 
     pub fn mv(&mut self, contact: u32, x: i32, y: i32, pressure: u32) -> anyhow::Result<()> {
-        // let (x, y) = if self.state.flip_xy {
-        //     (y, x)
-        // } else {
-        //     (x, y)
-        // };
-        let y = self.state.max_y as i32 - y;
-        self.write_command(format!("m {contact} {y} {x} {pressure}").as_str())
+        // On MuMu emulator, the x-y is flipped and the y is also flipped (???)
+        let (x, y) = if self.state.flip_xy {
+            (self.state.max_y as i32 - y, x)
+        } else {
+            (x, y)
+        };
+        // let y = self.state.max_y as i32 - y;
+        self.write_command(format!("m {contact} {x} {y} {pressure}").as_str())
     }
 
     pub fn up(&mut self, contact: u32) -> anyhow::Result<()> {
@@ -280,7 +293,7 @@ const CLICK_DELAY_MS: u32 = 50;
 
 impl Toucher for MiniTouch {
     fn click(&mut self, x: u32, y: u32) -> anyhow::Result<()> {
-        self.down(0, x, y, 0)?;
+        self.down(0, x, y, self.state.max_pressure)?;
         self.commit()?;
         self.wait(Duration::from_millis(CLICK_DELAY_MS as u64))?;
         self.up(0)?;
@@ -296,7 +309,8 @@ impl Toucher for MiniTouch {
         slope_in: f32,
         slope_out: f32,
     ) -> anyhow::Result<()> {
-        self.down(0, start.0, start.1, 0)?;
+        println!("{start:?} {end:?}");
+        self.down(0, start.0, start.1, self.state.max_pressure)?;
         self.commit()?;
 
         // 三次样条插值
@@ -314,10 +328,11 @@ impl Toucher for MiniTouch {
                 cubic_spline(slope_in, slope_out, t as f32 / duration.as_millis() as f32);
             let progress = progress.min(1.0).max(0.0);
             // info!("{}", progress);
-            // println!("{progress}");
+            println!("{progress}");
             let cur_x = lerp(start.0 as f32, end.0 as f32, progress) as i32;
             let cur_y = lerp(start.1 as f32, end.1 as f32, progress) as i32;
-            self.mv(0, cur_x as i32, cur_y as i32, 0)?;
+            println!("{cur_x} {cur_y}");
+            self.mv(0, cur_x as i32, cur_y as i32, self.state.max_pressure)?;
             self.commit()?;
             self.wait(Duration::from_millis(SWIPE_DELAY_MS as u64))?;
             thread::sleep(Duration::from_millis(SWIPE_DELAY_MS as u64));
@@ -347,18 +362,26 @@ mod test {
     #[test]
     fn test_minitoucher() {
         init();
+        // mumu
         let device = connect("127.0.0.1:16384").unwrap();
         let mut toucher = MiniTouch::init(&device).unwrap();
         // toucher.click(10, 10).unwrap();
         // toucher.click(100, 100).unwrap();
         toucher.click(822, 762).unwrap();
-        thread::sleep(Duration::from_secs_f32(3.0))
+        thread::sleep(Duration::from_secs_f32(2.0));
+
+        // leidian
+        let device = connect("emulator-5554").unwrap();
+        let mut toucher = MiniTouch::init(&device).unwrap();
+        toucher.click(822, 762).unwrap();
+        thread::sleep(Duration::from_secs_f32(2.0));
     }
 
     #[test]
     fn test_slowly_swipe() {
         init();
-        let device = connect("127.0.0.1:16384").unwrap();
+        // let device = connect("127.0.0.1:16384").unwrap();
+        let device = connect("emulator-5554").unwrap();
         let mut toucher = MiniTouch::init(&device).unwrap();
         toucher
             .swipe(

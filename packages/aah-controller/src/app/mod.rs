@@ -1,8 +1,6 @@
 // pub mod minicap;
 pub mod minitouch;
 
-use std::path::Path;
-
 use crate::adb::Device;
 
 pub trait App {
