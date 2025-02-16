@@ -11,45 +11,48 @@ use super::Controller;
 /// This uses pure adb to do the touch events
 pub struct AdbController {
     pub inner: adb::Device,
-    width: u32,
-    height: u32,
 }
 
 impl AdbController {
     pub fn connect(device_serial: impl AsRef<str>) -> Result<Self, MyError> {
         let device_serial = device_serial.as_ref();
 
-        cprintln!("<blue>[AahController]</blue>: connecting to {device_serial}...");
+        cprintln!("<blue>[AdbController]</blue>: connecting to {device_serial}...");
         let device = adb::connect(device_serial)?;
-        cprintln!("<blue>[AahController]</blue>: connected");
+        cprintln!("<blue>[AdbController]</blue>: connected");
 
-        let screen = device.screencap()?;
-        let width = screen.width();
-        let height = screen.height();
         cprintln!(
-            "<blue>[AahController]</blue>: device screen: {}x{}",
-            screen.width(),
-            screen.height()
+            "<blue>[AdbController]</blue>: device screen: {}x{}",
+            device.screencap()?.width(),
+            device.screencap()?.height()
         );
 
         let controller = Self {
             inner: device,
-            width,
-            height,
         };
 
         Ok(controller)
+    }
+
+    fn width(&self) -> u32 {
+        self.inner.screencap().unwrap().width()
+    }
+
+    fn height(&self) -> u32 {
+        self.inner.screencap().unwrap().height()
     }
 }
 
 impl Controller for AdbController {
     fn screen_size(&self) -> (u32, u32) {
-        (self.width, self.height)
+        (self.width(), self.height())
     }
 
     fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
-        if x > self.width || y > self.height {
-            return Err(MyError::S("coord out of screen".to_string()));
+        if x > self.width() || y > self.height() {
+            return Err(MyError::S(
+                format!("coord out of screen (click at {}, {}; size is {}, {})", x, y, self.width(), self.height())
+            ));
         }
         cprintln!(
             "<blue>[AahController]</blue>: clicking ({}, {}) using adb",
