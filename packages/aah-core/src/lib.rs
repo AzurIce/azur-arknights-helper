@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aah_controller::{aah_controller::AahController, adb_controller::AdbController, Controller};
+use aah_controller::{aah_controller::AahController, adb_controller::AdbController, pc_controller::create_pc_controller, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
@@ -63,7 +63,6 @@ impl AAH {
     ///
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
-    /// - `on_task_evt`: 任务事件的回调函数
     pub fn connect(
         serial: impl AsRef<str>,
         resource: Arc<Resource>,
@@ -78,12 +77,23 @@ impl AAH {
     /// 
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
-    /// - `on_task_evt`: 任务事件的回调函数
     pub fn connect_with_adb_controller(
         serial: impl AsRef<str>,
         resource: Arc<Resource>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AdbController::connect(serial)?);
+
+        AAH::new(controller, resource)
+    }
+
+    /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
+    /// 使用 Windows 控制器
+    /// 
+    /// - `resource`: 资源
+    pub fn connect_with_pc_controller(
+        resource: Arc<Resource>,
+    ) -> Result<Self, anyhow::Error> {
+        let controller = create_pc_controller()?;
 
         AAH::new(controller, resource)
     }
