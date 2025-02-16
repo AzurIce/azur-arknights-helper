@@ -1,5 +1,5 @@
 [submodule "packages/auto-gakumasu"]
 	path = packages/auto-gakumasu
-	url = git@github.com:YXHXianYu/auto-gakumasu.git
+	url = https://github.com/YXHXianYu/auto-gakumasu.git
 	branch = aah
 	shallow = true
