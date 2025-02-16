@@ -1,4 +1,5 @@
 use anyhow::Context;
+use std::env;
 use std::fs::File;
 use std::io::{Read, Seek, Write};
 use std::path::Path;
@@ -51,18 +52,20 @@ where
 }
 
 fn main() {
-    println!("cargo:rerun-if-changed=resources");
-    let src_dir = Path::new("resources");
-    let dst = Path::new("resources.zip");
+    let root_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
+    println!("root_dir: {root_dir:?}");
+    let root_dir = Path::new(&root_dir).join("../../");
+    let src_dir = root_dir.join("resources");
+    let dst = root_dir.join("resources.zip");
 
     let dst_file = File::create(dst).unwrap();
 
-    let walkdir = WalkDir::new(src_dir);
+    let walkdir = WalkDir::new(&src_dir);
     let it = walkdir.into_iter();
 
     zip_dir(
         &mut it.filter_map(|e| e.ok()),
-        src_dir,
+        &src_dir,
         dst_file,
         zip::CompressionMethod::Zstd,
     )
