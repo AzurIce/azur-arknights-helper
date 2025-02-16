@@ -1,0 +1,9 @@
+[package]
+name = "xtask-build-resources"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+zip = "2.2.2"
+walkdir = "2.5.0"
+anyhow = "1.0.89"

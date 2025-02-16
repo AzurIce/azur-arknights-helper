@@ -3,8 +3,6 @@
 
 <s>本来想拿 MaaCore 在 Rust 里搓点有意思的东西，但是 cpp 的构建过程实在是太烦人了，所以决定纯 Rust 重写。</s>
 
-- [ ] 实现 TemplateMatching
-
 ## 如何使用
 
 ```
@@ -46,7 +44,7 @@ retry = 1
 [steps.action.ClickMatchTemplate]
 template = "mission-week_collect-all.png"
 
-// ...
+# ...
 ```
 
 每一个任务有一个 `name` 字段作为唯一标识符，与其文件名一致。

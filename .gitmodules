@@ -1,9 +1,9 @@
 [submodule "packages/auto-gakumasu"]
 	path = packages/auto-gakumasu
-	url = git@github.com:YXHXianYu/auto-gakumasu.git
+	url = https://github.com/YXHXianYu/auto-gakumasu.git
 	branch = aah
 	shallow = true
 [submodule "packages/auto-wuthering-waves"]
 	path = packages/auto-wuthering-waves
-	url = git@github.com:YXHXianYu/auto-wuthering-waves.git
+	url = https://github.com/YXHXianYu/auto-wuthering-waves.git
 	shallow = true
