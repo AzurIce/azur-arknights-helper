@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace]
-members = ["packages/*"]
+members = ["packages/*", "xtasks/*"]
 
 [workspace.dependencies]
 aah-controller = { path = "packages/aah-controller" }
@@ -34,8 +34,3 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 reqwest = "0.12.7"
 tokio = "1.43.0"
-
-[build-dependencies]
-zip = "2.2.2"
-walkdir = "2.5.0"
-anyhow = "1.0.89"
