@@ -1,0 +1,41 @@
+name = "gakumasu_start_kuyo"
+desc = "start kuyo in Leidian Emulator"
+
+[[steps]]
+delay_sec = 2.0
+retry = 3
+[steps.action.Click]
+x = 504
+y = 249
+# [steps.action.ClickMatchTemplate]
+# template = "gakumasu/kuyo_logo.png"
+
+# wait for kuyo start
+[[steps]]
+delay_sec = 10.0
+[steps.action.Click]
+x = 1
+y = 100
+
+# click the button 1
+[[steps]]
+delay_sec = 2.0
+retry = 3
+[steps.action.Click]
+x = 540
+y = 1900
+
+# click the button 2
+[[steps]]
+delay_sec = 2.0
+retry = 3
+[steps.action.Click]
+x = 886
+y = 687
+
+# wait for gakumasu start & click any position
+[[steps]]
+delay_sec = 50.0
+[steps.action.Click]
+x = 100
+y = 100

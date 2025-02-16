@@ -182,6 +182,14 @@ impl Resource {
         }
     }
 
+    pub async fn try_init_by_specific_dir(target_dir: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+        let res = {
+            info!("specific directory, loading with LocalResource...");
+            LocalResource::load(target_dir)?.into()
+        };
+        Ok(res)
+    }
+
     pub async fn try_init(target_dir: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
         let res = if cfg!(debug_assertions) {
             info!("debug mod, loading with LocalResource...");
