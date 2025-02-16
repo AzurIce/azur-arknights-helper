@@ -4,3 +4,4 @@ update-resources:
     else \
         echo "last_updated = $(date --rfc-3339=seconds)" > resources/manifest.toml; \
     fi
+    cargo build-resources
