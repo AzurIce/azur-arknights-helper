@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aah_controller::{aah_controller::AahController, Controller};
+use aah_controller::{aah_controller::AahController, adb_controller::AdbController, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
@@ -73,7 +73,22 @@ impl AAH {
         AAH::new(controller, resource)
     }
 
-    pub fn new(
+    /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
+    /// 使用 ADB 控制器
+    /// 
+    /// - `serial`: 设备的序列号
+    /// - `res_dir`: 资源目录的路径
+    /// - `on_task_evt`: 任务事件的回调函数
+    pub fn connect_with_adb_controller(
+        serial: impl AsRef<str>,
+        resource: Arc<Resource>,
+    ) -> Result<Self, anyhow::Error> {
+        let controller = Box::new(AdbController::connect(serial)?);
+
+        AAH::new(controller, resource)
+    }
+
+    fn new(
         controller: Box<dyn Controller + Sync + Send>,
         resource: Arc<Resource>,
     ) -> Result<Self, anyhow::Error> {
