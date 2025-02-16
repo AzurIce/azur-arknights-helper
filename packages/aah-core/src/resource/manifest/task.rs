@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs};
 
-use crate::task::action::{ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome};
+use crate::task::action::{Action, ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome};
 use crate::task::{Task, TaskStep};
 
 fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
@@ -87,7 +87,7 @@ fn award_task() -> Task {
         name: "award".to_string(),
         desc: None,
         steps: vec![
-            TaskStep::from_action(NavigateIn::new("mission")),
+            TaskStep::from_action(Action::ByName("enter_mission".to_string())),
             TaskStep::from_action(ClickMatchTemplate::new("mission-week_collect-all.png"))
                 .with_delay(0.5)
                 .with_retry(1)
@@ -107,7 +107,7 @@ fn award_task() -> Task {
                 .with_delay(0.5)
                 .with_retry(1)
                 .skip_if_failed(),
-            TaskStep::from_action(NavigateOut::new("mission")),
+            TaskStep::from_action(Action::ByName("back".to_string())),
         ],
     }
 }

@@ -1,5 +1,6 @@
 pub mod click;
 pub mod click_match_template;
+#[deprecated(note = "Use ByName Action instead")]
 pub mod navigate;
 pub mod press_esc;
 pub mod press_home;
@@ -32,7 +33,9 @@ pub enum Action {
     /// [`ClickMatchTemplate`]
     ClickMatchTemplate(ClickMatchTemplate),
     // Navigate
+    #[deprecated(note = "Use ByName Action instead")]
     NavigateIn(NavigateIn),
+    #[deprecated(note = "Use ByName Action instead")]
     NavigateOut(NavigateOut),
 }
 

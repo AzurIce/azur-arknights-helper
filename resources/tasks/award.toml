@@ -2,8 +2,8 @@ name = "award"
 
 [[steps]]
 
-[steps.action.NavigateIn]
-to = "mission"
+[steps.action]
+ByName = "enter_mission"
 
 [[steps]]
 delay_sec = 0.5
@@ -46,5 +46,5 @@ template = "confirm.png"
 
 [[steps]]
 
-[steps.action.NavigateOut]
-from = "mission"
+[steps.action]
+ByName = "back"
