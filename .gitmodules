@@ -3,3 +3,7 @@
 	url = git@github.com:YXHXianYu/auto-gakumasu.git
 	branch = aah
 	shallow = true
+[submodule "packages/auto-wuthering-waves"]
+	path = packages/auto-wuthering-waves
+	url = git@github.com:YXHXianYu/auto-wuthering-waves.git
+	shallow = true
