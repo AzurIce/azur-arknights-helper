@@ -70,6 +70,13 @@ impl AAH {
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AahController::connect(serial)?);
 
+        AAH::new(controller, resource)
+    }
+
+    pub fn new(
+        controller: Box<dyn Controller + Sync + Send>,
+        resource: Arc<Resource>,
+    ) -> Result<Self, anyhow::Error> {
         let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
         let ocr_engine = OcrEngine::new(OcrEngineParams {
             detection_model: Some(
