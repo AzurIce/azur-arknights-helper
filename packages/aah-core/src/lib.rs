@@ -86,17 +86,6 @@ impl AAH {
         AAH::new(controller, resource)
     }
 
-    /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
-    /// 使用 Windows 控制器
-    /// 
-    /// - `resource`: 资源
-    pub fn connect_with_pc_controller(
-        resource: Arc<Resource>,
-    ) -> Result<Self, anyhow::Error> {
-        let controller = create_pc_controller()?;
-
-        AAH::new(controller, resource)
-    }
 
     fn new(
         controller: Box<dyn Controller + Sync + Send>,

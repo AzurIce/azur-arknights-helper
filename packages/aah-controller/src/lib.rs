@@ -205,6 +205,56 @@ pub trait Toucher {
     }
 }
 
-pub trait PcController {
+// MARK: PC Controller
 
+#[derive(Debug, Clone)]
+pub struct WindowInfo {
+    pub title: String,
+    pub position: (i32, i32),
+    pub size: (u32, u32),
+}
+
+pub trait PcControllerTrait: Controller {
+    // MARK: Need to implement
+
+    // 获取所有可见窗口
+    fn get_all_windows(&self) -> Result<Vec<WindowInfo>, MyError>;
+
+    // 聚焦到指定窗口
+    // fn focus_window(&self, title: &str) -> Result<(), MyError>;
+
+    // 模拟鼠标点击
+    fn left_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+
+    // 模拟鼠标右键点击
+    fn right_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+
+    // 模拟鼠标中键点击
+    fn middle_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+
+    // 模拟键盘按键
+    fn key_click(&self, key: char) -> Result<(), MyError>;
+
+    // 模拟键盘按键
+    fn key_press(&self, key: char) -> Result<(), MyError>;
+
+    // 模拟键盘释放按键
+    fn key_release(&self, key: char) -> Result<(), MyError>;
+
+    // 模拟鼠标滑动
+    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
+
+    // MARK: Has default implementation
+
+    // 通过标题查找窗口
+    fn find_window_by_title(&self, title: &str) -> Result<WindowInfo, MyError> {
+        let window = self.get_all_windows()?
+            .into_iter()
+            .find(|w| w.title.contains(title));
+        
+        match window {
+            Some(w) => Ok(w),
+            None => Err(MyError::S("Window not found".to_string())),
+        }
+    }
 }

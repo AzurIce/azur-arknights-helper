@@ -14,6 +14,7 @@ use wgpu::{
 
 use crate::gpu::Context;
 
+#[derive(Clone, Debug)]
 pub struct Match {
     pub location: (u32, u32),
     pub value: f32,

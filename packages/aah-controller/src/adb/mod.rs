@@ -46,6 +46,12 @@ impl Display for MyError {
 
 impl Error for MyError {}
 
+impl From<enigo::NewConError> for MyError {
+    fn from(err: enigo::NewConError) -> Self {
+        MyError::S(format!("{:?}", err))
+    }
+}
+
 #[derive(Debug)]
 pub struct DeviceInfo {
     pub serial: String,
