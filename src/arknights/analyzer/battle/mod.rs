@@ -12,7 +12,12 @@ use deploy::{DeployAnalyzer, DeployCard};
 use image::DynamicImage;
 use serde::Serialize;
 
-use super::{single_match::SingleMatchAnalyzer, Analyzer};
+use crate::{
+    arknights::Aah,
+    task::Runnable,
+    vision::analyzer::{matching::MatchOptions, single_match::SingleMatchAnalyzer, Analyzer},
+    CachedScreenCapper,
+};
 
 #[derive(Debug, Serialize, Clone)]
 /// [`BattleAnalyzer`] 的分析结果：
@@ -84,7 +89,7 @@ impl BattleAnalyzer {
     ///
     /// - `res_dir`: 资源文件路径，会通过 [`crate::utils::resource::get_template`] 加载模板
     /// - `oper_names`: 内部的 [`DeployAnalyzer`] 识别的干员，为游戏内部资源文件的命名方式，如 `char_102_texas`, `char_1028_texas2`
-    pub fn new<P: AsRef<Path>, S: AsRef<str>>(res_dir: P, oper_names: Vec<S>) -> Self {
+    pub fn new<P: AsRef<Path>, S: AsRef<str>>(res_dir: P, oper_names: &[S]) -> Self {
         let deploy_analyzer = DeployAnalyzer::new(&res_dir, oper_names);
         Self {
             res_dir: res_dir.as_ref().to_path_buf(),
@@ -96,7 +101,7 @@ impl BattleAnalyzer {
     }
 
     /// 分析传入的 `image`
-    pub fn analyze_image(&mut self, image: &DynamicImage) -> Result<BattleAnalyzerOutput, String> {
+    pub fn analyze_image(&mut self, image: &DynamicImage) -> anyhow::Result<BattleAnalyzerOutput> {
         let log_tag = cformat!("<strong>[BattleAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing battle...");
         let t = Instant::now();
@@ -123,8 +128,11 @@ impl BattleAnalyzer {
                 }
                 Some(img) => {
                     let output = SingleMatchAnalyzer::new(&self.res_dir, img.to_string())
-                        .roi((0.875, 0.0), (1.0, 0.125))
-                        .use_cache()
+                        .with_options(
+                            MatchOptions::default()
+                                .with_roi((0.875, 0.0), (1.0, 0.125))
+                                .use_cache(),
+                        )
                         .analyze_image(image)?;
                     if output.res.rect.is_some() {
                         // battle started
@@ -154,9 +162,9 @@ impl BattleAnalyzer {
     }
 }
 
-impl Analyzer for BattleAnalyzer {
-    type Output = BattleAnalyzerOutput;
-    fn analyze(&mut self, aah: &crate::AAH) -> Result<Self::Output, String> {
+impl Analyzer<Aah> for BattleAnalyzer {
+    type Res = BattleAnalyzerOutput;
+    fn analyze(&mut self, aah: &Aah) -> anyhow::Result<Self::Res> {
         let screen = aah.screen_cap_and_cache().unwrap();
         self.analyze_image(&screen)
     }
@@ -170,7 +178,7 @@ mod test {
     fn test_battle_analyzer() {
         let mut analyzer = BattleAnalyzer::new(
             "../../resources",
-            vec![
+            &[
                 "char_1028_texas2",
                 "char_4087_ines",
                 "char_479_sleach",

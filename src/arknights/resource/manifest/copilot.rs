@@ -1,11 +1,19 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{collections::HashMap, fs, ops::Deref, path::Path};
 
 use serde::{Deserialize, Serialize};
 
-use crate::task::copilot::{Copilot, CopilotAction, CopilotStep, Direction};
+use crate::arknights::actions::copilot::{Copilot, CopilotAction, CopilotStep, Direction};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CopilotConfig(pub HashMap<String, Copilot>);
+
+impl Deref for CopilotConfig {
+    type Target = HashMap<String, Copilot>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl CopilotConfig {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
@@ -26,22 +34,14 @@ impl CopilotConfig {
         }
         Ok(config)
     }
-
-    pub fn get_task<S: AsRef<str>>(&self, name: S) -> Result<Copilot, String> {
-        return self
-            .0
-            .get(name.as_ref())
-            .ok_or("failed to retrive task from copilot_config".to_string())
-            .map(|task| task.clone());
-    }
 }
 
 impl Default for CopilotConfig {
     fn default() -> Self {
         let mut map = HashMap::new();
-        let test_tasks = vec![("1-4", example_copilot_task())];
-        for (name, task) in test_tasks {
-            map.insert(name.to_string(), task);
+        let test_copilots = vec![("1-4", example_copilot())];
+        for (name, v) in test_copilots {
+            map.insert(name.to_string(), v);
         }
         Self(map)
     }
@@ -53,7 +53,7 @@ impl Default for CopilotConfig {
 //     action: BattleStepCommand,
 // }
 
-pub fn example_copilot_task() -> Copilot {
+pub fn example_copilot() -> Copilot {
     Copilot {
         name: "1-4".to_string(),
         level_code: "1-4".to_string(),
@@ -123,11 +123,11 @@ pub fn example_copilot_task() -> Copilot {
 
 #[cfg(test)]
 mod test {
-    use super::example_copilot_task;
+    use super::example_copilot;
 
     #[test]
     fn test_serde() {
-        let task = toml::to_string_pretty(&example_copilot_task()).unwrap();
+        let task = toml::to_string_pretty(&example_copilot()).unwrap();
         println!("{}", task);
     }
 }

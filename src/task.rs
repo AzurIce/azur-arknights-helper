@@ -68,7 +68,7 @@ impl<T: Runner, ActionSet: Runnable<T> + Debug + Clone> Runnable<T> for Action<A
 }
 
 pub trait Runner {
-    fn run_task(&self, name: &str) -> anyhow::Result<()>;
+    fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()>;
 }
 
 pub trait Runnable<T> {
@@ -188,7 +188,7 @@ impl<T: Debug + Clone> Debug for TaskEvt<T> {
     }
 }
 
-impl<R: Runner, T: Runnable<R, Res = ()> + Debug + Clone> Runnable<R> for Task<T> {
+impl<R: Runner, ActionSet: Runnable<R, Res = ()> + Debug + Clone> Runnable<R> for Task<ActionSet> {
     type Res = ();
     fn run(&self, runner: &R) -> anyhow::Result<Self::Res> {
         info!("[Task<{}>] running...", self.name);
@@ -267,15 +267,15 @@ mod test {
 
     #[test]
     fn test_serde_action() {
-        let action = Action::<android::actions::AndroidActionSet>::by_name("test".to_string());
+        let action = Action::<android::actions::ActionSet>::by_name("test".to_string());
         let toml = toml::to_string_pretty(&action).unwrap();
         println!("{toml}");
 
-        let action = Action::<android::actions::AndroidActionSet>::detailed(Press::esc());
+        let action = Action::<android::actions::ActionSet>::detailed(Press::esc());
         let toml = toml::to_string_pretty(&action).unwrap();
         println!("{toml}");
 
-        let action = Action::<android::actions::AndroidActionSet>::detailed(
+        let action = Action::<android::actions::ActionSet>::detailed(
             ClickMatchTemplate::new("template.png"),
         );
         let toml = toml::to_string_pretty(&action).unwrap();
@@ -284,7 +284,7 @@ mod test {
 
     #[test]
     fn test_serde_task() {
-        let task = Task::<android::actions::AndroidActionSet> {
+        let task = Task::<android::actions::ActionSet> {
             name: "test".to_string(),
             desc: Some("test".to_string()),
             steps: vec![

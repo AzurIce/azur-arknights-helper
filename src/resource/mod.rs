@@ -17,6 +17,26 @@ use serde::de::DeserializeOwned;
 
 use crate::task::Task;
 
+pub trait Load {
+    fn load(path: impl AsRef<Path>) -> anyhow::Result<Self>
+    where
+        Self: Sized;
+}
+
+pub trait GetTask<ActionSet: Debug + Clone> {
+    /// 获取 `resources-root/tasks/<name>.toml` 的任务配置
+    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>>;
+}
+
+pub trait ResRoot {
+    fn res_root(&self) -> &Path;
+}
+
+// pub trait GetTemplate {
+//     /// 获取 `resources-root/templates/<path>` 的图片
+//     fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage>;
+// }
+
 /// 一个通用的基础 resources 目录应当具备以下目录结构：
 /// ```
 /// /resource-repo
@@ -34,11 +54,10 @@ use crate::task::Task;
 pub struct GeneralAahResource<ActionSet: Debug + Clone> {
     pub root: PathBuf,
     pub manifest: Manifest,
-    /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
     pub task_config: TaskConfig<ActionSet>,
 }
 
-impl<ActionSet: Debug + Clone + DeserializeOwned> Resource for GeneralAahResource<ActionSet> {
+impl<ActionSet: Debug + Clone + DeserializeOwned> Load for GeneralAahResource<ActionSet> {
     fn load(root: impl AsRef<Path>) -> anyhow::Result<Self>
     where
         Self: Sized,
@@ -68,45 +87,45 @@ impl<ActionSet: Debug + Clone + DeserializeOwned> Resource for GeneralAahResourc
     }
 }
 
-impl<ActionSet: Debug + Clone> GeneralAahResource<ActionSet> {
-    pub fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>> {
+impl<ActionSet: Debug + Clone> GetTask<ActionSet> for GeneralAahResource<ActionSet> {
+    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>> {
         let name = name.as_ref().to_string();
         self.task_config.0.get(&name)
     }
-    /// 获取所有 Task 名称
-    pub fn get_tasks(&self) -> Vec<String> {
-        self.task_config.0.keys().map(|s| s.to_string()).collect()
-    }
-    pub fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage> {
-        let path = path.as_ref();
-        let img = image::open(self.root.join("templates").join(path))?;
-        Ok(img)
+}
+
+impl<ActionSet: Debug + Clone> ResRoot for GeneralAahResource<ActionSet> {
+    fn res_root(&self) -> &Path {
+        &self.root
     }
 }
 
-/// 对应一个 Git 仓库，用于存放资源
-/// ```
-pub struct GitRepoResource<T: Resource> {
+// impl<ActionSet: Debug + Clone> GetTemplate for GeneralAahResource<ActionSet> {
+//     fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage> {
+//         let path = path.as_ref();
+//         let img = image::open(self.root.join("templates").join(path))?;
+//         Ok(img)
+//     }
+// }
+
+// MARK: GitRepoResource
+
+/// 一个实现了 [`Load`] 的结构的 Wrapper，用于便捷地从 Git 仓库初始化/更新资源。
+pub struct GitRepoResource<T: Load> {
     repo_url: String,
     root: PathBuf,
     resource: T,
     manifest: Manifest,
 }
 
-impl<T: Resource> Deref for GitRepoResource<T> {
+impl<T: Load> Deref for GitRepoResource<T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         &self.resource
     }
 }
 
-pub trait Resource {
-    fn load(path: impl AsRef<Path>) -> anyhow::Result<Self>
-    where
-        Self: Sized;
-}
-
-impl<T: Resource> GitRepoResource<T> {
+impl<T: Load> GitRepoResource<T> {
     pub async fn try_init(
         target_dir: impl AsRef<Path>,
         repo_url: impl AsRef<str>,
@@ -225,6 +244,8 @@ impl<T: Resource> GitRepoResource<T> {
     }
 }
 
+/// MARK: Functions
+
 async fn download_repo_zip(
     repo_url: impl AsRef<str>,
     dir: impl AsRef<Path>,
@@ -254,12 +275,7 @@ async fn download_repo_zip(
     }
 }
 
-pub trait ResourceTrait<ActionSet: Debug + Clone> {
-    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>>;
-    fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage>;
-}
-
-//     "https://api.github.com/repos/AzurIce/azur-arknights-helper/contents/resources";
+// api: "https://api.github.com/repos/AzurIce/azur-arknights-helper/contents/resources";
 async fn fetch_file_from_github(
     repo_url: impl AsRef<str>,
     path: impl AsRef<str>,
@@ -296,6 +312,8 @@ async fn fetch_manifest(repo_url: impl AsRef<str>) -> Result<Manifest, anyhow::E
     Ok(manifest)
 }
 
+// MARK: Test
+
 #[cfg(test)]
 mod test {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -327,12 +345,13 @@ mod test {
     async fn test_try_load_or_init_resource() {
         init_logger();
 
-        let resource = GitRepoResource::<GeneralAahResource<android::actions::AndroidActionSet>>::try_load_or_init(
-            "./test/.aah/resources",
-            "https://github.com/AzurIce/aah-resources",
-        )
-        .await
-        .unwrap();
+        let resource =
+            GitRepoResource::<GeneralAahResource<android::actions::ActionSet>>::try_load_or_init(
+                "./test/.aah/resources",
+                "https://github.com/AzurIce/aah-resources",
+            )
+            .await
+            .unwrap();
         println!("{:?}", resource.manifest);
     }
 
@@ -340,10 +359,13 @@ mod test {
     async fn test_update_resource() {
         init_logger();
 
-        let resource = GitRepoResource::<GeneralAahResource<android::actions::AndroidActionSet>>::try_load_or_init(
-            "./test/.aah/resources",
-            "https://github.com/AzurIce/aah-resources",
-        ).await.unwrap();
+        let resource =
+            GitRepoResource::<GeneralAahResource<android::actions::ActionSet>>::try_load_or_init(
+                "./test/.aah/resources",
+                "https://github.com/AzurIce/aah-resources",
+            )
+            .await
+            .unwrap();
         let resource = resource.update().await.unwrap();
         println!("{:?}", resource.manifest);
     }

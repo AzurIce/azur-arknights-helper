@@ -1,27 +1,41 @@
+use std::sync::{Arc, Mutex};
 
+use aah_controller::Controller;
+
+
+#[cfg(feature = "arknights")]
+pub mod arknights;
 #[cfg(feature = "android")]
 pub mod android;
-#[cfg(feature = "pc")]
-pub mod pc;
+#[cfg(feature = "desktop")]
+pub mod desktop;
 pub mod resource;
 pub mod task;
 pub mod vision;
 pub mod utils;
 
-// pub mod arknights;
+pub trait AahTrait {
+    type Controller;
+    type Resource;
+    fn controller(&self) -> &Self::Controller;
+    fn resource(&self) -> &Self::Resource;
+}
 
 pub trait CachedScreenCapper {
     fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage>;
     fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage>;
 }
 
-pub trait GetTemplate {
-    fn get_template(&self, name: &str) -> anyhow::Result<image::DynamicImage>;
-}
+// pub struct GeneralAah<C: Controller, R> {
+//     pub controller: C,
+//     pub resource: Arc<R>,
+//     screen_cache: Mutex<Option<image::DynamicImage>>,
+// }
 
-pub struct GeneralAah {
+// impl<C: Controller, R> GeneralAah<C, R> {
 
-}
+// }
+
 
 #[cfg(test)]
 mod test {

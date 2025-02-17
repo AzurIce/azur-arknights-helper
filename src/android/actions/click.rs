@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::task::Runnable;
 
-use super::AndroidActionSet;
+use super::ActionSet;
 
 /// An action for clicking the specific coordinate on the screen
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -12,9 +12,9 @@ pub struct Click {
     y: u32,
 }
 
-impl Into<AndroidActionSet> for Click {
-    fn into(self) -> AndroidActionSet {
-        AndroidActionSet::Click(self)
+impl Into<ActionSet> for Click {
+    fn into(self) -> ActionSet {
+        ActionSet::Click(self)
     }
 }
 

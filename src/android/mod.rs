@@ -1,22 +1,24 @@
-use std::sync::{Arc, Mutex};
+use std::{path::Path, sync::{Arc, Mutex}};
 
 use aah_controller::{aah_controller::AahController, adb_controller::AdbController, Controller};
 use log::info;
 
 use crate::{
-    resource::{GeneralAahResource, Resource, ResourceTrait},
+    resource::{GeneralAahResource, GetTask, ResRoot},
     task::{Runnable, Runner},
-    CachedScreenCapper, GetTemplate,
+    CachedScreenCapper,
 };
 
 pub mod actions;
+
+pub use actions::ActionSet;
 
 /// 通用 Android AAH
 ///
 /// ActionSet: 见 [`actions::AndroidActionSet`]
 pub struct GeneralAndroidAah {
     pub controller: Box<dyn Controller + Sync + Send>,
-    pub resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
+    pub resource: Arc<GeneralAahResource<actions::ActionSet>>,
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
@@ -59,7 +61,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect(
         serial: impl AsRef<str>,
-        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::ActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AahController::connect(serial)?);
 
@@ -73,7 +75,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect_with_adb_controller(
         serial: impl AsRef<str>,
-        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::ActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AdbController::connect(serial)?);
 
@@ -82,7 +84,7 @@ impl GeneralAndroidAah {
 
     fn new(
         controller: Box<dyn Controller + Sync + Send>,
-        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::ActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         Ok(Self {
             resource,
@@ -93,7 +95,8 @@ impl GeneralAndroidAah {
 }
 
 impl Runner for GeneralAndroidAah {
-    fn run_task(&self, name: &str) -> anyhow::Result<()> {
+    fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
+        let name = name.as_ref().to_string();
         info!("running task: {}...", name);
         let task = self
             .resource
@@ -101,12 +104,6 @@ impl Runner for GeneralAndroidAah {
             .ok_or(anyhow::anyhow!("failed to get task"))?;
 
         task.run(self)
-    }
-}
-
-impl GetTemplate for GeneralAndroidAah {
-    fn get_template(&self, name: &str) -> anyhow::Result<image::DynamicImage> {
-        self.resource.get_template(name)
     }
 }
 
@@ -141,9 +138,17 @@ impl CachedScreenCapper for GeneralAndroidAah {
     }
 }
 
+impl ResRoot for GeneralAndroidAah {
+    fn res_root(&self) -> &Path {
+        self.resource.root.as_path()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::path::Path;
+
+    use crate::resource::Load;
 
     use super::*;
 

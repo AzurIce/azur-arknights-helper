@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::task::Runnable;
 
-use super::AndroidActionSet;
+use super::ActionSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Key {
@@ -25,9 +25,9 @@ impl Press {
     }
 }
 
-impl Into<AndroidActionSet> for Press {
-    fn into(self) -> AndroidActionSet {
-        AndroidActionSet::Press(self)
+impl Into<ActionSet> for Press {
+    fn into(self) -> ActionSet {
+        ActionSet::Press(self)
     }
 }
 

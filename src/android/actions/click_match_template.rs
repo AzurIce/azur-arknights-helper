@@ -4,20 +4,22 @@ use aah_controller::Controller;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    task::Runnable, vision::analyzer::single_match::SingleMatchAnalyzer, CachedScreenCapper,
-    GetTemplate,
+    resource::ResRoot,
+    task::Runnable,
+    vision::analyzer::{single_match::SingleMatchAnalyzer, Analyzer},
+    CachedScreenCapper,
 };
 
-use super::AndroidActionSet;
+use super::ActionSet;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ClickMatchTemplate {
     template: String,
 }
 
-impl Into<AndroidActionSet> for ClickMatchTemplate {
-    fn into(self) -> AndroidActionSet {
-        AndroidActionSet::ClickMatchTemplate(self)
+impl Into<ActionSet> for ClickMatchTemplate {
+    fn into(self) -> ActionSet {
+        ActionSet::ClickMatchTemplate(self)
     }
 }
 
@@ -30,13 +32,12 @@ impl ClickMatchTemplate {
 }
 
 // TODO: create a new trait like Controller
-impl<T: Controller + CachedScreenCapper + GetTemplate> Runnable<T> for ClickMatchTemplate {
+impl<T: Controller + CachedScreenCapper + ResRoot> Runnable<T> for ClickMatchTemplate {
     type Res = ();
     fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
-        let template = runner.get_template(&self.template)?;
-        let analyzer = SingleMatchAnalyzer::new(template);
+        let mut analyzer = SingleMatchAnalyzer::new(runner.res_root(), &self.template);
         let output = analyzer
-            .run(runner)
+            .analyze(runner)
             .map_err(|err| anyhow::anyhow!("failed to analyze: {err}"))?;
         let rect = output
             .res
