@@ -556,6 +556,7 @@ version = "0.1.0"
 dependencies = [
  "aah-controller",
  "aah-cv",
+ "anyhow",
  "chrono",
  "color-print",
  "image 0.25.5",
@@ -563,6 +564,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "windows 0.59.0",
 ]
 
 [[package]]

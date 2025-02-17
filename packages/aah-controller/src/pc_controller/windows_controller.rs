@@ -104,7 +104,6 @@ impl PcControllerTrait for WindowsController {
 
     // 模拟鼠标点击
     fn left_click(&self, x: i32, y: i32) -> Result<(), MyError> {
-        println!("left_click: {}, {}", x, y);
         self.impl_left_click(x, y)
     }
 
