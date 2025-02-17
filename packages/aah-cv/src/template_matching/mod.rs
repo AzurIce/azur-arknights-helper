@@ -57,6 +57,15 @@ pub fn find_matches(
         }
     }
 
+    // sort matches by value (is_x_more_match_than_y)
+    matches.sort_by(|a, b| {
+        if is_x_more_match_than_y(a.value, b.value, method) {
+            std::cmp::Ordering::Less
+        } else {
+            std::cmp::Ordering::Greater
+        }
+    });
+
     matches
 }
 
