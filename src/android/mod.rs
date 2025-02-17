@@ -4,7 +4,7 @@ use aah_controller::{aah_controller::AahController, adb_controller::AdbControlle
 use log::info;
 
 use crate::{
-    resource::{Resource, ResourceTrait},
+    resource::{GeneralAahResource, Resource, ResourceTrait},
     task::{Runnable, Runner},
     CachedScreenCapper, GetTemplate,
 };
@@ -12,11 +12,11 @@ use crate::{
 pub mod actions;
 
 /// 通用 Android AAH
-/// 
+///
 /// ActionSet: 见 [`actions::AndroidActionSet`]
 pub struct GeneralAndroidAah {
     pub controller: Box<dyn Controller + Sync + Send>,
-    pub resource: Arc<Resource<actions::AndroidActionSet>>,
+    pub resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
@@ -59,7 +59,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect(
         serial: impl AsRef<str>,
-        resource: Arc<Resource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AahController::connect(serial)?);
 
@@ -73,7 +73,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect_with_adb_controller(
         serial: impl AsRef<str>,
-        resource: Arc<Resource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AdbController::connect(serial)?);
 
@@ -82,7 +82,7 @@ impl GeneralAndroidAah {
 
     fn new(
         controller: Box<dyn Controller + Sync + Send>,
-        resource: Arc<Resource<actions::AndroidActionSet>>,
+        resource: Arc<GeneralAahResource<actions::AndroidActionSet>>,
     ) -> Result<Self, anyhow::Error> {
         Ok(Self {
             resource,
@@ -145,8 +145,6 @@ impl CachedScreenCapper for GeneralAndroidAah {
 mod test {
     use std::path::Path;
 
-    use crate::resource::LocalResource;
-
     use super::*;
 
     #[test]
@@ -154,7 +152,7 @@ mod test {
         let root = std::env::var("CARGO_MANIFEST_DIR").unwrap();
         let root = Path::new(&root);
 
-        let resource = LocalResource::load(root.join("test/android_resources")).unwrap();
+        let resource = GeneralAahResource::load(root.join("test/android_resources")).unwrap();
         let resource = Arc::new(resource.into());
         let aah = GeneralAndroidAah::connect("127.0.0.1:16384", resource).unwrap();
         aah.run_task("arknights_wakeup").unwrap();
