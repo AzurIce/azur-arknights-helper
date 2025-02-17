@@ -2,11 +2,12 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
 use std::fmt::Debug;
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs};
 
 use crate::android;
-use crate::android::actions::{AndroidActionSet, Press};
+use crate::android::actions::{ActionSet, Press};
 use crate::task::{Action, Task, TaskStep};
 
 fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
@@ -28,6 +29,13 @@ fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct TaskConfig<ActionSet: Debug + Clone>(pub HashMap<String, Task<ActionSet>>);
 
+impl<ActionSet: Debug + Clone> Deref for TaskConfig<ActionSet> {
+    type Target = HashMap<String, Task<ActionSet>>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 impl<ActionSet: Debug + Clone + DeserializeOwned> TaskConfig<ActionSet> {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, anyhow::Error> {
         let path = path.as_ref();
@@ -41,16 +49,9 @@ impl<ActionSet: Debug + Clone + DeserializeOwned> TaskConfig<ActionSet> {
         }
         Ok(task_config)
     }
-
-    pub fn get_task<S: AsRef<str>>(&self, name: S) -> Result<&Task<ActionSet>, String> {
-        return self
-            .0
-            .get(name.as_ref())
-            .ok_or("failed to retrive task from task_config".to_string());
-    }
 }
 
-impl Default for TaskConfig<AndroidActionSet> {
+impl Default for TaskConfig<ActionSet> {
     fn default() -> Self {
         let mut map = HashMap::new();
         let test_tasks = default_tasks();
@@ -64,7 +65,7 @@ impl Default for TaskConfig<AndroidActionSet> {
 use android::actions::ClickMatchTemplate;
 
 #[allow(unused)]
-fn startup_task() -> Task<android::actions::AndroidActionSet> {
+fn startup_task() -> Task<android::actions::ActionSet> {
     Task {
         name: "start_up".to_string(),
         desc: Some("start up to the main screen".to_string()),
@@ -96,7 +97,7 @@ fn startup_task() -> Task<android::actions::AndroidActionSet> {
 }
 
 #[allow(unused)]
-fn award_task() -> Task<android::actions::AndroidActionSet> {
+fn award_task() -> Task<android::actions::ActionSet> {
     Task {
         name: "award".to_string(),
         desc: None,
@@ -132,7 +133,7 @@ fn award_task() -> Task<android::actions::AndroidActionSet> {
     }
 }
 
-pub fn default_tasks() -> Vec<Task<android::actions::AndroidActionSet>> {
+pub fn default_tasks() -> Vec<Task<android::actions::ActionSet>> {
     vec![
         Task {
             name: "press_esc".to_string(),
@@ -151,18 +152,18 @@ pub fn default_tasks() -> Vec<Task<android::actions::AndroidActionSet>> {
 mod test {
     use std::{error::Error, fs::OpenOptions, io::Write};
 
-    use crate::android::actions::AndroidActionSet;
+    use crate::android::actions::ActionSet;
 
     use super::*;
 
     #[test]
     fn test_task_config() {
-        let defalt_config = TaskConfig::<AndroidActionSet>::default();
+        let defalt_config = TaskConfig::<ActionSet>::default();
         println!("{:#?}", defalt_config);
         let toml = toml::to_string_pretty(&defalt_config).unwrap();
         println!("{toml}");
 
-        let config = TaskConfig::<AndroidActionSet>::load("test/android_resources");
+        let config = TaskConfig::<ActionSet>::load("test/android_resources");
         println!("{:#?}", config);
     }
 

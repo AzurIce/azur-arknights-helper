@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::task::Runnable;
 
-use super::AndroidActionSet;
+use super::ActionSet;
 
 mod duration_as_sec_f32 {
     use std::time::Duration;
@@ -35,9 +35,9 @@ pub struct Swipe {
     slope_out: f32,
 }
 
-impl Into<AndroidActionSet> for Swipe {
-    fn into(self) -> AndroidActionSet {
-        AndroidActionSet::Swipe(self)
+impl Into<ActionSet> for Swipe {
+    fn into(self) -> ActionSet {
+        ActionSet::Swipe(self)
     }
 }
 

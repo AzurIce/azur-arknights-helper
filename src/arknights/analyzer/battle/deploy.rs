@@ -1,20 +1,22 @@
-use std::{path::Path, time::Instant};
+use std::{
+    path::{Path, PathBuf},
+    time::Instant,
+};
 
 use color_print::{cformat, cprintln};
 use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
-    utils::resource::get_opers_avatars,
+    arknights::Aah,
+    task::Runnable,
+    utils::{resource::get_opers_avatars, LazyImage},
     vision::{
-        analyzer::multi_match::MultiMatchAnalyzer,
+        analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer},
         matcher::best_matcher::BestMatcher,
         utils::{average_hsv_v, draw_box, Rect},
-    },
-    AAH,
+    }, CachedScreenCapper,
 };
-
-use super::Analyzer;
 
 #[allow(unused)]
 #[derive(Debug, Serialize, Clone)]
@@ -42,6 +44,8 @@ pub struct DeployAnalyzerOutput {
 }
 
 pub struct DeployAnalyzer {
+    res_dir: PathBuf,
+
     use_cache: bool,
     oper_names: Vec<String>,
     matcher: BestMatcher,
@@ -49,7 +53,9 @@ pub struct DeployAnalyzer {
 }
 
 impl DeployAnalyzer {
-    pub fn new<S: AsRef<str>, P: AsRef<Path>>(res_dir: P, opers: Vec<S>) -> Self {
+    pub fn new<S: AsRef<str>>(res_dir: impl AsRef<Path>, opers: &[S]) -> Self {
+        let res_dir = res_dir.as_ref().to_path_buf();
+
         let opers_avatars = get_opers_avatars(opers, &res_dir).unwrap();
         let oper_names = opers_avatars
             .iter()
@@ -63,8 +69,9 @@ impl DeployAnalyzer {
         // ccorr_normed 0.9
         let multi_match_analyzer =
             MultiMatchAnalyzer::new(&res_dir, "battle_deploy-card-cost1.png")
-                .roi((0.0, 0.75), (1.0, 1.0));
+                .with_options(MatchOptions::default().with_roi((0.0, 0.75), (1.0, 1.0)));
         Self {
+            res_dir,
             use_cache: false,
             oper_names,
             matcher: BestMatcher::new(images, None),
@@ -77,7 +84,7 @@ impl DeployAnalyzer {
         self
     }
 
-    pub fn analyze_image(&mut self, image: &DynamicImage) -> Result<DeployAnalyzerOutput, String> {
+    pub fn analyze_image(&self, image: &DynamicImage) -> anyhow::Result<DeployAnalyzerOutput> {
         let log_tag = cformat!("<strong>[DeployAnalyzer]: </strong>");
         cprintln!("{log_tag}analyzing deploy...");
         let t = Instant::now();
@@ -144,10 +151,10 @@ impl DeployAnalyzer {
     }
 }
 
-impl Analyzer for DeployAnalyzer {
-    type Output = DeployAnalyzerOutput;
-    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
-        let screen = core.screen_cap_and_cache()?;
+impl Runnable<Aah> for DeployAnalyzer {
+    type Res = DeployAnalyzerOutput;
+    fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
+        let screen = aah.screen_cap_and_cache()?;
         self.analyze_image(&screen)
     }
 }
@@ -176,7 +183,7 @@ mod test {
         // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
         let mut analyzer = DeployAnalyzer::new(
             "../../resources",
-            vec![
+            &[
                 // "char_1028_texas2",
                 // "char_4087_ines",
                 // "char_479_sleach",

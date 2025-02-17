@@ -1,9 +1,8 @@
 use std::f32::consts::PI;
 
-use crate::AAH;
 use ndarray::{Array1, Array2, Axis};
 
-use super::Analyzer;
+use crate::{arknights::Aah, task::Runnable};
 
 #[cfg(test)]
 mod test {
@@ -28,10 +27,10 @@ impl DepotAnalyzer {
     }
 }
 
-impl Analyzer for DepotAnalyzer {
-    type Output = DepotAnalyzerOutput;
+impl Runnable<Aah> for DepotAnalyzer {
+    type Res = DepotAnalyzerOutput;
 
-    fn analyze(&mut self, aah: &AAH) -> Result<Self::Output, String> {
+    fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
         let crop_height = 128 + 30;
         let x_period = 312;
         let y_period = 380;
@@ -39,7 +38,7 @@ impl Analyzer for DepotAnalyzer {
         let mut screen = aah
             .controller
             .screencap_scaled()
-            .map_err(|err| format!("{:?}", err))?;
+            .map_err(|err| anyhow::anyhow!("{:?}", err))?;
 
         let screen = screen.crop(
             0,

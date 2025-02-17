@@ -26,6 +26,43 @@ pub struct MatchOptions {
     pub(crate) roi: [(f32, f32); 2], // topleft and bottomright
 }
 
+impl MatchOptions {
+    pub fn with_color_mask(
+        mut self,
+        mask_r: RangeInclusive<u8>,
+        mask_g: RangeInclusive<u8>,
+        mask_b: RangeInclusive<u8>,
+    ) -> Self {
+        self.color_mask = (mask_r, mask_g, mask_b);
+        self
+    }
+
+    pub fn with_method(mut self, method: MatchTemplateMethod) -> Self {
+        self.method = Some(method);
+        self
+    }
+
+    pub fn with_binarize_threshold(mut self, binarize_threshold: u8) -> Self {
+        self.binarize_threshold = Some(binarize_threshold);
+        self
+    }
+
+    pub fn with_threshold(mut self, threshold: f32) -> Self {
+        self.threshold = Some(threshold);
+        self
+    }
+
+    pub fn use_cache(mut self) -> Self {
+        self.use_cache = true;
+        self
+    }
+
+    pub fn with_roi(mut self, tl: (f32, f32), br: (f32, f32)) -> Self {
+        self.roi = [tl, br];
+        self
+    }
+}
+
 impl Default for MatchOptions {
     fn default() -> Self {
         Self {
