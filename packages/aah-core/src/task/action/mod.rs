@@ -58,3 +58,15 @@ impl Runnable for Action {
         }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_serde_action() {
+        let action = Action::PressEsc(PressEsc);
+        let toml = toml::to_string_pretty(&action).unwrap();
+        println!("{toml}")
+    }
+}
