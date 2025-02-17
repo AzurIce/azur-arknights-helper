@@ -3,6 +3,7 @@
 
 use std::time::Duration;
 
+use enigo::Key;
 use image::DynamicImage;
 
 use crate::adb::MyError;
@@ -233,13 +234,13 @@ pub trait PcControllerTrait: Controller {
     fn middle_click(&self, x: i32, y: i32) -> Result<(), MyError>;
 
     // 模拟键盘按键
-    fn key_click(&self, key: char) -> Result<(), MyError>;
+    fn key_click(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟键盘按键
-    fn key_press(&self, key: char) -> Result<(), MyError>;
+    fn key_press(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: char) -> Result<(), MyError>;
+    fn key_release(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟鼠标滑动
     fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
