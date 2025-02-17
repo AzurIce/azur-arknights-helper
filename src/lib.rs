@@ -30,7 +30,7 @@ mod test {
         sync::{Mutex, OnceLock},
     };
 
-    use resource::LocalResource;
+    // use resource::LocalResource;
 
     use super::*;
     use std::sync::Arc;
