@@ -118,18 +118,18 @@ impl PcControllerTrait for WindowsController {
     }
 
     // 模拟键盘按键
-    fn key_click(&self, key: char) -> Result<(), MyError> {
-        self.impl_key_click(Key::Unicode(key))
+    fn key_click(&self, key: Key) -> Result<(), MyError> {
+        self.impl_key_click(key)
     }
 
     // 模拟键盘按键
-    fn key_press(&self, key: char) -> Result<(), MyError> {
-        self.impl_key_press(Key::Unicode(key))
+    fn key_press(&self, key: Key) -> Result<(), MyError> {
+        self.impl_key_press(key)
     }
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: char) -> Result<(), MyError> {
-        self.impl_key_release(Key::Unicode(key))
+    fn key_release(&self, key: Key) -> Result<(), MyError> {
+        self.impl_key_release(key)
     }
 
     // 模拟鼠标滑动
