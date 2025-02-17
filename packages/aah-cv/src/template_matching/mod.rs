@@ -36,21 +36,13 @@ pub fn find_matches(
         for x in 0..input_width {
             let value = input.get_pixel(x, y).0[0];
 
-            let ok = if matches!(
-                method,
-                MatchTemplateMethod::SumOfSquaredDifference
-                    | MatchTemplateMethod::SumOfSquaredDifferenceNormed
-            ) {
-                value < threshold
-            } else {
-                value > threshold
-            };
-            if ok {
+            if is_x_more_match_than_y(value, threshold, method) {
                 if let Some(m) = matches.iter_mut().rev().find(|m| {
                     ((m.location.0 as i32 - x as i32).abs() as u32) < template_width
                         && ((m.location.1 as i32 - y as i32).abs() as u32) < template_height
                 }) {
-                    if value > m.value {
+                    
+                    if is_x_more_match_than_y(value, m.value, method) {
                         m.location = (x, y);
                         m.value = value;
                     }
@@ -66,6 +58,18 @@ pub fn find_matches(
     }
 
     matches
+}
+
+pub fn is_x_more_match_than_y(x: f32, y: f32, method: MatchTemplateMethod) -> bool {
+    if matches!(
+        method,
+        MatchTemplateMethod::SumOfSquaredDifference
+            | MatchTemplateMethod::SumOfSquaredDifferenceNormed
+    ) {
+        return x < y;
+    } else {
+        return x > y;
+    };
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Serialize, Deserialize)]
