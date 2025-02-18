@@ -154,8 +154,8 @@ impl PcControllerTrait for WindowsController {
     }
 
     // 模拟鼠标滑动
-    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError> {
-        self.impl_swipe(from_x, from_y, to_x, to_y, duration_ms)
+    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_sec: f64) -> Result<(), MyError> {
+        self.impl_swipe(from_x, from_y, to_x, to_y, (duration_sec * 1000.0) as u64)
     }
 }
 
