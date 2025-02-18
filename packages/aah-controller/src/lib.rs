@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use anyhow::Context;
+use enigo::Key;
 use image::DynamicImage;
 
 #[cfg(feature = "android")]
@@ -215,11 +216,23 @@ pub struct WindowInfo {
 pub trait PcControllerTrait: Controller {
     // MARK: Need to implement
 
+    // 获取屏幕尺寸
+    fn get_screen_size(&self) -> (u32, u32);
+
     // 获取所有可见窗口
     fn get_all_windows(&self) -> anyhow::Result<Vec<WindowInfo>>;
 
     // 聚焦到指定窗口
     // fn focus_window(&self, title: &str) -> Result<(), MyError>;
+
+    // 移动鼠标
+    fn move_mouse_relative(&self, dx: i32, dy: i32) -> Result<(), MyError>;
+
+    // 移动鼠标
+    fn move_mouse_absolute(&self, x: i32, y: i32) -> Result<(), MyError>;
+
+    // 获取鼠标位置
+    fn location(&self) -> Result<(i32, i32), MyError>;
 
     // 模拟鼠标点击
     fn left_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
@@ -231,23 +244,16 @@ pub trait PcControllerTrait: Controller {
     fn middle_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
 
     // 模拟键盘按键
-    fn key_click(&self, key: char) -> anyhow::Result<()>;
+    fn key_click(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟键盘按键
-    fn key_press(&self, key: char) -> anyhow::Result<()>;
+    fn key_press(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: char) -> anyhow::Result<()>;
+    fn key_release(&self, key: Key) -> Result<(), MyError>;
 
-    // 模拟鼠标滑动
-    fn swipe(
-        &self,
-        from_x: i32,
-        from_y: i32,
-        to_x: i32,
-        to_y: i32,
-        duration_ms: u64,
-    ) -> anyhow::Result<()>;
+    // 模拟鼠标拖动
+    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
 
     // MARK: Has default implementation
 
