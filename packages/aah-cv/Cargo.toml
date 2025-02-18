@@ -23,4 +23,4 @@ easyfft = "0.4.1"
 nalgebra = "0.33.2"
 flume = "0.11.0"
 num = "0.4.2"
-serde = "1.0.210"
+serde = { version = "1.0.210", features = ["derive"] }

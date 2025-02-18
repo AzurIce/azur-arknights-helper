@@ -1,6 +1,5 @@
-use std::{ops::RangeInclusive, path::Path};
+use std::path::Path;
 
-use aah_cv::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
 
 use crate::{
@@ -9,9 +8,9 @@ use crate::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
         utils::{draw_box, Rect},
     },
-    AAH,
+    Core,
 };
-use aah_controller::DEFAULT_HEIGHT;
+use aah_controller::{Controller, DEFAULT_HEIGHT};
 
 use super::{matching::MatchOptions, Analyzer};
 
@@ -23,58 +22,29 @@ pub struct SingleMatchAnalyzerOutput {
 
 /// To find the best result where the template fits in the screen
 pub struct SingleMatchAnalyzer {
-    /// filename in `resources/templates`
-    template_filename: String,
-    options: MatchOptions,
-    /// this is loaded from `template_filename`
     template: DynamicImage,
+    // res_dir: PathBuf,
+    options: MatchOptions,
 }
 
 impl SingleMatchAnalyzer {
-    pub fn new<S: AsRef<str>, P: AsRef<Path>>(res_dir: P, template_filename: S) -> Self {
-        let template = get_template(&template_filename, &res_dir).unwrap();
+    pub fn new(res_dir: impl AsRef<Path>, template_path: impl AsRef<Path>) -> Self {
+        let template = get_template(template_path, res_dir).unwrap();
         Self {
             template,
-            template_filename: template_filename.as_ref().to_string(),
+            // res_dir,
             options: Default::default(),
         }
     }
-    pub fn color_mask(
-        mut self,
-        mask_r: RangeInclusive<u8>,
-        mask_g: RangeInclusive<u8>,
-        mask_b: RangeInclusive<u8>,
-    ) -> Self {
-        self.options.color_mask = (mask_r, mask_g, mask_b);
+
+    pub fn with_options(mut self, options: MatchOptions) -> Self {
+        self.options = options;
         self
     }
 
-    pub fn method(mut self, method: MatchTemplateMethod) -> Self {
-        self.options.method = Some(method);
-        self
-    }
+    pub fn analyze_image(&self, image: &DynamicImage) -> anyhow::Result<SingleMatchAnalyzerOutput> {
+        // let template = self.template.get_or_load()?;
 
-    pub fn binarize_threshold(mut self, binarize_threshold: u8) -> Self {
-        self.options.binarize_threshold = Some(binarize_threshold);
-        self
-    }
-
-    pub fn threshold(mut self, threshold: f32) -> Self {
-        self.options.threshold = Some(threshold);
-        self
-    }
-
-    pub fn use_cache(mut self) -> Self {
-        self.options.use_cache = true;
-        self
-    }
-
-    pub fn roi(mut self, tl: (f32, f32), br: (f32, f32)) -> Self {
-        self.options.roi = [tl, br];
-        self
-    }
-
-    pub fn analyze_image(&self, image: &DynamicImage) -> Result<SingleMatchAnalyzerOutput, String> {
         // Scaling
         let template = if image.height() != DEFAULT_HEIGHT {
             let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
@@ -138,31 +108,43 @@ impl SingleMatchAnalyzer {
     }
 }
 
-impl Analyzer for SingleMatchAnalyzer {
-    type Output = SingleMatchAnalyzerOutput;
-    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+impl<T, C: Controller> Analyzer<T> for SingleMatchAnalyzer
+where
+    T: Core<Controller = C>,
+{
+    type Res = SingleMatchAnalyzerOutput;
+    fn analyze(&mut self, core: &T) -> anyhow::Result<Self::Res> {
         // Get image
-        let screen = if self.options.use_cache {
-            core.screen_cache_or_cap()?.clone()
-        } else {
-            core.screen_cap_and_cache()
-                .map_err(|err| format!("{:?}", err))?
-        };
+        let screen = core.controller().screencap()?;
+        // TODO: where to imple cache thing?
+        // let screen = if self.options.use_cache {
+        //     core.screen_cache_or_cap()?.clone()
+        // } else {
+        //     core.screen_cap_and_cache()
+        //         .map_err(|err| anyhow::anyhow!("{:?}", err))?
+        // };
         self.analyze_image(&screen)
+            .map_err(|err| anyhow::anyhow!("{:?}", err))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::env;
+
     use super::*;
-    use crate::test::aah_for_test;
 
     #[test]
     fn test_single_match_analyzer() {
-        let aah = aah_for_test();
-        let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "start_start.png")
-            .roi((0.3, 0.75), (0.6, 1.0));
-        let output = analyzer.analyze(&aah).unwrap();
+        let root = env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&root);
+
+        let image =
+            image::open(root.join("aah-resources/templates/MUMU-1920x1080/start.png")).unwrap();
+
+        let mut analyzer = SingleMatchAnalyzer::new(root.join("aah-resources"), "start_start.png")
+            .with_options(MatchOptions::default().with_roi((0.3, 0.75), (0.6, 1.0)));
+        let output = analyzer.analyze_image(&image).unwrap();
         println!("{:?}", output.res.rect);
     }
 }
