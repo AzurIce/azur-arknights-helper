@@ -255,7 +255,7 @@ pub trait PcControllerTrait: Controller {
     fn key_release(&self, key: Key) -> Result<(), MyError>;
 
     // 模拟鼠标拖动
-    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
+    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_sec: f64) -> Result<(), MyError>;
 
     // MARK: Has default implementation
 
