@@ -13,7 +13,7 @@ use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
-    arknights::Aah,
+    arknights::AahCore,
     vision::analyzer::{matching::MatchOptions, single_match::SingleMatchAnalyzer, Analyzer},
     CachedScreenCapper,
 };
@@ -161,9 +161,9 @@ impl BattleAnalyzer {
     }
 }
 
-impl Analyzer<Aah> for BattleAnalyzer {
+impl Analyzer<AahCore> for BattleAnalyzer {
     type Res = BattleAnalyzerOutput;
-    fn analyze(&mut self, aah: &Aah) -> anyhow::Result<Self::Res> {
+    fn analyze(&mut self, aah: &AahCore) -> anyhow::Result<Self::Res> {
         let screen = aah.screen_cap_and_cache().unwrap();
         self.analyze_image(&screen)
     }

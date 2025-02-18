@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use aah_core::{
-    arknights::{resource::AahResource, Aah},
+    arknights::{resource::AahResource, AahCore},
     resource::GitRepoResource,
 };
 use clap::{CommandFactory, Parser, Subcommand};
@@ -55,7 +55,7 @@ fn main() {
         ))
         .expect("failed to load resource");
     let aah =
-        Aah::connect(serial, Arc::new(resource.inner)).expect("failed to connect to the device");
+        AahCore::connect(serial, Arc::new(resource.inner)).expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {

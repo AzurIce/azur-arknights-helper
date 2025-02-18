@@ -14,7 +14,7 @@ use crate::{
     arknights::{
         actions::battle::{Deploy, Retreat, UseSkill},
         analyzer::battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
-        Aah,
+        AahCore,
     },
     utils::resource::get_template,
     vision::analyzer::Analyzer,
@@ -103,9 +103,9 @@ pub enum CopilotAction {
     },
 }
 
-impl TaskRecipe<Aah> for Copilot {
+impl TaskRecipe<AahCore> for Copilot {
     type Res = ();
-    fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
+    fn run(&self, aah: &AahCore) -> anyhow::Result<Self::Res> {
         let log_tag = cformat!("<strong>[CopilotTask {}]: </strong>", self.level_code);
         let copilot_task = aah
             .resource

@@ -8,7 +8,7 @@ use image::DynamicImage;
 use serde::Serialize;
 
 use crate::{
-    arknights::Aah,
+    arknights::AahCore,
     utils::resource::get_opers_avatars,
     vision::{
         analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer, Analyzer},
@@ -151,9 +151,9 @@ impl DeployAnalyzer {
     }
 }
 
-impl Analyzer<Aah> for DeployAnalyzer {
+impl Analyzer<AahCore> for DeployAnalyzer {
     type Res = DeployAnalyzerOutput;
-    fn analyze(&mut self, core: &Aah) -> anyhow::Result<Self::Res> {
+    fn analyze(&mut self, core: &AahCore) -> anyhow::Result<Self::Res> {
         let screen = core.screen_cap_and_cache()?;
         self.analyze_image(&screen)
     }

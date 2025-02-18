@@ -3,7 +3,7 @@ use ocrs::ImageSource;
 use regex::Regex;
 
 use crate::{
-    arknights::Aah,
+    arknights::AahCore,
     vision::{
         analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer, Analyzer},
         utils::{draw_box, Rect},
@@ -24,9 +24,9 @@ impl LevelAnalyzer {
     }
 }
 
-impl Analyzer<Aah> for LevelAnalyzer {
+impl Analyzer<AahCore> for LevelAnalyzer {
     type Res = LevelAnalyzerOutput;
-    fn analyze(&mut self, aah: &Aah) -> anyhow::Result<Self::Res> {
+    fn analyze(&mut self, aah: &AahCore) -> anyhow::Result<Self::Res> {
         let _ = aah.screen_cap_and_cache()?;
 
         println!("Multimatching levels_crystal");
