@@ -1,7 +1,7 @@
 // pub mod minicap;
 pub mod minitouch;
 
-use crate::adb::Device;
+use crate::android::adb::Device;
 
 pub trait App {
     fn check(device: &Device) -> anyhow::Result<()>;

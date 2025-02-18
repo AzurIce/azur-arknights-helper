@@ -1,39 +1,12 @@
 use std::time::Duration;
 
-use crate::adb::{
+use crate::android::adb::{
     utils::{read_to_end, read_to_end_to_string},
     AdbTcpStream,
 };
 
 use super::AdbCommand;
 
-#[cfg(test)]
-mod test {
-    use crate::adb::host;
-
-    use super::{ScreenCap, ShellCommand};
-
-    #[test]
-    fn test_screencap() {
-        let mut host = host::connect_default().unwrap();
-        let res = host
-            .execute_local_command("127.0.0.1:16384".to_string(), ScreenCap)
-            .unwrap();
-        println!("{}", res.len())
-    }
-
-    #[test]
-    fn test_minitouch() {
-        let mut host = host::connect_default().unwrap();
-        let res = host
-            .execute_local_command(
-                "127.0.0.1:16384".to_string(),
-                ShellCommand::new("/data/local/tmp/minitouch -h".to_string()),
-            )
-            .unwrap();
-        println!("{res}")
-    }
-}
 
 /// shell:command
 ///
@@ -112,5 +85,33 @@ impl AdbCommand for InputSwipe {
 
     fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
         stream.check_response_status()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::android::adb::host;
+
+    use super::{ScreenCap, ShellCommand};
+
+    #[test]
+    fn test_screencap() {
+        let mut host = host::connect_default().unwrap();
+        let res = host
+            .execute_local_command("127.0.0.1:16384".to_string(), ScreenCap)
+            .unwrap();
+        println!("{}", res.len())
+    }
+
+    #[test]
+    fn test_minitouch() {
+        let mut host = host::connect_default().unwrap();
+        let res = host
+            .execute_local_command(
+                "127.0.0.1:16384".to_string(),
+                ShellCommand::new("/data/local/tmp/minitouch -h".to_string()),
+            )
+            .unwrap();
+        println!("{res}")
     }
 }

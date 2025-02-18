@@ -12,14 +12,14 @@ use log::trace;
 use tempfile::{tempfile, NamedTempFile};
 
 use crate::{
-    adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
+    android::adb::{command::local_service::ShellCommand, utils::execute_adb_command, Device},
     Toucher,
 };
 
-const MINITOUCH_ARM: &[u8] = include_bytes!("../../resources/minitouch/armeabi-v7a/minitouch");
-const MINITOUCH_ARM_64: &[u8] = include_bytes!("../../resources/minitouch/arm64-v8a/minitouch");
-const MINITOUCH_X86: &[u8] = include_bytes!("../../resources/minitouch/x86/minitouch");
-const MINITOUCH_X86_64: &[u8] = include_bytes!("../../resources/minitouch/x86_64/minitouch");
+const MINITOUCH_ARM: &[u8] = include_bytes!("../../../resources/minitouch/armeabi-v7a/minitouch");
+const MINITOUCH_ARM_64: &[u8] = include_bytes!("../../../resources/minitouch/arm64-v8a/minitouch");
+const MINITOUCH_X86: &[u8] = include_bytes!("../../../resources/minitouch/x86/minitouch");
+const MINITOUCH_X86_64: &[u8] = include_bytes!("../../../resources/minitouch/x86_64/minitouch");
 
 use super::App;
 
@@ -351,7 +351,7 @@ impl Toucher for MiniTouch {
 
 #[cfg(test)]
 mod test {
-    use crate::adb::connect;
+    use crate::android::adb::connect;
 
     use super::*;
 

@@ -9,7 +9,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aah_controller::{aah_controller::AahController, adb_controller::AdbController, pc_controller::create_pc_controller, Controller};
+use aah_controller::{android::{AahController, AdbController}, Controller};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;

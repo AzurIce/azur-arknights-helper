@@ -3,15 +3,13 @@
 
 use std::time::Duration;
 
+use anyhow::Context;
 use image::DynamicImage;
 
-use crate::adb::MyError;
-
-pub mod aah_controller;
-pub mod adb_controller;
-pub mod pc_controller;
-pub mod adb;
-pub mod app;
+#[cfg(feature = "android")]
+pub mod android;
+#[cfg(feature = "desktop")]
+pub mod desktop;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rect {
@@ -36,7 +34,7 @@ pub trait Controller {
         self.screen_size().0 as f32 / DEFAULT_HEIGHT as f32
     }
 
-    fn click_in_rect(&self, rect: Rect) -> Result<(), MyError> {
+    fn click_in_rect(&self, rect: Rect) -> anyhow::Result<()> {
         let x = rand::random::<u32>() % rect.width + rect.x;
         let y = rand::random::<u32>() % rect.height + rect.y;
         self.click(x, y)
@@ -45,7 +43,7 @@ pub trait Controller {
     /// A scaled version of [`Controller::click_in_rect`].
     ///
     /// This scaled the coord from 1920x1080 to the actual size by simply dividing [`Controller::scale_factor`]
-    fn click_in_rect_scaled(&self, rect_scaled: Rect) -> Result<(), MyError> {
+    fn click_in_rect_scaled(&self, rect_scaled: Rect) -> anyhow::Result<()> {
         let scale_fector = self.scale_factor();
         let rect = Rect {
             x: (rect_scaled.x as f32 / scale_fector) as u32,
@@ -56,12 +54,12 @@ pub trait Controller {
         self.click_in_rect(rect)
     }
 
-    fn click(&self, x: u32, y: u32) -> Result<(), MyError>;
+    fn click(&self, x: u32, y: u32) -> anyhow::Result<()>;
 
     /// A scaled version of [`Controller::click`].
     ///
     /// This scaled the coord from 1920x1080 to the actual size by simply dividing [`Controller::scale_factor`]
-    fn click_scaled(&self, x_scaled: u32, y_scaled: u32) -> Result<(), MyError> {
+    fn click_scaled(&self, x_scaled: u32, y_scaled: u32) -> anyhow::Result<()> {
         let scale_factor = self.scale_factor();
         let (x, y) = (
             x_scaled as f32 / scale_factor,
@@ -77,7 +75,7 @@ pub trait Controller {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), MyError>;
+    ) -> anyhow::Result<()>;
 
     /// A scaled version of [`Controller::swipe`].
     ///
@@ -89,7 +87,7 @@ pub trait Controller {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), MyError> {
+    ) -> anyhow::Result<()> {
         let scale_factor = self.scale_factor();
         let (start, end) = (
             (
@@ -111,15 +109,15 @@ pub trait Controller {
     }
 
     /// Get the raw screencap data in bytes
-    fn raw_screencap(&self) -> Result<Vec<u8>, MyError>;
+    fn raw_screencap(&self) -> anyhow::Result<Vec<u8>>;
 
     /// Get the decoded screencap image
-    fn screencap(&self) -> Result<image::DynamicImage, MyError>;
+    fn screencap(&self) -> anyhow::Result<image::DynamicImage>;
 
     /// A scaled version of [`Controller::swipe`].
     ///
     /// This scaled the screenshot image to [`DEFAULT_HEIGHT`]
-    fn screencap_scaled(&self) -> Result<image::DynamicImage, MyError> {
+    fn screencap_scaled(&self) -> anyhow::Result<image::DynamicImage> {
         let screen = self.screencap()?;
         let screen = if screen.height() != DEFAULT_HEIGHT {
             // let scale_factor = 2560.0 / image.width() as f32;
@@ -140,9 +138,9 @@ pub trait Controller {
         Ok(screen)
     }
 
-    fn press_home(&self) -> Result<(), MyError>;
+    fn press_home(&self) -> anyhow::Result<()>;
 
-    fn press_esc(&self) -> Result<(), MyError>;
+    fn press_esc(&self) -> anyhow::Result<()>;
 }
 
 /// A toucher contains [`Toucher::click`] and [`Toucher::swipe`]
@@ -218,43 +216,52 @@ pub trait PcControllerTrait: Controller {
     // MARK: Need to implement
 
     // 获取所有可见窗口
-    fn get_all_windows(&self) -> Result<Vec<WindowInfo>, MyError>;
+    fn get_all_windows(&self) -> anyhow::Result<Vec<WindowInfo>>;
 
     // 聚焦到指定窗口
     // fn focus_window(&self, title: &str) -> Result<(), MyError>;
 
     // 模拟鼠标点击
-    fn left_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+    fn left_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
 
     // 模拟鼠标右键点击
-    fn right_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+    fn right_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
 
     // 模拟鼠标中键点击
-    fn middle_click(&self, x: i32, y: i32) -> Result<(), MyError>;
+    fn middle_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
 
     // 模拟键盘按键
-    fn key_click(&self, key: char) -> Result<(), MyError>;
+    fn key_click(&self, key: char) -> anyhow::Result<()>;
 
     // 模拟键盘按键
-    fn key_press(&self, key: char) -> Result<(), MyError>;
+    fn key_press(&self, key: char) -> anyhow::Result<()>;
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: char) -> Result<(), MyError>;
+    fn key_release(&self, key: char) -> anyhow::Result<()>;
 
     // 模拟鼠标滑动
-    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
+    fn swipe(
+        &self,
+        from_x: i32,
+        from_y: i32,
+        to_x: i32,
+        to_y: i32,
+        duration_ms: u64,
+    ) -> anyhow::Result<()>;
 
     // MARK: Has default implementation
 
     // 通过标题查找窗口
-    fn find_window_by_title(&self, title: &str) -> Result<WindowInfo, MyError> {
-        let window = self.get_all_windows()?
+    fn find_window_by_title(&self, title: &str) -> anyhow::Result<WindowInfo> {
+        let window = self
+            .get_all_windows()
+            .context(format!("failed to get all windows"))?
             .into_iter()
             .find(|w| w.title.contains(title));
-        
+
         match window {
             Some(w) => Ok(w),
-            None => Err(MyError::S("Window not found".to_string())),
+            None => anyhow::bail!("Window not found"),
         }
     }
 }

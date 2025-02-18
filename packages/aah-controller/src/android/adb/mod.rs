@@ -13,7 +13,7 @@ use command::local_service::ShellCommand;
 use image::{codecs::png::PngDecoder, DynamicImage};
 use log::{error, trace};
 
-use crate::adb::utils::{read_payload_to_string, read_response_status, ResponseStatus};
+use utils::{read_payload_to_string, read_response_status, ResponseStatus};
 
 use self::{
     command::{host_service, local_service, AdbCommand},
@@ -27,8 +27,8 @@ pub mod utils;
 
 #[derive(Debug)]
 pub enum MyError {
-    S(String),
-    Adb(String),
+    AdbCommandError(String),
+    AdbTcpStreamError(String),
     ParseError(String),
     DeviceNotFound(String),
     HostConnectError(String),
@@ -45,12 +45,6 @@ impl Display for MyError {
 }
 
 impl Error for MyError {}
-
-impl From<enigo::NewConError> for MyError {
-    fn from(err: enigo::NewConError) -> Self {
-        MyError::S(format!("{:?}", err))
-    }
-}
 
 #[derive(Debug)]
 pub struct DeviceInfo {
@@ -210,7 +204,7 @@ impl Device {
     }
 
     pub fn connect_adb_tcp_stream(&self) -> Result<AdbTcpStream, MyError> {
-        AdbTcpStream::connect_device(&self.serial).map_err(|err| MyError::S(err))
+        AdbTcpStream::connect_device(&self.serial).map_err(|err| MyError::AdbTcpStreamError(err))
     }
 
     // pub fn get_screen_size(&self) -> Result<(u32, u32), MyError> {
@@ -262,7 +256,7 @@ impl Device {
         let mut adb_tcp_stream = self.connect_adb_tcp_stream()?;
         adb_tcp_stream
             .execute_command(command)
-            .map_err(|err| MyError::Adb(err.to_string()))
+            .map_err(|err| MyError::AdbCommandError(err.to_string()))
     }
 }
 
@@ -271,7 +265,7 @@ mod test {
     use std::time::Instant;
 
     use super::*;
-    use crate::adb::command::local_service;
+    use crate::android::adb::command::local_service;
 
     #[test]
     fn test_connect() -> Result<(), MyError> {

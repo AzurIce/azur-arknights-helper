@@ -1,27 +1,6 @@
-use crate::adb::{utils::read_payload_to_string, AdbTcpStream, DeviceInfo};
+use crate::android::adb::{utils::read_payload_to_string, AdbTcpStream, DeviceInfo};
 
 use super::AdbCommand;
-
-#[cfg(test)]
-mod test {
-    use crate::adb::host;
-
-    use super::*;
-
-    #[test]
-    fn test_version() {
-        let mut host = host::connect_default().unwrap();
-        let res = host.execute_command(Version::new());
-        println!("{:?}", res);
-    }
-
-    #[test]
-    fn test_device_long() {
-        let mut host = host::connect_default().unwrap();
-        let res = host.execute_command(DeviceLong::new());
-        println!("{:?}", res)
-    }
-}
 
 /// host:version
 pub struct Version;
@@ -94,5 +73,26 @@ impl AdbCommand for Transport {
 
     fn handle_response(&self, stream: &mut AdbTcpStream) -> Result<Self::Output, String> {
         stream.check_response_status()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::android::adb::host;
+
+    use super::*;
+
+    #[test]
+    fn test_version() {
+        let mut host = host::connect_default().unwrap();
+        let res = host.execute_command(Version::new());
+        println!("{:?}", res);
+    }
+
+    #[test]
+    fn test_device_long() {
+        let mut host = host::connect_default().unwrap();
+        let res = host.execute_command(DeviceLong::new());
+        println!("{:?}", res)
     }
 }

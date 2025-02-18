@@ -5,6 +5,7 @@ edition = "2021"
 
 [features]
 default = ["arknights"]
+all = ["arknights", "android", "desktop"]
 arknights = ["android"]
 android = []
 desktop = []

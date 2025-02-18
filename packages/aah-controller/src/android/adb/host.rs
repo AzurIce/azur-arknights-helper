@@ -13,7 +13,18 @@ use super::{
 
 use super::{DeviceInfo, MyError};
 
-pub mod command;
+mod command {
+    pub const DATA: &[u8; 4] = b"DATA";
+    pub const DENT: &[u8; 4] = b"DENT";
+    pub const DONE: &[u8; 4] = b"DONE";
+    pub const FAIL: &[u8; 4] = b"FAIL";
+    pub const LIST: &[u8; 4] = b"LIST";
+    pub const OKAY: &[u8; 4] = b"OKAY";
+    pub const QUIT: &[u8; 4] = b"QUIT";
+    pub const RECV: &[u8; 4] = b"RECV";
+    pub const SEND: &[u8; 4] = b"SEND";
+    pub const STAT: &[u8; 4] = b"STAT";
+}
 
 pub struct Host {
     socket_addr: SocketAddrV4,
@@ -54,7 +65,7 @@ impl Host {
     pub fn devices_long(&mut self) -> Result<Vec<DeviceInfo>, MyError> {
         let response = self
             .execute_command(DeviceLong::new())
-            .map_err(|err| MyError::Adb(err.to_string()))?;
+            .map_err(|err| MyError::AdbCommandError(err.to_string()))?;
         Ok(response)
     }
 
@@ -106,7 +117,7 @@ impl Host {
 
 #[cfg(test)]
 mod test {
-    use crate::adb::command::local_service::ShellCommand;
+    use crate::android::adb::command::local_service::ShellCommand;
 
     use super::*;
 
