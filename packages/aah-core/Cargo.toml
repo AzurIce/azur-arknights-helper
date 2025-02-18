@@ -3,6 +3,13 @@ name = "aah-core"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["arknights"]
+all = ["arknights", "android", "desktop"]
+arknights = ["android"]
+android = []
+desktop = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
@@ -30,8 +37,9 @@ regex = "1.10.5"
 zip = "2.2.0"
 bytes = "1.7.2"
 time = { version = "0.3.36", features = ["serde", "parsing", "macros"] }
+ndarray = "0.16.1"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 
 [dev-dependencies]
 env_logger = "0.11.6"
 regex = "1.10.5"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }

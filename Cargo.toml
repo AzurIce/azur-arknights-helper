@@ -3,13 +3,6 @@ name = "aah"
 version = "0.1.0"
 edition = "2021"
 
-[features]
-default = ["arknights"]
-all = ["arknights", "android", "desktop"]
-arknights = ["android"]
-android = []
-desktop = []
-
 [workspace]
 members = ["packages/*", "xtasks/*"]
 
@@ -55,6 +48,4 @@ time = { version = "0.3.36", features = ["serde", "parsing", "macros"] }
 zip = "2.2.2"
 ocrs = "0.10.0"
 imageproc.workspace = true
-rten = "0.16.0"
-regex = "1.11.1"
-ndarray = "0.16.1"
+
