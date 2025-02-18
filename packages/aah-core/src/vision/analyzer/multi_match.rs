@@ -1,15 +1,15 @@
-use std::{ops::RangeInclusive, path::Path};
+use std::path::Path;
 
 use aah_cv::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
 
 use crate::{
-    utils::resource::get_template,
+    utils::{resource::get_template, LazyImage},
     vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
         utils::{draw_box, Rect},
     },
-    AAH,
+    CachedScreenCapper,
 };
 use aah_controller::DEFAULT_HEIGHT;
 
@@ -22,61 +22,25 @@ pub struct MultiMatchAnalyzerOutput {
 }
 
 pub struct MultiMatchAnalyzer {
-    template_filename: String,
-    options: MatchOptions,
-
     template: DynamicImage,
+    options: MatchOptions,
 }
 
 impl MultiMatchAnalyzer {
-    pub fn new(res_dir: impl AsRef<Path>, template_filename: impl AsRef<str>) -> Self {
-        let template = get_template(&template_filename, &res_dir).unwrap();
+    pub fn new(res_dir: impl AsRef<Path>, template_path: impl AsRef<Path>) -> Self {
+        let template = get_template(template_path, res_dir).unwrap();
         Self {
-            template_filename: template_filename.as_ref().to_string(),
             template,
             options: Default::default(),
         }
     }
 
-    pub fn color_mask(
-        mut self,
-        mask_r: RangeInclusive<u8>,
-        mask_g: RangeInclusive<u8>,
-        mask_b: RangeInclusive<u8>,
-    ) -> Self {
-        self.options.color_mask = (mask_r, mask_g, mask_b);
+    pub fn with_options(mut self, options: MatchOptions) -> Self {
+        self.options = options;
         self
     }
 
-    pub fn method(mut self, method: MatchTemplateMethod) -> Self {
-        self.options.method = Some(method);
-        self
-    }
-
-    pub fn binarize_threshold(mut self, binarize_threshold: u8) -> Self {
-        self.options.binarize_threshold = Some(binarize_threshold);
-        self
-    }
-
-    pub fn threshold(mut self, threshold: f32) -> Self {
-        self.options.threshold = Some(threshold);
-        self
-    }
-
-    pub fn use_cache(mut self) -> Self {
-        self.options.use_cache = true;
-        self
-    }
-
-    pub fn roi(mut self, tl: (f32, f32), br: (f32, f32)) -> Self {
-        self.options.roi = [tl, br];
-        self
-    }
-
-    pub fn analyze_image(
-        &mut self,
-        image: &DynamicImage,
-    ) -> Result<MultiMatchAnalyzerOutput, String> {
+    pub fn analyze_image(&self, image: &DynamicImage) -> anyhow::Result<MultiMatchAnalyzerOutput> {
         // Scaling
         let template = if image.height() != DEFAULT_HEIGHT {
             let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
@@ -144,29 +108,36 @@ impl MultiMatchAnalyzer {
     }
 }
 
-impl Analyzer for MultiMatchAnalyzer {
-    type Output = MultiMatchAnalyzerOutput;
-    fn analyze(&mut self, core: &AAH) -> Result<Self::Output, String> {
+impl<T: CachedScreenCapper> Analyzer<T> for MultiMatchAnalyzer {
+    type Res = MultiMatchAnalyzerOutput;
+    fn analyze(&mut self, core: &T) -> anyhow::Result<Self::Res> {
         let screen = if self.options.use_cache {
             core.screen_cache_or_cap()?.clone()
         } else {
             core.screen_cap_and_cache()
-                .map_err(|err| format!("{:?}", err))?
+                .map_err(|err| anyhow::anyhow!("{:?}", err))?
         };
         self.analyze_image(&screen)
+            .map_err(|err| anyhow::anyhow!(err))
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::path::Path;
+
     use crate::vision::analyzer::multi_match::MultiMatchAnalyzer;
 
     #[test]
     fn test_multi_template_match_analyzer() {
+        let root = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&root);
+
         // let mut core = AAH::connect("127.0.0.1:16384", "../../resources", |_| {}).unwrap();
-        let image = image::open("../../resources/templates/MUMU-1920x1080/1-4.png").unwrap();
+        let image =
+            image::open(root.join("aah-resources/templates/MUMU-1920x1080/1-4.png")).unwrap();
         let mut analyzer =
-            MultiMatchAnalyzer::new("../../resources", "battle_deploy-card-cost1.png");
+            MultiMatchAnalyzer::new(root.join("aah-resources"), "battle_deploy-card-cost1.png");
         let output = analyzer.analyze_image(&image).unwrap();
         output.annotated_screen.save("./assets/output.png").unwrap();
         println!("{:?}", output.res.rects);

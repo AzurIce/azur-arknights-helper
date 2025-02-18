@@ -3,7 +3,10 @@
 
 use std::sync::Arc;
 
-use aah_core::{resource::Resource, AAH};
+use aah_core::{
+    arknights::{resource::AahResource, Aah},
+    resource::GitRepoResource,
+};
 use clap::{CommandFactory, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -46,10 +49,13 @@ fn main() {
         .enable_all()
         .build()
         .unwrap()
-        .block_on(Resource::try_init("./resources"))
+        .block_on(GitRepoResource::<AahResource>::try_init(
+            "./.aah/resources",
+            "https://github.com/AzurIce/aah-resources",
+        ))
         .expect("failed to load resource");
     let aah =
-        AAH::connect(serial, Arc::new(resource.into())).expect("failed to connect to the device");
+        Aah::connect(serial, Arc::new(resource.inner)).expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {

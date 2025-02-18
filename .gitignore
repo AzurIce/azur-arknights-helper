@@ -2,6 +2,7 @@ target
 .direnv
 .DS_Store
 .aah
+*.log
 
 # for auto-gakumasu
 

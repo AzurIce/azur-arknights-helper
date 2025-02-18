@@ -10,7 +10,6 @@
 
 use std::{fmt::Debug, time::Duration};
 
-use aah_core::vision::analyzer::battle::BattleAnalyzerOutput;
 use color_print::cprintln;
 use image::DynamicImage;
 use log::info;
@@ -150,37 +149,37 @@ impl<ActionSet: Debug + Clone> TaskStep<ActionSet> {
     }
 }
 
-/// 任务事件
-///
-/// - `Log(String)`: log 信息
-/// - `Img(DynamicImage)`: 标记过的图片
-#[derive(Clone)]
-#[non_exhaustive]
-pub enum TaskEvt<T: Debug + Clone> {
-    ExecStat {
-        step: TaskStep<T>,
-        cur: usize,
-        total: usize,
-    },
-    MatchTaskRes {},
-    Log(String),
-    AnnotatedImg(DynamicImage),
-    BattleAnalyzerRes(BattleAnalyzerOutput),
-}
+// /// 任务事件
+// ///
+// /// - `Log(String)`: log 信息
+// /// - `Img(DynamicImage)`: 标记过的图片
+// #[derive(Clone)]
+// #[non_exhaustive]
+// pub enum TaskEvt<T: Debug + Clone> {
+//     ExecStat {
+//         step: TaskStep<T>,
+//         cur: usize,
+//         total: usize,
+//     },
+//     MatchTaskRes {},
+//     Log(String),
+//     AnnotatedImg(DynamicImage),
+//     BattleAnalyzerRes(BattleAnalyzerOutput),
+// }
 
-impl<T: Debug + Clone> Debug for TaskEvt<T> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            TaskEvt::ExecStat { step, cur, total } => {
-                write!(f, "TaskEvt::ExecStat({:?}, {}/{})", step, cur, total)
-            }
-            TaskEvt::Log(log) => write!(f, "TaskEvt::Log({})", log),
-            TaskEvt::AnnotatedImg(_img) => write!(f, "TaskEvt::AnnotatedImg"),
-            TaskEvt::BattleAnalyzerRes(res) => write!(f, "TaskEvt::BattleAnalyzerRes({:?})", res),
-            TaskEvt::MatchTaskRes { .. } => write!(f, "TaskEvt::MatchTaskRes"),
-        }
-    }
-}
+// impl<T: Debug + Clone> Debug for TaskEvt<T> {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match self {
+//             TaskEvt::ExecStat { step, cur, total } => {
+//                 write!(f, "TaskEvt::ExecStat({:?}, {}/{})", step, cur, total)
+//             }
+//             TaskEvt::Log(log) => write!(f, "TaskEvt::Log({})", log),
+//             TaskEvt::AnnotatedImg(_img) => write!(f, "TaskEvt::AnnotatedImg"),
+//             TaskEvt::BattleAnalyzerRes(res) => write!(f, "TaskEvt::BattleAnalyzerRes({:?})", res),
+//             TaskEvt::MatchTaskRes { .. } => write!(f, "TaskEvt::MatchTaskRes"),
+//         }
+//     }
+// }
 
 impl<C, R, T, ActionSet> TaskRecipe<T> for Task<ActionSet>
 where

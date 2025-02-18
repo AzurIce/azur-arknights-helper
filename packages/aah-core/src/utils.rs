@@ -1,5 +1,60 @@
 //! some utils
 
+pub struct LazyImage {
+    path: PathBuf,
+    image: RefCell<Option<DynamicImage>>,
+}
+
+impl LazyImage {
+    pub fn new(path: impl AsRef<Path>) -> Self {
+        let path = path.as_ref().to_path_buf();
+        Self {
+            path,
+            image: RefCell::new(None),
+        }
+    }
+    fn load(&self) -> anyhow::Result<()> {
+        let image = image::open(&self.path)
+            .context(format!("LazyImage failed to load image {:?}", self.path))?;
+        *self.image.borrow_mut() = Some(image);
+        Ok(())
+    }
+    pub fn get_or_load(&self) -> anyhow::Result<DynamicImage> {
+        if self.image.borrow().is_none() {
+            self.load().unwrap();
+        }
+        Ok(self.image.borrow().as_ref().unwrap().clone())
+    }
+}
+
+use std::{
+    cell::RefCell,
+    path::{Path, PathBuf},
+};
+
+use anyhow::Context;
+use image::DynamicImage;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+pub fn init_logger() {
+    // let indicatif_layer = IndicatifLayer::new();
+
+    let filter_layer = EnvFilter::try_from_default_env()
+        .or_else(|_| EnvFilter::try_new("info"))
+        .unwrap();
+
+    tracing_subscriber::registry()
+        .with(filter_layer)
+        .with(
+            tracing_subscriber::fmt::layer(), // .with_level(false)
+                                              // .with_target(false)
+                                              // .without_time()
+                                              // .with_writer(indicatif_layer.get_stderr_writer()),
+        )
+        // .with(indicatif_layer)
+        .init();
+}
+
 pub mod resource {
     //! resource related utils
     use std::{fs, path::Path};
@@ -7,15 +62,16 @@ pub mod resource {
     use image::DynamicImage;
 
     /// 从 `{res_path}/resources/templates/1920x1080` 目录中根据文件名称获取模板
-    pub fn get_template<S: AsRef<str>, P: AsRef<Path>>(
-        template_filename: S,
-        res_dir: P,
-    ) -> Result<DynamicImage, String> {
-        let filename = template_filename.as_ref();
+    pub fn get_template(
+        template_path: impl AsRef<Path>,
+        res_dir: impl AsRef<Path>,
+    ) -> anyhow::Result<DynamicImage> {
+        let filename = template_path.as_ref();
         let res_dir = res_dir.as_ref();
 
         let path = res_dir.join("templates").join("1920x1080").join(filename);
-        let image = image::open(path).map_err(|err| format!("template not found: {err}"))?;
+        let image =
+            image::open(path).map_err(|err| anyhow::anyhow!("template not found: {err}"))?;
         Ok(image)
     }
 
@@ -45,7 +101,7 @@ pub mod resource {
 
     /// 输入干员列表和资源路径，以 `Vec<(名,头像)>` 形式返回这些干员的所有头像列表
     pub fn get_opers_avatars<S: AsRef<str>, P: AsRef<Path>>(
-        opers: Vec<S>,
+        opers: &[S],
         res_dir: P,
     ) -> Result<Vec<(String, DynamicImage)>, String> {
         let res_dir = res_dir.as_ref();

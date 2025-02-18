@@ -1,5 +1,5 @@
 use std::{
-    env,
+    fmt::Debug,
     fs::{self, File},
     io::Cursor,
     ops::Deref,
@@ -10,127 +10,58 @@ pub mod manifest;
 
 use anyhow::Context;
 use bytes::Bytes;
+use image::DynamicImage;
 use log::info;
-use manifest::{
-    copilot::CopilotConfig,
-    navigate::{Navigate, NavigateConfig},
-    task::TaskConfig,
-    Manifest,
-};
+use manifest::{task::TaskConfig, Manifest};
+use serde::de::DeserializeOwned;
 
-use crate::{task::copilot::Copilot, task::Task};
+use crate::task::Task;
 
-// https://docs.github.com/en/rest/repos/contents
-const RESOURCE_ROOT_URL: &str =
-    "https://api.github.com/repos/AzurIce/azur-arknights-helper/contents/resources";
-
-async fn download_resource_zip(dir: impl AsRef<Path>) -> Result<(), anyhow::Error> {
-    let url = format!(
-        "https://api.github.com/repos/AzurIce/azur-arknights-helper/contents/resources.zip"
-    );
-
-    let client = reqwest::Client::builder()
-        .user_agent("azur-arknights-helper")
-        .build()?;
-    info!("sending request...");
-    let request = client
-        .get(&url)
-        .header("Accept", "application/vnd.github.v3+json")
-        .send()
-        .await?;
-
-    info!("request status: {}", request.status());
-    if request.status().is_success() {
-        let json: serde_json::Value = request.json().await?;
-        info!("resp json: {json}");
-        let download_url = json["download_url"].as_str().unwrap();
-
-        info!("sending download request...");
-        let response = client.get(download_url).send().await?;
-
-        if response.status().is_success() {
-            info!("saving resources.zip...");
-            let mut file = File::create(dir.as_ref().join("resources.zip"))?;
-            let bytes = response.bytes().await?;
-            std::io::copy(&mut Cursor::new(bytes), &mut file)?;
-            info!("downloaded resource zip from LFS");
-            return Ok(());
-        } else {
-            anyhow::bail!("download request status not success")
-        }
-    } else {
-        anyhow::bail!("request status not success")
-    }
+pub trait Load {
+    fn load(path: impl AsRef<Path>) -> anyhow::Result<Self>
+    where
+        Self: Sized;
 }
 
-async fn fetch_file_from_github(path: impl AsRef<str>) -> Result<Bytes, anyhow::Error> {
-    let path = path.as_ref();
-    let client = reqwest::Client::builder()
-        .user_agent("azur-arknights-helper")
-        .build()?;
-    let resp = client
-        .get(format!("{RESOURCE_ROOT_URL}/{path}"))
-        .header("Accept", "application/vnd.github.raw+json")
-        .send()
-        .await?;
-    Ok(resp.bytes().await?)
+pub trait GetTask<ActionSet: Debug + Clone> {
+    /// 获取 `resources-root/tasks/<name>.toml` 的任务配置
+    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>>;
 }
 
-async fn fetch_manifest() -> Result<Manifest, anyhow::Error> {
-    let manifest_bytes = fetch_file_from_github("manifest.toml").await?;
-    let manifest = String::from_utf8_lossy(&manifest_bytes);
-    let manifest: Manifest = toml::from_str(&manifest)?;
-
-    Ok(manifest)
+pub trait ResRoot {
+    fn res_root(&self) -> &Path;
 }
 
-/// A struct for local Maa Resource Dir
-///
-/// default should be at `./.aah/MaaResource`
+// pub trait GetTemplate {
+//     /// 获取 `resources-root/templates/<path>` 的图片
+//     fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage>;
+// }
+
+/// 一个通用的基础 resources 目录应当具备以下目录结构：
+/// ```
+/// /resource-repo
+/// ├── manifest.toml
+/// ├── tasks
+/// │   ├── task1.toml
+/// │   ├── task2.toml
+/// │   └── ...
+/// ├── templates
+/// │   ├── template1.png
+/// │   ├── template2.png
+/// │   └── ...
+/// └── ...
 #[derive(Debug)]
-pub struct LocalResource {
+pub struct GeneralAahResource<ActionSet: Debug + Clone> {
     pub root: PathBuf,
     pub manifest: Manifest,
-    /// 由 `tasks.toml` 和 `tasks` 目录加载的任务配置
-    pub task_config: TaskConfig,
-    /// 由 `copilots.toml` 和 `copilots` 目录加载的任务配置
-    pub copilot_config: CopilotConfig,
-    /// 由 `navigates.toml` 加载的导航配置
-    pub navigate_config: NavigateConfig,
+    pub task_config: TaskConfig<ActionSet>,
 }
 
-impl LocalResource {
-    pub fn get_task(&self, name: impl AsRef<str>) -> Option<&Task> {
-        let name = name.as_ref().to_string();
-        self.task_config.0.get(&name)
-    }
-
-    pub fn get_copilot(&self, name: impl AsRef<str>) -> Option<&Copilot> {
-        let name = name.as_ref().to_string();
-        self.copilot_config.0.get(&name)
-    }
-
-    pub fn get_navigate(&self, name: impl AsRef<str>) -> Option<&Navigate> {
-        let name = name.as_ref().to_string();
-        self.navigate_config.0.get(&name)
-    }
-
-    /// 获取所有 Task 名称
-    pub fn get_tasks(&self) -> Vec<String> {
-        self.task_config.0.keys().map(|s| s.to_string()).collect()
-    }
-
-    /// 获取所有 Copilot 名称
-    pub fn get_copilots(&self) -> Vec<String> {
-        self.copilot_config
-            .0
-            .keys()
-            .map(|s| s.to_string())
-            .collect()
-    }
-
-    /// Load resource from resources dir (where the manifest.toml sits)
-    pub fn load(root: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+impl<ActionSet: Debug + Clone + DeserializeOwned> Load for GeneralAahResource<ActionSet> {
+    fn load(root: impl AsRef<Path>) -> anyhow::Result<Self>
+    where
+        Self: Sized,
+    {
         let root = root.as_ref().to_path_buf();
         if !root.exists() {
             anyhow::bail!("Resource root not exists: {:?}", root);
@@ -141,202 +72,253 @@ impl LocalResource {
 
         let task_config =
             TaskConfig::load(root.join("tasks")).context("failed to load task config")?;
-        let copilot_config =
-            CopilotConfig::load(root.join("copilot")).context("failed to load copilot config")?;
-        let navigate_config = NavigateConfig::load(root.join("navigates.toml"))
-            .context("failed to load navigate config")?;
+        // let copilot_config =
+        //     CopilotConfig::load(root.join("copilot")).context("failed to load copilot config")?;
+        // let navigate_config = NavigateConfig::load(root.join("navigates.toml"))
+        //     .context("failed to load navigate config")?;
 
         Ok(Self {
             root,
             manifest,
             task_config,
-            copilot_config,
-            navigate_config,
+            // copilot_config,
+            // navigate_config,
         })
     }
 }
 
-#[derive(Debug)]
-pub enum Resource {
-    LocalResource(LocalResource),
-    ArchiveFileResource(ArchiveFileResource),
-}
-
-impl From<LocalResource> for Resource {
-    fn from(res: LocalResource) -> Self {
-        Self::LocalResource(res)
+impl<ActionSet: Debug + Clone> GetTask<ActionSet> for GeneralAahResource<ActionSet> {
+    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>> {
+        let name = name.as_ref().to_string();
+        self.task_config.0.get(&name)
     }
 }
 
-impl From<ArchiveFileResource> for Resource {
-    fn from(res: ArchiveFileResource) -> Self {
-        Self::ArchiveFileResource(res)
+impl<ActionSet: Debug + Clone> ResRoot for GeneralAahResource<ActionSet> {
+    fn res_root(&self) -> &Path {
+        &self.root
     }
 }
 
-impl Resource {
-    pub fn root(&self) -> &Path {
-        match self {
-            Resource::LocalResource(res) => &res.root,
-            Resource::ArchiveFileResource(res) => &res.root,
-        }
-    }
+// impl<ActionSet: Debug + Clone> GetTemplate for GeneralAahResource<ActionSet> {
+//     fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<DynamicImage> {
+//         let path = path.as_ref();
+//         let img = image::open(self.root.join("templates").join(path))?;
+//         Ok(img)
+//     }
+// }
 
-    pub async fn try_init_by_specific_dir(
-        target_dir: impl AsRef<Path>,
-    ) -> Result<Self, anyhow::Error> {
-        let res = {
-            info!("specific directory, loading with LocalResource...");
-            LocalResource::load(target_dir)?.into()
-        };
-        Ok(res)
-    }
+// MARK: GitRepoResource
 
-    pub async fn try_init(target_dir: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
-        let res = if cfg!(debug_assertions) {
-            info!("debug mod, loading with LocalResource...");
-            let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-            LocalResource::load(Path::new(&manifest_dir).join("resources"))?.into()
-        } else {
-            info!("release mod, loading with ArchiveFileResource...");
-            ArchiveFileResource::try_init(target_dir).await?.into()
-        };
-        Ok(res)
-    }
-
-    pub async fn updatable(&self) -> bool {
-        !matches!(self, Resource::LocalResource(_))
-    }
-
-    pub async fn update(self) -> Result<Self, anyhow::Error> {
-        match self {
-            Resource::ArchiveFileResource(res) => {
-                res.update().await.map(Resource::ArchiveFileResource)
-            }
-            _ => unimplemented!("not implemented"),
-        }
-    }
+/// 一个实现了 [`Load`] 的结构的 Wrapper，用于便捷地从 Git 仓库初始化/更新资源。
+pub struct GitRepoResource<T: Load> {
+    repo_url: String,
+    root: PathBuf,
+    pub inner: T,
+    manifest: Manifest,
 }
 
-impl Deref for Resource {
-    type Target = LocalResource;
+impl<T: Load> Deref for GitRepoResource<T> {
+    type Target = T;
     fn deref(&self) -> &Self::Target {
-        match self {
-            Resource::LocalResource(res) => res,
-            Resource::ArchiveFileResource(res) => res.deref(),
-        }
+        &self.inner
     }
 }
 
-impl ArchiveFileResource {
-    /// Try initialize resource into the target dir
-    pub async fn try_init(target_dir: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
-        let target_dir = target_dir.as_ref().to_path_buf();
-        info!("loading local resource...");
-        let res = match LocalResource::load(&target_dir) {
-            Ok(res) => res,
-            Err(err) => {
-                info!("local resource load failed: {err}, downloading resource zip...");
-                let parent_dir = target_dir.parent().unwrap();
-                download_resource_zip(parent_dir)
-                    .await
-                    .context("failed to download_resource_zip")?;
-                // let archived_resource = fetch_file_from_github("resources.zip")
-                //     .await
-                //     .context("fetching resources.zip form github")?;
-                // let mut archive = zip::ZipArchive::new(std::io::Cursor::new(archived_resource))?;
-                let file = File::open(parent_dir.join("resources.zip"))?;
-                let mut archive = zip::ZipArchive::new(file)?;
+impl<T: Load> GitRepoResource<T> {
+    pub async fn try_init(
+        target_dir: impl AsRef<Path>,
+        repo_url: impl AsRef<str>,
+    ) -> anyhow::Result<Self> {
+        let repo_url = repo_url.as_ref().to_string();
+        let target_dir = target_dir.as_ref();
 
-                info!("extracting resources...");
-                for i in 0..archive.len() {
-                    let mut file = archive.by_index(i).unwrap();
-                    let outpath = match file.enclosed_name() {
-                        Some(path) => path,
-                        None => continue,
-                    };
-                    let outpath = target_dir.join(outpath);
+        if target_dir.exists() {
+            fs::remove_dir_all(target_dir).context("failed to clean resource dir")?;
+        }
+        fs::create_dir_all(target_dir).context("failed to create resource dir")?;
 
-                    // {
-                    //     let comment = file.comment();
-                    //     if !comment.is_empty() {
-                    //         println!("File {i} comment: {comment}");
-                    //     }
-                    // }
+        let parent_dir = target_dir.parent().unwrap();
+        download_repo_zip(&repo_url, parent_dir).await?;
 
-                    if file.is_dir() {
-                        // println!("File {} extracted to \"{}\"", i, outpath.display());
-                        fs::create_dir_all(&outpath).unwrap();
-                    } else {
-                        // println!(
-                        //     "File {} extracted to \"{}\" ({} bytes)",
-                        //     i,
-                        //     outpath.display(),
-                        //     file.size()
-                        // );
-                        if let Some(p) = outpath.parent() {
-                            if !p.exists() {
-                                fs::create_dir_all(p).unwrap();
-                            }
-                        }
-                        let mut outfile = fs::File::create(&outpath).unwrap();
-                        std::io::copy(&mut file, &mut outfile).unwrap();
-                    }
+        let file =
+            File::open(parent_dir.join("resources.zip")).context("failed to open resources.zip")?;
+        let mut archive = zip::ZipArchive::new(file).context("failed to read zip archive")?;
 
-                    // Get and Set permissions
-                    #[cfg(unix)]
-                    {
-                        use std::os::unix::fs::PermissionsExt;
+        info!("extracting resources...");
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).unwrap();
+            let outpath = match file.enclosed_name() {
+                Some(path) => path,
+                None => continue,
+            };
+            let outpath = outpath.components().skip(1).collect::<PathBuf>();
+            let outpath = target_dir.join(outpath);
 
-                        if let Some(mode) = file.unix_mode() {
-                            fs::set_permissions(&outpath, fs::Permissions::from_mode(mode))
-                                .unwrap();
-                        }
+            // {
+            //     let comment = file.comment();
+            //     if !comment.is_empty() {
+            //         println!("File {i} comment: {comment}");
+            //     }
+            // }
+
+            if file.is_dir() {
+                // println!("File {} extracted to \"{}\"", i, outpath.display());
+                fs::create_dir_all(&outpath).unwrap();
+            } else {
+                // println!(
+                //     "File {} extracted to \"{}\" ({} bytes)",
+                //     i,
+                //     outpath.display(),
+                //     file.size()
+                // );
+                if let Some(p) = outpath.parent() {
+                    if !p.exists() {
+                        fs::create_dir_all(p).unwrap();
                     }
                 }
-                LocalResource::load(&target_dir)?
+                let mut outfile = fs::File::create(&outpath).unwrap();
+                std::io::copy(&mut file, &mut outfile).unwrap();
             }
-        };
 
-        Ok(ArchiveFileResource {
-            root: target_dir,
-            inner: res,
+            // Get and Set permissions
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+
+                if let Some(mode) = file.unix_mode() {
+                    fs::set_permissions(&outpath, fs::Permissions::from_mode(mode)).unwrap();
+                }
+            }
+        }
+        let manifest = fs::read_to_string(target_dir.join("manifest.toml"))?;
+        let manifest = toml::from_str(&manifest)?;
+        T::load(target_dir).map(|resource| Self {
+            repo_url,
+            inner: resource,
+            manifest,
+            root: target_dir.to_path_buf(),
         })
     }
 
+    pub async fn try_load_or_init(
+        target_dir: impl AsRef<Path>,
+        repo_url: impl AsRef<str>,
+    ) -> anyhow::Result<Self> {
+        let target_dir = target_dir.as_ref();
+        let repo_url = repo_url.as_ref().to_string();
+        if let Ok(resource) = T::load(&target_dir) {
+            let manifest = fs::read_to_string(target_dir.join("manifest.toml"))?;
+            let manifest = toml::from_str(&manifest)?;
+            return Ok(Self {
+                repo_url,
+                inner: resource,
+                manifest,
+                root: target_dir.to_path_buf(),
+            });
+        } else {
+            Self::try_init(&target_dir, &repo_url).await?;
+            let manifest = fs::read_to_string(target_dir.join("manifest.toml"))?;
+            let manifest = toml::from_str(&manifest)?;
+            T::load(target_dir).map(|resource| Self {
+                repo_url,
+                inner: resource,
+                manifest,
+                root: target_dir.to_path_buf(),
+            })
+        }
+    }
     /// Update resource to the latest version
     ///
-    /// this will not do anything if the version.json is unchanged
+    /// this will not do anything if the `last_updated` field in `manifest.toml` is unchanged
     /// when the version is updated, it'll fetch the origin and checkout to latest main
     pub async fn update(self) -> Result<Self, anyhow::Error> {
-        let manifest = fetch_manifest().await?;
+        let manifest = fetch_manifest(&self.repo_url).await?;
         if self.manifest.last_updated == manifest.last_updated {
             info!("Resource is up to date");
             return Ok(self);
         }
 
         fs::remove_dir_all(&self.root)?;
-
-        Self::try_init(&self.root).await
+        Self::try_init(&self.root, self.repo_url).await
     }
 }
 
-#[derive(Debug)]
-pub struct ArchiveFileResource {
-    pub root: PathBuf,
-    inner: LocalResource,
-}
+/// MARK: Functions
 
-impl Deref for ArchiveFileResource {
-    type Target = LocalResource;
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+async fn download_repo_zip(
+    repo_url: impl AsRef<str>,
+    dir: impl AsRef<Path>,
+) -> Result<(), anyhow::Error> {
+    let mut repo_url = repo_url.as_ref().to_string();
+    if !repo_url.ends_with("/") {
+        repo_url.push('/');
+    }
+
+    let url = format!("{repo_url}archive/main.zip");
+
+    let client = reqwest::Client::builder()
+        .user_agent("azur-arknights-helper")
+        .build()?;
+
+    let response = client.get(url).send().await?;
+
+    if response.status().is_success() {
+        info!("saving resources.zip...");
+        let mut file = File::create(dir.as_ref().join("resources.zip"))?;
+        let bytes = response.bytes().await?;
+        std::io::copy(&mut Cursor::new(bytes), &mut file)?;
+        info!("downloaded resource zip");
+        return Ok(());
+    } else {
+        anyhow::bail!("download request status not success")
     }
 }
+
+// api: "https://api.github.com/repos/AzurIce/azur-arknights-helper/contents/resources";
+async fn fetch_file_from_github(
+    repo_url: impl AsRef<str>,
+    path: impl AsRef<str>,
+) -> Result<Bytes, anyhow::Error> {
+    let path = path.as_ref();
+    let mut repo_url = repo_url.as_ref().to_string();
+    if !repo_url.ends_with("/") {
+        repo_url.push('/');
+    }
+    let mut url = repo_url
+        .split(".com")
+        .map(|str| str.to_string())
+        .collect::<Vec<String>>();
+    url[0] = "https://api.github.com/repos".to_string();
+    let url = url.join("");
+    let url = format!("{url}contents/{path}");
+
+    let client = reqwest::Client::builder()
+        .user_agent("azur-arknights-helper")
+        .build()?;
+    let resp = client
+        .get(url)
+        .header("Accept", "application/vnd.github.raw+json")
+        .send()
+        .await?;
+    Ok(resp.bytes().await?)
+}
+
+async fn fetch_manifest(repo_url: impl AsRef<str>) -> Result<Manifest, anyhow::Error> {
+    let manifest_bytes = fetch_file_from_github(repo_url, "manifest.toml").await?;
+    let manifest = String::from_utf8_lossy(&manifest_bytes);
+    let manifest: Manifest = toml::from_str(&manifest)?;
+
+    Ok(manifest)
+}
+
+// MARK: Test
 
 #[cfg(test)]
 mod test {
     use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+    use crate::android;
 
     use super::*;
 
@@ -360,10 +342,16 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_try_initialize_resource() {
+    async fn test_try_load_or_init_resource() {
         init_logger();
 
-        let resource = Resource::try_init("./test/.aah/resources").await.unwrap();
+        let resource =
+            GitRepoResource::<GeneralAahResource<android::actions::ActionSet>>::try_load_or_init(
+                "./test/.aah/resources",
+                "https://github.com/AzurIce/aah-resources",
+            )
+            .await
+            .unwrap();
         println!("{:?}", resource.manifest);
     }
 
@@ -371,13 +359,22 @@ mod test {
     async fn test_update_resource() {
         init_logger();
 
-        let resource = Resource::try_init("./test/.aah/resources").await.unwrap();
-        resource.update().await.unwrap();
+        let resource =
+            GitRepoResource::<GeneralAahResource<android::actions::ActionSet>>::try_load_or_init(
+                "./test/.aah/resources",
+                "https://github.com/AzurIce/aah-resources",
+            )
+            .await
+            .unwrap();
+        let resource = resource.update().await.unwrap();
+        println!("{:?}", resource.manifest);
     }
 
     #[tokio::test]
-    async fn test_fetch_version() {
-        let version = fetch_manifest().await.unwrap();
+    async fn test_fetch_manifest() {
+        let version = fetch_manifest("https://github.com/AzurIce/aah-resources")
+            .await
+            .unwrap();
         println!("{:?}", version);
     }
 }
