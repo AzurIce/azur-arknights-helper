@@ -4,6 +4,7 @@
 use std::time::Duration;
 
 use anyhow::Context;
+use anyhow::Result;
 use enigo::Key;
 use image::DynamicImage;
 
@@ -220,45 +221,46 @@ pub trait PcControllerTrait: Controller {
     fn get_screen_size(&self) -> (u32, u32);
 
     // 获取所有可见窗口
-    fn get_all_windows(&self) -> anyhow::Result<Vec<WindowInfo>>;
+    fn get_all_windows(&self) -> Result<Vec<WindowInfo>>;
 
     // 聚焦到指定窗口
-    // fn focus_window(&self, title: &str) -> Result<(), MyError>;
+    // fn focus_window(&self, title: &str) -> Result<()>;
 
     // 移动鼠标
-    fn move_mouse_relative(&self, dx: i32, dy: i32) -> Result<(), MyError>;
+    fn move_mouse_relative(&self, dx: i32, dy: i32) -> Result<()>;
 
     // 移动鼠标
-    fn move_mouse_absolute(&self, x: i32, y: i32) -> Result<(), MyError>;
+    fn move_mouse_absolute(&self, x: i32, y: i32) -> Result<()>;
 
     // 获取鼠标位置
-    fn location(&self) -> Result<(i32, i32), MyError>;
+    fn location(&self) -> Result<(i32, i32)>;
 
     // 模拟鼠标点击
-    fn left_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
+    fn left_click(&self, x: i32, y: i32) -> Result<()>;
 
     // 模拟鼠标右键点击
-    fn right_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
+    fn right_click(&self, x: i32, y: i32) -> Result<()>;
 
     // 模拟鼠标中键点击
-    fn middle_click(&self, x: i32, y: i32) -> anyhow::Result<()>;
+    fn middle_click(&self, x: i32, y: i32) -> Result<()>;
 
     // 模拟键盘按键
-    fn key_click(&self, key: Key) -> Result<(), MyError>;
+    fn key_click(&self, key: Key) -> Result<()>;
 
     // 模拟键盘按键
-    fn key_press(&self, key: Key) -> Result<(), MyError>;
+    fn key_press(&self, key: Key) -> Result<()>;
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: Key) -> Result<(), MyError>;
+    fn key_release(&self, key: Key) -> Result<()>;
 
     // 模拟鼠标拖动
-    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError>;
+    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64)
+        -> Result<()>;
 
     // MARK: Has default implementation
 
     // 通过标题查找窗口
-    fn find_window_by_title(&self, title: &str) -> anyhow::Result<WindowInfo> {
+    fn find_window_by_title(&self, title: &str) -> Result<WindowInfo> {
         let window = self
             .get_all_windows()
             .context(format!("failed to get all windows"))?

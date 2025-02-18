@@ -6,7 +6,7 @@ version = 4
 name = "aah"
 version = "0.1.0"
 dependencies = [
- "aah-controller 0.1.0",
+ "aah-controller",
  "aah-core",
  "aah-cv",
  "aah-resource",
@@ -57,25 +57,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "aah-controller"
-version = "0.1.0"
-source = "git+https://github.com/AzurIce/azur-arknights-helper#3c5303cd949a5e2b87f406a9567190cad6310854"
-dependencies = [
- "anyhow",
- "async-channel",
- "color-print",
- "env_logger",
- "image 0.25.5",
- "log",
- "rand 0.9.0",
- "tempfile",
-]
-
-[[package]]
 name = "aah-core"
 version = "0.1.0"
 dependencies = [
- "aah-controller 0.1.0",
+ "aah-controller",
  "aah-cv",
  "aah-resource",
  "anyhow",
@@ -577,24 +562,6 @@ dependencies = [
  "once_cell",
  "serde",
  "serde_json",
-]
-
-[[package]]
-name = "auto-wuthering-waves"
-version = "0.1.0"
-dependencies = [
- "aah-controller 0.1.0 (git+https://github.com/AzurIce/azur-arknights-helper)",
- "aah-cv",
- "anyhow",
- "chrono",
- "color-print",
- "enigo",
- "image 0.25.5",
- "once_cell",
- "serde",
- "serde_json",
- "tokio",
- "windows 0.59.0",
 ]
 
 [[package]]
