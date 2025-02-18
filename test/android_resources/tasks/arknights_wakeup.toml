@@ -1,0 +1,37 @@
+
+name = "arknights_wakeup"
+desc = "arknights from start_up to the main screen"
+
+[[steps]]
+retry = 2
+skip_if_failed = true
+[steps.action.ClickMatchTemplate]
+template = "arknights_start_start.png"
+
+[[steps]]
+retry = 2
+skip_if_failed = true
+[steps.action.ClickMatchTemplate]
+template = "arknights_wakeup_wakeup.png"
+
+[[steps]]
+delay_sec = 6.0
+skip_if_failed = true
+retry = 3
+[steps.action.ClickMatchTemplate]
+template = "arknights_confirm.png"
+
+[[steps]]
+delay_sec = 2.0
+skip_if_failed = true
+retry = 2
+[steps.action.ClickMatchTemplate]
+template = "arknights_qiandao_close.png"
+
+[[steps]]
+delay_sec = 2.0
+skip_if_failed = true
+retry = 2
+
+[steps.action.ClickMatchTemplate]
+template = "arknights_notice_close.png"

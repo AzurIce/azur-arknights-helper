@@ -1,6 +1,3 @@
-pub mod copilot;
-#[deprecated(note = "Use ByName Action instead")]
-pub mod navigate;
 pub mod task;
 
 use serde::Deserialize;
