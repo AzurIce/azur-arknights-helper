@@ -1,14 +1,10 @@
-use std::{
-    ops::Deref,
-    path::{Path, PathBuf},
-};
+use std::{ops::Deref, path::Path};
 
-use image::DynamicImage;
 use manifest::copilot::CopilotConfig;
 
 use crate::{
-    resource::{GeneralAahResource, Load},
-    utils::LazyImage,
+    resource::{GeneralAahResource, GetTask, Load, ResRoot},
+    task::Task,
 };
 
 pub mod manifest;
@@ -31,6 +27,18 @@ impl Deref for AahResource {
     }
 }
 
+impl GetTask<ActionSet> for AahResource {
+    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<ActionSet>> {
+        self.inner.get_task(name)
+    }
+}
+
+impl ResRoot for AahResource {
+    fn res_root(&self) -> &Path {
+        self.inner.res_root()
+    }
+}
+
 impl Load for AahResource {
     fn load(root: impl AsRef<Path>) -> anyhow::Result<Self> {
         let root = root.as_ref();
@@ -47,7 +55,8 @@ impl Load for AahResource {
 // MARK: impl AahResource
 
 impl AahResource {
-    pub fn get_copilot(&self, name: &str) -> Option<&Copilot> {
+    pub fn get_copilot(&self, name: impl AsRef<str>) -> Option<&Copilot> {
+        let name = name.as_ref();
         self.copilot_config.get(name)
     }
 }

@@ -7,7 +7,6 @@ use crate::android::adb::{
 
 use super::AdbCommand;
 
-
 /// shell:command
 ///
 /// command is something like "cmd arg1 arg2 ..."

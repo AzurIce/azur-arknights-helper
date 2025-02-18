@@ -9,13 +9,13 @@ use serde::Serialize;
 
 use crate::{
     arknights::Aah,
-    task::Runnable,
-    utils::{resource::get_opers_avatars, LazyImage},
+    utils::resource::get_opers_avatars,
     vision::{
-        analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer},
+        analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer, Analyzer},
         matcher::best_matcher::BestMatcher,
         utils::{average_hsv_v, draw_box, Rect},
-    }, CachedScreenCapper,
+    },
+    CachedScreenCapper,
 };
 
 #[allow(unused)]
@@ -151,10 +151,10 @@ impl DeployAnalyzer {
     }
 }
 
-impl Runnable<Aah> for DeployAnalyzer {
+impl Analyzer<Aah> for DeployAnalyzer {
     type Res = DeployAnalyzerOutput;
-    fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
-        let screen = aah.screen_cap_and_cache()?;
+    fn analyze(&mut self, core: &Aah) -> anyhow::Result<Self::Res> {
+        let screen = core.screen_cap_and_cache()?;
         self.analyze_image(&screen)
     }
 }

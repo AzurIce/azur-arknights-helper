@@ -4,7 +4,6 @@ use aah_cv::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
 
 use crate::{
-    task::Runnable,
     utils::{resource::get_template, LazyImage},
     vision::{
         matcher::multi_matcher::{MultiMatcher, MultiMatcherResult},
@@ -115,8 +114,7 @@ impl<T: CachedScreenCapper> Analyzer<T> for MultiMatchAnalyzer {
         let screen = if self.options.use_cache {
             core.screen_cache_or_cap()?.clone()
         } else {
-            core
-                .screen_cap_and_cache()
+            core.screen_cap_and_cache()
                 .map_err(|err| anyhow::anyhow!("{:?}", err))?
         };
         self.analyze_image(&screen)

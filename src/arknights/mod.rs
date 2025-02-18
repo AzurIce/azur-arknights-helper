@@ -15,14 +15,10 @@ use ocrs::{OcrEngine, OcrEngineParams};
 use resource::AahResource;
 use rten::Model;
 
-use crate::{
-    resource::{GetTask, ResRoot},
-    task::{Runnable, Runner},
-    CachedScreenCapper,
-};
+use crate::{resource::GetTask, CachedScreenCapper, Core, TaskRecipe};
 
 pub struct Aah {
-    pub controller: Box<dyn Controller + Sync + Send>,
+    pub controller: Box<dyn Controller>,
     pub resource: Arc<AahResource>,
 
     ocr_engine: OcrEngine,
@@ -30,86 +26,14 @@ pub struct Aah {
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
-// TODO: reuse code
-
-impl ResRoot for Aah {
-    fn res_root(&self) -> &std::path::Path {
-        self.resource.root.as_ref()
+impl Core for Aah {
+    type Controller = Box<dyn Controller>;
+    type Resource = AahResource;
+    fn controller(&self) -> &Self::Controller {
+        &self.controller
     }
-}
-
-impl Controller for Aah {
-    fn click(&self, x: u32, y: u32) -> Result<()> {
-        self.controller.click(x, y)
-    }
-    fn swipe(
-        &self,
-        start: (u32, u32),
-        end: (i32, i32),
-        duration: std::time::Duration,
-        slope_in: f32,
-        slope_out: f32,
-    ) -> Result<()> {
-        self.controller
-            .swipe(start, end, duration, slope_in, slope_out)
-    }
-    fn screen_size(&self) -> (u32, u32) {
-        self.controller.screen_size()
-    }
-    fn screencap(&self) -> Result<image::DynamicImage> {
-        self.controller.screencap()
-    }
-    fn raw_screencap(&self) -> Result<Vec<u8>> {
-        self.controller.raw_screencap()
-    }
-    fn press_esc(&self) -> Result<()> {
-        self.controller.press_esc()
-    }
-    fn press_home(&self) -> Result<()> {
-        self.controller.press_home()
-    }
-}
-impl CachedScreenCapper for Aah {
-    /// Get screen cache or capture one. This is for internal analyzer use
-    fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
-        let mut screen_cache = self.screen_cache.lock().unwrap();
-        if screen_cache.is_none() {
-            let screen = self
-                .controller
-                .screencap()
-                .map_err(|err| anyhow::anyhow!("{err}"))?;
-            *screen_cache = Some(screen.clone());
-        }
-        screen_cache
-            .as_ref()
-            .map(|i| i.clone())
-            .ok_or(anyhow::anyhow!("screen cache is empty"))
-    }
-
-    fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage> {
-        let mut screen_cache = self.screen_cache.lock().unwrap();
-        let screen = self
-            .controller
-            .screencap()
-            .map_err(|err| anyhow::anyhow!("{err}"))?;
-        *screen_cache = Some(screen);
-        screen_cache
-            .as_ref()
-            .map(|i| i.clone())
-            .ok_or(anyhow::anyhow!("screen cache is empty"))
-    }
-}
-
-impl Runner for Aah {
-    fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
-        let name = name.as_ref().to_string();
-
-        let task = self
-            .resource
-            .get_task(name)
-            .ok_or(anyhow::anyhow!("failed to get task"))?;
-
-        task.run(self)
+    fn resource(&self) -> &Self::Resource {
+        &self.resource
     }
 }
 
@@ -165,7 +89,21 @@ impl Aah {
             screen_cache: Mutex::new(None),
         })
     }
+    /// 运行名为 `name` 的任务
+    ///
+    /// - `name`: 任务名称
+    pub fn run_task<S: AsRef<str>>(&self, name: S) -> anyhow::Result<()> {
+        let name = name.as_ref().to_string();
 
+        let task = self
+            .resource
+            .get_task(&name)
+            .ok_or(anyhow::anyhow!("failed to get task"))?;
+
+        task.run(self)?;
+
+        Ok(())
+    }
     /// 运行名为 `name` 的作业
     ///
     /// - `name`: 作业名称
@@ -245,6 +183,37 @@ impl Aah {
     //         self.emit_task_evt(TaskEvt::BattleAnalyzerRes(output));
     //     }
     // }
+}
+
+impl CachedScreenCapper for Aah {
+    /// Get screen cache or capture one. This is for internal analyzer use
+    fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
+        let mut screen_cache = self.screen_cache.lock().unwrap();
+        if screen_cache.is_none() {
+            let screen = self
+                .controller
+                .screencap()
+                .map_err(|err| anyhow::anyhow!("{err}"))?;
+            *screen_cache = Some(screen.clone());
+        }
+        screen_cache
+            .as_ref()
+            .map(|i| i.clone())
+            .ok_or(anyhow::anyhow!("screen cache is empty"))
+    }
+
+    fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage> {
+        let mut screen_cache = self.screen_cache.lock().unwrap();
+        let screen = self
+            .controller
+            .screencap()
+            .map_err(|err| anyhow::anyhow!("{err}"))?;
+        *screen_cache = Some(screen);
+        screen_cache
+            .as_ref()
+            .map(|i| i.clone())
+            .ok_or(anyhow::anyhow!("screen cache is empty"))
+    }
 }
 
 #[cfg(test)]

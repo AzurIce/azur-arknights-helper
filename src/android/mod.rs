@@ -12,8 +12,7 @@ use log::info;
 
 use crate::{
     resource::{GeneralAahResource, GetTask, ResRoot},
-    task::{Runnable, Runner},
-    CachedScreenCapper,
+    Core, TaskRecipe,
 };
 
 pub mod actions;
@@ -24,40 +23,21 @@ pub use actions::ActionSet;
 ///
 /// ActionSet: 见 [`actions::AndroidActionSet`]
 pub struct GeneralAndroidAah {
-    pub controller: Box<dyn Controller + Sync + Send>,
-    pub resource: Arc<GeneralAahResource<actions::ActionSet>>,
+    controller: Box<dyn Controller>,
+    resource: Arc<GeneralAahResource<actions::ActionSet>>,
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
-impl Controller for GeneralAndroidAah {
-    fn click(&self, x: u32, y: u32) -> Result<()> {
-        self.controller.click(x, y)
+impl Core for GeneralAndroidAah {
+    type Controller = Box<dyn Controller>;
+    type Resource = GeneralAahResource<actions::ActionSet>;
+
+    fn resource(&self) -> &Self::Resource {
+        &self.resource
     }
-    fn swipe(
-        &self,
-        start: (u32, u32),
-        end: (i32, i32),
-        duration: std::time::Duration,
-        slope_in: f32,
-        slope_out: f32,
-    ) -> Result<()> {
-        self.controller
-            .swipe(start, end, duration, slope_in, slope_out)
-    }
-    fn screen_size(&self) -> (u32, u32) {
-        self.controller.screen_size()
-    }
-    fn screencap(&self) -> Result<image::DynamicImage> {
-        self.controller.screencap()
-    }
-    fn raw_screencap(&self) -> Result<Vec<u8>> {
-        self.controller.raw_screencap()
-    }
-    fn press_esc(&self) -> Result<()> {
-        self.controller.press_esc()
-    }
-    fn press_home(&self) -> Result<()> {
-        self.controller.press_home()
+
+    fn controller(&self) -> &Self::Controller {
+        &self.controller
     }
 }
 
@@ -68,7 +48,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect(
         serial: impl AsRef<str>,
-        resource: Arc<GeneralAahResource<actions::ActionSet>>,
+        resource: GeneralAahResource<actions::ActionSet>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AahController::connect(serial)?);
 
@@ -82,7 +62,7 @@ impl GeneralAndroidAah {
     /// - `res_dir`: 资源目录的路径
     pub fn connect_with_adb_controller(
         serial: impl AsRef<str>,
-        resource: Arc<GeneralAahResource<actions::ActionSet>>,
+        resource: GeneralAahResource<actions::ActionSet>,
     ) -> Result<Self, anyhow::Error> {
         let controller = Box::new(AdbController::connect(serial)?);
 
@@ -91,18 +71,17 @@ impl GeneralAndroidAah {
 
     fn new(
         controller: Box<dyn Controller + Sync + Send>,
-        resource: Arc<GeneralAahResource<actions::ActionSet>>,
+        resource: GeneralAahResource<actions::ActionSet>,
     ) -> Result<Self, anyhow::Error> {
+        let resource = Arc::new(resource);
         Ok(Self {
-            resource,
             controller,
+            resource,
             screen_cache: Mutex::new(None),
         })
     }
-}
 
-impl Runner for GeneralAndroidAah {
-    fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
+    pub fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()> {
         let name = name.as_ref().to_string();
         info!("running task: {}...", name);
         let task = self
@@ -112,11 +91,9 @@ impl Runner for GeneralAndroidAah {
 
         task.run(self)
     }
-}
 
-impl CachedScreenCapper for GeneralAndroidAah {
     /// Get screen cache or capture one. This is for internal analyzer use
-    fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
+    pub fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
         if screen_cache.is_none() {
             let screen = self
@@ -131,7 +108,7 @@ impl CachedScreenCapper for GeneralAndroidAah {
             .ok_or(anyhow::anyhow!("screen cache is empty"))
     }
 
-    fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage> {
+    pub fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
         let screen = self
             .controller
@@ -165,7 +142,6 @@ mod test {
         let root = Path::new(&root);
 
         let resource = GeneralAahResource::load(root.join("test/android_resources")).unwrap();
-        let resource = Arc::new(resource.into());
         let aah = GeneralAndroidAah::connect("127.0.0.1:16384", resource).unwrap();
         aah.run_task("arknights_wakeup").unwrap();
     }

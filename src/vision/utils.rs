@@ -53,7 +53,10 @@ pub fn binarize_image(image: &DynamicImage, threshold: u8) -> DynamicImage {
     DynamicImage::ImageLuma8(image)
 }
 
-pub fn mask_image(image: &DynamicImage, color_mask: (RangeInclusive<u8>, RangeInclusive<u8>, RangeInclusive<u8>)) -> DynamicImage {
+pub fn mask_image(
+    image: &DynamicImage,
+    color_mask: (RangeInclusive<u8>, RangeInclusive<u8>, RangeInclusive<u8>),
+) -> DynamicImage {
     let color_mask = &color_mask;
     let mut image = image.to_rgb8();
     for (_, _, pixel) in image.enumerate_pixels_mut() {

@@ -14,7 +14,6 @@ use serde::Serialize;
 
 use crate::{
     arknights::Aah,
-    task::Runnable,
     vision::analyzer::{matching::MatchOptions, single_match::SingleMatchAnalyzer, Analyzer},
     CachedScreenCapper,
 };

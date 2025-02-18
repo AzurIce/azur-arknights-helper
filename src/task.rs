@@ -13,9 +13,11 @@ use std::{fmt::Debug, time::Duration};
 use aah_core::vision::analyzer::battle::BattleAnalyzerOutput;
 use color_print::cprintln;
 use image::DynamicImage;
-use log::{debug, info};
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;
+
+use crate::{resource::GetTask, Core, TaskRecipe};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ByNameAction {
@@ -25,15 +27,6 @@ pub struct ByNameAction {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ByNameActionSet {
     ByName(ByNameAction),
-}
-
-impl<T: Runner> Runnable<T> for ByNameActionSet {
-    type Res = ();
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
-        match self {
-            ByNameActionSet::ByName(ByNameAction { name }) => runner.run_task(name),
-        }
-    }
 }
 
 /// Action are the tasks you can use in the configuration file
@@ -56,24 +49,25 @@ impl<ActionSet: Debug + Clone> Action<ActionSet> {
     }
 }
 
-impl<T: Runner, ActionSet: Runnable<T> + Debug + Clone> Runnable<T> for Action<ActionSet> {
+impl<C, R, T, ActionSet> TaskRecipe<T> for Action<ActionSet>
+where
+    R: GetTask<ActionSet>,
+    T: Core<Controller = C, Resource = R>,
+    ActionSet: TaskRecipe<T> + Debug + Clone,
+{
     type Res = ();
     fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
         match self {
-            Action::ByName(action) => action.run(runner).map(|_| ()),
+            Action::ByName(ByNameActionSet::ByName(ByNameAction { name })) => {
+                let task = runner
+                    .resource()
+                    .get_task(name)
+                    .ok_or_else(|| anyhow::anyhow!("failed to get task by name: {:?}", name))?;
+                task.run(runner).map(|_| ())
+            }
             Action::Detailed(action) => action.run(runner).map(|_| ()),
-            _ => Ok(()),
         }
     }
-}
-
-pub trait Runner {
-    fn run_task(&self, name: impl AsRef<str>) -> anyhow::Result<()>;
-}
-
-pub trait Runnable<T> {
-    type Res;
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res>;
 }
 
 #[skip_serializing_none]
@@ -188,12 +182,23 @@ impl<T: Debug + Clone> Debug for TaskEvt<T> {
     }
 }
 
-impl<R: Runner, ActionSet: Runnable<R, Res = ()> + Debug + Clone> Runnable<R> for Task<ActionSet> {
+impl<C, R, T, ActionSet> TaskRecipe<T> for Task<ActionSet>
+where
+    R: GetTask<ActionSet>,
+    T: Core<Controller = C, Resource = R>,
+    ActionSet: TaskRecipe<T> + Debug + Clone,
+{
     type Res = ();
-    fn run(&self, runner: &R) -> anyhow::Result<Self::Res> {
+    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
         info!("[Task<{}>] running...", self.name);
         for (i, step) in self.steps.iter().enumerate() {
-            info!("[Task<{}>] running step {}/{}: {:?}", self.name, i, self.steps.len(), step);
+            info!(
+                "[Task<{}>] running step {}/{}: {:?}",
+                self.name,
+                i,
+                self.steps.len(),
+                step
+            );
             // runner.emit_task_evt(TaskEvt::ExecStat {
             //     step: step.clone(),
             //     cur: i,
@@ -215,9 +220,14 @@ impl<R: Runner, ActionSet: Runnable<R, Res = ()> + Debug + Clone> Runnable<R> fo
     }
 }
 
-impl<R: Runner, T: Runnable<R, Res = ()> + Debug + Clone> Runnable<R> for TaskStep<T> {
+impl<C, R, T, ActionSet> TaskRecipe<T> for TaskStep<ActionSet>
+where
+    R: GetTask<ActionSet>,
+    T: Core<Controller = C, Resource = R>,
+    ActionSet: TaskRecipe<T> + Debug + Clone,
+{
     type Res = ();
-    fn run(&self, runner: &R) -> anyhow::Result<Self::Res> {
+    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
         std::thread::sleep(Duration::from_secs_f32(self.delay_sec.unwrap_or(0.0)));
 
         let exec = || {
@@ -275,9 +285,9 @@ mod test {
         let toml = toml::to_string_pretty(&action).unwrap();
         println!("{toml}");
 
-        let action = Action::<android::actions::ActionSet>::detailed(
-            ClickMatchTemplate::new("template.png"),
-        );
+        let action = Action::<android::actions::ActionSet>::detailed(ClickMatchTemplate::new(
+            "template.png",
+        ));
         let toml = toml::to_string_pretty(&action).unwrap();
         println!("{toml}");
     }

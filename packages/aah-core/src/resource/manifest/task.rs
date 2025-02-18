@@ -3,7 +3,9 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::{collections::HashMap, fs};
 
-use crate::task::action::{Action, ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome};
+use crate::task::action::{
+    Action, ClickMatchTemplate, NavigateIn, NavigateOut, PressEsc, PressHome,
+};
 use crate::task::{Task, TaskStep};
 
 fn get_task_files(path: impl AsRef<Path>) -> Vec<PathBuf> {

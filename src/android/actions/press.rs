@@ -1,7 +1,7 @@
 use aah_controller::Controller;
 use serde::{Deserialize, Serialize};
 
-use crate::task::Runnable;
+use crate::{Core, TaskRecipe};
 
 use super::ActionSet;
 
@@ -31,12 +31,16 @@ impl Into<ActionSet> for Press {
     }
 }
 
-impl<T: Controller> Runnable<T> for Press {
+impl<T, C> TaskRecipe<T> for Press
+where
+    C: Controller,
+    T: Core<Controller = C>,
+{
     type Res = ();
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
+    fn run(&self, aah: &T) -> anyhow::Result<Self::Res> {
         match self.key {
-            Key::Esc => runner.press_esc(),
-            Key::Home => runner.press_home(),
+            Key::Esc => aah.controller().press_esc(),
+            Key::Home => aah.controller().press_home(),
         }
         .map_err(|err| anyhow::anyhow!("controller error: {:?}", err))
     }
