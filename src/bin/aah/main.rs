@@ -54,8 +54,8 @@ fn main() {
             "https://github.com/AzurIce/aah-resources",
         ))
         .expect("failed to load resource");
-    let aah =
-        AahCore::connect(serial, Arc::new(resource.inner)).expect("failed to connect to the device");
+    let aah = AahCore::connect(serial, Arc::new(resource.inner))
+        .expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {
             if let Err(err) = aah.run_task(name) {
