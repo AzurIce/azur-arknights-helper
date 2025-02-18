@@ -1,15 +1,28 @@
-use std::{thread, time::Duration};
+use std::time::Duration;
 
-use crate::{adb::MyError, Controller, PcControllerTrait, WindowInfo};
+use crate::{Controller, PcControllerTrait, WindowInfo};
 
-use windows::Win32::{Foundation::{BOOL, HWND, LPARAM, RECT}, Graphics::Gdi::{BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC, GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS, SRCCOPY}, UI::WindowsAndMessaging::{
-        EnumWindows, GetDesktopWindow, GetSystemMetrics, GetWindowRect, GetWindowTextW, IsWindowVisible, SetForegroundWindow, SM_CXSCREEN, SM_CYSCREEN
-    }};
+use anyhow::Result;
 use enigo::{
-    Button, Coordinate::{Abs, Rel}, Direction::{Click, Press, Release}, Enigo, Key, Keyboard, Mouse, Settings
+    Button,
+    Coordinate::{Abs, Rel},
+    Direction::{Click, Press, Release},
+    Enigo, Key, Keyboard, Mouse, Settings,
+};
+use windows::Win32::{
+    Foundation::{BOOL, HWND, LPARAM, RECT},
+    Graphics::Gdi::{
+        BitBlt, CreateCompatibleBitmap, CreateCompatibleDC, DeleteDC, DeleteObject, GetDC,
+        GetDIBits, ReleaseDC, SelectObject, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, DIB_RGB_COLORS,
+        SRCCOPY,
+    },
+    UI::WindowsAndMessaging::{
+        EnumWindows, GetDesktopWindow, GetSystemMetrics, GetWindowRect, GetWindowTextW,
+        IsWindowVisible, SetForegroundWindow, SM_CXSCREEN, SM_CYSCREEN,
+    },
 };
 
-pub fn create_pc_controller() -> Result<Box<dyn PcControllerTrait + Sync + Send>, MyError> {
+pub fn create_pc_controller() -> Result<Box<dyn PcControllerTrait + Sync + Send>> {
     println!("PcController connecting in platform: windows");
 
     let controller = WindowsController::new();
@@ -27,7 +40,11 @@ impl WindowsController {
         println!("WindowsController created");
 
         if Self::true_width() != 1920 || Self::true_height() != 1080 {
-            panic!("WindowsController only supports 1920x1080 screen resolution, but got {}x{}", Self::true_width(), Self::true_height());
+            panic!(
+                "WindowsController only supports 1920x1080 screen resolution, but got {}x{}",
+                Self::true_width(),
+                Self::true_height()
+            );
         }
 
         Self {
@@ -43,7 +60,7 @@ impl Controller for WindowsController {
         (self.width, self.height)
     }
 
-    fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
+    fn click(&self, x: u32, y: u32) -> Result<()> {
         self.impl_left_click(x as i32, y as i32)
     }
 
@@ -54,37 +71,46 @@ impl Controller for WindowsController {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), MyError> {
-        self.impl_swipe(start.0 as i32, start.1 as i32, end.0, end.1, duration.as_millis() as u64)
+    ) -> Result<()> {
+        self.impl_swipe(
+            start.0 as i32,
+            start.1 as i32,
+            end.0,
+            end.1,
+            duration.as_millis() as u64,
+        )
     }
 
-    fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
+    fn raw_screencap(&self) -> Result<Vec<u8>> {
         self.impl_raw_screencap()
     }
 
-    fn screencap(&self) -> Result<image::DynamicImage, MyError> {
+    fn screencap(&self) -> Result<image::DynamicImage> {
         self.impl_screencap()
     }
 
-    fn press_home(&self) -> Result<(), MyError> {
+    fn press_home(&self) -> Result<()> {
         self.impl_key_press(Key::Home)
     }
 
-    fn press_esc(&self) -> Result<(), MyError> {
+    fn press_esc(&self) -> Result<()> {
         self.impl_key_press(Key::Escape)
     }
 }
 
 impl PcControllerTrait for WindowsController {
-
     // 获取所有可见窗口
-    fn get_all_windows(&self) -> Result<Vec<WindowInfo>, MyError> {
-        let res = self.impl_get_all_windows()?
+    fn get_all_windows(&self) -> Result<Vec<WindowInfo>> {
+        let res = self
+            .impl_get_all_windows()?
             .into_iter()
             .map(|w| WindowInfo {
                 title: w.title,
                 position: (w.rect.left, w.rect.top),
-                size: ((w.rect.right - w.rect.left) as u32, (w.rect.bottom - w.rect.top) as u32),
+                size: (
+                    (w.rect.right - w.rect.left) as u32,
+                    (w.rect.bottom - w.rect.top) as u32,
+                ),
             })
             .collect();
 
@@ -103,44 +129,52 @@ impl PcControllerTrait for WindowsController {
     // }
 
     // 模拟鼠标点击
-    fn left_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn left_click(&self, x: i32, y: i32) -> Result<()> {
         println!("left_click: {}, {}", x, y);
         self.impl_left_click(x, y)
     }
 
     // 模拟鼠标右键点击
-    fn right_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn right_click(&self, x: i32, y: i32) -> Result<()> {
         self.impl_right_click(x, y)
     }
 
     // 模拟鼠标中键点击
-    fn middle_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn middle_click(&self, x: i32, y: i32) -> Result<()> {
         self.impl_middle_click(x, y)
     }
 
     // 模拟键盘按键
-    fn key_click(&self, key: char) -> Result<(), MyError> {
+    fn key_click(&self, key: char) -> Result<()> {
         self.impl_key_click(Key::Unicode(key))
     }
 
     // 模拟键盘按键
-    fn key_press(&self, key: char) -> Result<(), MyError> {
+    fn key_press(&self, key: char) -> Result<()> {
         self.impl_key_press(Key::Unicode(key))
     }
 
     // 模拟键盘释放按键
-    fn key_release(&self, key: char) -> Result<(), MyError> {
+    fn key_release(&self, key: char) -> Result<()> {
         self.impl_key_release(Key::Unicode(key))
     }
 
     // 模拟鼠标滑动
-    fn swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError> {
+    fn swipe(
+        &self,
+        from_x: i32,
+        from_y: i32,
+        to_x: i32,
+        to_y: i32,
+        duration_ms: u64,
+    ) -> Result<()> {
         self.impl_swipe(from_x, from_y, to_x, to_y, duration_ms)
     }
 }
 
 // MARK: Implementation
 
+#[allow(unused)]
 struct ImplWindowInfo {
     title: String,
     handle: HWND,
@@ -148,105 +182,110 @@ struct ImplWindowInfo {
 }
 
 impl WindowsController {
-    
     fn true_width() -> u32 {
-        unsafe {
-            GetSystemMetrics(SM_CXSCREEN) as u32
-        }
+        unsafe { GetSystemMetrics(SM_CXSCREEN) as u32 }
     }
 
     fn true_height() -> u32 {
-        unsafe {
-            GetSystemMetrics(SM_CYSCREEN) as u32
-        }
+        unsafe { GetSystemMetrics(SM_CYSCREEN) as u32 }
     }
 
     // MARK: - PC Controller Impl
 
-    fn impl_get_all_windows(&self) -> Result<Vec<ImplWindowInfo>, MyError> {
+    fn impl_get_all_windows(&self) -> Result<Vec<ImplWindowInfo>> {
         let mut windows = Vec::new();
-        
+
         unsafe {
-            let _ = EnumWindows(Some(enum_window_proc), LPARAM(&mut windows as *mut _ as isize));
+            let _ = EnumWindows(
+                Some(enum_window_proc),
+                LPARAM(&mut windows as *mut _ as isize),
+            );
         }
-        
+
         Ok(windows)
     }
 
     #[allow(dead_code)]
-    fn impl_focus_window(&self, handle: HWND) -> Result<(), MyError> {
-        let result = unsafe {
-            SetForegroundWindow(handle).as_bool()
-        };
+    fn impl_focus_window(&self, handle: HWND) -> Result<()> {
+        let result = unsafe { SetForegroundWindow(handle).as_bool() };
         if result {
             Ok(())
         } else {
-            Err(MyError::S("Failed to focus window".to_string()))
+            anyhow::bail!("Failed to focus window")
         }
     }
 
-    fn impl_left_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn impl_left_click(&self, x: i32, y: i32) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.move_mouse(x, y, Abs).unwrap();
         enigo.button(Button::Left, Click).unwrap();
         Ok(())
     }
 
-    fn impl_right_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn impl_right_click(&self, x: i32, y: i32) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.move_mouse(x, y, Abs).unwrap();
         enigo.button(Button::Right, Click).unwrap();
         Ok(())
     }
 
-    fn impl_middle_click(&self, x: i32, y: i32) -> Result<(), MyError> {
+    fn impl_middle_click(&self, x: i32, y: i32) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.move_mouse(x, y, Abs).unwrap();
         enigo.button(Button::Middle, Click).unwrap();
         Ok(())
     }
 
-    fn impl_key_click(&self, key: Key) -> Result<(), MyError> {
+    fn impl_key_click(&self, key: Key) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.key(key, Click).unwrap();
         Ok(())
     }
 
-    fn impl_key_press(&self, key: Key) -> Result<(), MyError> {
+    fn impl_key_press(&self, key: Key) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.key(key, Press).unwrap();
         Ok(())
     }
 
-    fn impl_key_release(&self, key: Key) -> Result<(), MyError> {
+    fn impl_key_release(&self, key: Key) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
         enigo.key(key, Release).unwrap();
         Ok(())
     }
 
-    fn impl_swipe(&self, from_x: i32, from_y: i32, to_x: i32, to_y: i32, duration_ms: u64) -> Result<(), MyError> {
+    fn impl_swipe(
+        &self,
+        from_x: i32,
+        from_y: i32,
+        to_x: i32,
+        to_y: i32,
+        duration_ms: u64,
+    ) -> Result<()> {
         let mut enigo = Enigo::new(&Settings::default())?;
-        
+
         // 移动到起始位置
         enigo.move_mouse(from_x, from_y, Abs).unwrap();
-        
+
         // 计算步进值
         let steps = 20; // 将动作分为20步
         let sleep_duration = duration_ms / steps as u64;
         let x_step = (to_x - from_x) as f64 / steps as f64;
         let y_step = (to_y - from_y) as f64 / steps as f64;
-        
+
         // 按下鼠标左键
         enigo.button(Button::Left, Press).unwrap();
-        
+
         // 逐步移动
         for i in 1..=steps {
             let current_x = from_x as f64 + (x_step * i as f64);
             let current_y = from_y as f64 + (y_step * i as f64);
-            enigo.move_mouse(current_x as i32, current_y as i32, Rel).unwrap();
+            enigo
+                .move_mouse(current_x as i32, current_y as i32, Rel)
+                .unwrap();
             std::thread::sleep(std::time::Duration::from_millis(sleep_duration));
         }
-        
+
         // 释放鼠标左键
         enigo.button(Button::Left, Release).unwrap();
 
@@ -255,9 +294,9 @@ impl WindowsController {
 
     // MARK: - Cmn Controller Impl
 
-    fn impl_raw_screencap(&self) -> Result<Vec<u8>, MyError> {
+    fn impl_raw_screencap(&self) -> Result<Vec<u8>> {
         unsafe {
-             // 获取设备上下文
+            // 获取设备上下文
             let hwnd = GetDesktopWindow();
             let hdc_screen = GetDC(Some(hwnd));
             let hdc_mem = CreateCompatibleDC(Some(hdc_screen));
@@ -282,7 +321,7 @@ impl WindowsController {
                 SRCCOPY,
             );
             if res.is_err() {
-                return Err(MyError::S("Failed to capture screen".to_string()));
+                anyhow::bail!("Failed to capture screen".to_string());
             }
 
             // 准备 BITMAPINFO 结构
@@ -306,7 +345,7 @@ impl WindowsController {
             // 获取位图数据
             let buffer_size = (width * height * 4) as usize;
             let mut buffer = vec![0u8; buffer_size];
-            
+
             let _ = GetDIBits(
                 hdc_screen,
                 hbm_screen,
@@ -326,13 +365,13 @@ impl WindowsController {
         }
     }
 
-    fn impl_screencap(&self) -> Result<image::DynamicImage, MyError> {
+    fn impl_screencap(&self) -> Result<image::DynamicImage> {
         let buffer = self.impl_raw_screencap()?;
-        let img = image::DynamicImage::ImageRgba8(image::ImageBuffer::from_raw(self.width, self.height, buffer).unwrap());
+        let img = image::DynamicImage::ImageRgba8(
+            image::ImageBuffer::from_raw(self.width, self.height, buffer).unwrap(),
+        );
         Ok(img)
     }
-
-
 }
 
 // 窗口枚举回调函数
@@ -355,7 +394,7 @@ extern "system" fn enum_window_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         if GetWindowRect(hwnd, &mut rect).is_ok() {
             let windows: &mut Vec<ImplWindowInfo> = &mut *(lparam.0 as *mut Vec<ImplWindowInfo>);
             let title = String::from_utf16_lossy(&title[..len as usize]);
-            
+
             windows.push(ImplWindowInfo {
                 title,
                 handle: hwnd,
@@ -366,4 +405,3 @@ extern "system" fn enum_window_proc(hwnd: HWND, lparam: LPARAM) -> BOOL {
         true.into()
     }
 }
-

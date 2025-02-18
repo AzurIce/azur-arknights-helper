@@ -1,6 +1,13 @@
-use std::{path::Path, sync::{Arc, Mutex}};
+use std::{
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
-use aah_controller::{aah_controller::AahController, adb_controller::AdbController, Controller};
+use aah_controller::{
+    android::{AahController, AdbController},
+    Controller,
+};
+use anyhow::Result;
 use log::info;
 
 use crate::{
@@ -23,7 +30,7 @@ pub struct GeneralAndroidAah {
 }
 
 impl Controller for GeneralAndroidAah {
-    fn click(&self, x: u32, y: u32) -> Result<(), aah_controller::adb::MyError> {
+    fn click(&self, x: u32, y: u32) -> Result<()> {
         self.controller.click(x, y)
     }
     fn swipe(
@@ -33,23 +40,23 @@ impl Controller for GeneralAndroidAah {
         duration: std::time::Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), aah_controller::adb::MyError> {
+    ) -> Result<()> {
         self.controller
             .swipe(start, end, duration, slope_in, slope_out)
     }
     fn screen_size(&self) -> (u32, u32) {
         self.controller.screen_size()
     }
-    fn screencap(&self) -> Result<image::DynamicImage, aah_controller::adb::MyError> {
+    fn screencap(&self) -> Result<image::DynamicImage> {
         self.controller.screencap()
     }
-    fn raw_screencap(&self) -> Result<Vec<u8>, aah_controller::adb::MyError> {
+    fn raw_screencap(&self) -> Result<Vec<u8>> {
         self.controller.raw_screencap()
     }
-    fn press_esc(&self) -> Result<(), aah_controller::adb::MyError> {
+    fn press_esc(&self) -> Result<()> {
         self.controller.press_esc()
     }
-    fn press_home(&self) -> Result<(), aah_controller::adb::MyError> {
+    fn press_home(&self) -> Result<()> {
         self.controller.press_home()
     }
 }

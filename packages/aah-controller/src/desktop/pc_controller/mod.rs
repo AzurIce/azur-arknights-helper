@@ -1,7 +1,7 @@
 use cfg_if::cfg_if;
 
 cfg_if! {
-    if #[cfg(target_os = "windows")] {
+    if #[cfg(all(target_os = "windows"))] {
         mod windows_controller;
         use windows_controller as imp;
 

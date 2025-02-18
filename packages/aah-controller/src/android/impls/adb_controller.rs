@@ -1,10 +1,11 @@
+use anyhow::{Context, Result};
 use std::time::Duration;
 
 use color_print::cprintln;
 
-use crate::adb::{self, MyError};
+use crate::android::adb::{self};
 
-use super::Controller;
+use crate::Controller;
 
 /// An implementation of [`crate::Controller`]
 ///
@@ -14,7 +15,7 @@ pub struct AdbController {
 }
 
 impl AdbController {
-    pub fn connect(device_serial: impl AsRef<str>) -> Result<Self, MyError> {
+    pub fn connect(device_serial: impl AsRef<str>) -> Result<Self> {
         let device_serial = device_serial.as_ref();
 
         cprintln!("<blue>[AdbController]</blue>: connecting to {device_serial}...");
@@ -27,9 +28,7 @@ impl AdbController {
             device.screencap()?.height()
         );
 
-        let controller = Self {
-            inner: device,
-        };
+        let controller = Self { inner: device };
 
         Ok(controller)
     }
@@ -48,7 +47,7 @@ impl Controller for AdbController {
         (self.width(), self.height())
     }
 
-    fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
+    fn click(&self, x: u32, y: u32) -> Result<()> {
         // if x > self.width() || y > self.height() {
         //     return Err(MyError::S(
         //         format!("coord out of screen (click at {}, {}; size is {}, {})", x, y, self.width(), self.height())
@@ -72,7 +71,7 @@ impl Controller for AdbController {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), MyError> {
+    ) -> Result<()> {
         cprintln!(
             "<blue>[AahController]</blue>: swiping from {:?} to {:?} for {:?} using adb",
             start,
@@ -92,11 +91,13 @@ impl Controller for AdbController {
         )?;
         Ok(())
     }
-    fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
-        self.inner.raw_screencap()
+    fn raw_screencap(&self) -> Result<Vec<u8>> {
+        self.inner
+            .raw_screencap()
+            .context("failed to get raw_screencap")
     }
-    fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        self.inner.screencap()
+    fn screencap(&self) -> Result<image::DynamicImage> {
+        self.inner.screencap().context("failed to get screencap")
         // cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");
         // match self.minicap.get_screen() {
         //     Ok(screen) => Ok(screen),
@@ -107,13 +108,13 @@ impl Controller for AdbController {
         // }
     }
 
-    fn press_home(&self) -> Result<(), MyError> {
+    fn press_home(&self) -> Result<()> {
         self.inner
             .execute_command_by_process("shell input keyevent HOME")?;
         Ok(())
     }
 
-    fn press_esc(&self) -> Result<(), MyError> {
+    fn press_esc(&self) -> Result<()> {
         self.inner
             .execute_command_by_process("shell input keyevent 111")?;
         Ok(())

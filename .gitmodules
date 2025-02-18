@@ -3,10 +3,6 @@
 	url = https://github.com/YXHXianYu/auto-gakumasu.git
 	branch = aah
 	shallow = true
-[submodule "packages/auto-wuthering-waves"]
-	path = packages/auto-wuthering-waves
-	url = https://github.com/YXHXianYu/auto-wuthering-waves.git
-	shallow = true
 [submodule "aah-resources"]
 	path = aah-resources
 	url = https://github.com/AzurIce/aah-resources

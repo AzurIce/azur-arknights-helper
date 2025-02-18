@@ -6,12 +6,13 @@ use std::{
 use color_print::cprintln;
 
 use crate::{
-    adb::{self, MyError},
-    app::App,
+    android::adb::{self},
+    android::app::App,
     Toucher,
 };
 
-use super::{app::minitouch::MiniTouch, Controller};
+use crate::{android::app::minitouch::MiniTouch, Controller};
+use anyhow::{Context, Result};
 
 /// An implementation of [`crate::Controller`]
 ///
@@ -29,7 +30,7 @@ impl AahController {
     pub fn connect(
         device_serial: impl AsRef<str>,
         // res_dir: impl AsRef<Path>,
-    ) -> Result<Self, MyError> {
+    ) -> Result<Self> {
         // let res_dir = res_dir.as_ref().to_path_buf();
         let device_serial = device_serial.as_ref();
 
@@ -47,7 +48,7 @@ impl AahController {
         );
 
         // let minicap = Minicap::init(&device, &res_dir).map_err(|err| MyError::S(err))?;
-        let minitouch = MiniTouch::init(&device).map_err(|err| MyError::S(err.to_string()))?;
+        let minitouch = MiniTouch::init(&device).context("minitouch failed to init")?;
         let minitouch = Arc::new(Mutex::new(minitouch));
 
         let controller = Self {
@@ -68,9 +69,9 @@ impl Controller for AahController {
         (self.width, self.height)
     }
 
-    fn click(&self, x: u32, y: u32) -> Result<(), MyError> {
+    fn click(&self, x: u32, y: u32) -> Result<()> {
         if x > self.width || y > self.height {
-            return Err(MyError::S("coord out of screen".to_string()));
+            anyhow::bail!("click coord out of screen");
         }
         // cprintln!("<blue>[AahController]</blue>: clicking ({}, {})", x, y);
         // self.inner
@@ -84,7 +85,7 @@ impl Controller for AahController {
             .lock()
             .unwrap()
             .click(x, y)
-            .map_err(|err| MyError::S(err.to_string()))?;
+            .context("minitouch failed to click")?;
         Ok(())
     }
 
@@ -95,7 +96,7 @@ impl Controller for AahController {
         duration: Duration,
         slope_in: f32,
         slope_out: f32,
-    ) -> Result<(), MyError> {
+    ) -> Result<()> {
         cprintln!(
             "<blue>[AahController]</blue>: swiping from {:?} to {:?} for {:?} using minitouch",
             start,
@@ -120,11 +121,11 @@ impl Controller for AahController {
         // )?;
         Ok(())
     }
-    fn raw_screencap(&self) -> Result<Vec<u8>, MyError> {
-        self.inner.raw_screencap()
+    fn raw_screencap(&self) -> Result<Vec<u8>> {
+        self.inner.raw_screencap().context("failed to get raw_screencap")
     }
-    fn screencap(&self) -> Result<image::DynamicImage, MyError> {
-        self.inner.screencap()
+    fn screencap(&self) -> Result<image::DynamicImage> {
+        self.inner.screencap().context("failed to get screencap")
         // cprintln!("<blue>[AahController]</blue>: screencapping using minicap...");
         // match self.minicap.get_screen() {
         //     Ok(screen) => Ok(screen),
@@ -135,13 +136,13 @@ impl Controller for AahController {
         // }
     }
 
-    fn press_home(&self) -> Result<(), MyError> {
+    fn press_home(&self) -> Result<()> {
         self.inner
             .execute_command_by_process("shell input keyevent HOME")?;
         Ok(())
     }
 
-    fn press_esc(&self) -> Result<(), MyError> {
+    fn press_esc(&self) -> Result<()> {
         self.inner
             .execute_command_by_process("shell input keyevent 111")?;
         Ok(())
