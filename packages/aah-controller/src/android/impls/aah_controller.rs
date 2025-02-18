@@ -122,7 +122,9 @@ impl Controller for AahController {
         Ok(())
     }
     fn raw_screencap(&self) -> Result<Vec<u8>> {
-        self.inner.raw_screencap().context("failed to get raw_screencap")
+        self.inner
+            .raw_screencap()
+            .context("failed to get raw_screencap")
     }
     fn screencap(&self) -> Result<image::DynamicImage> {
         self.inner.screencap().context("failed to get screencap")

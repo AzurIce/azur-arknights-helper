@@ -9,7 +9,10 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use aah_controller::{android::{AahController, AdbController}, Controller};
+use aah_controller::{
+    android::{AahController, AdbController},
+    Controller,
+};
 use ocrs::{OcrEngine, OcrEngineParams};
 use rten::Model;
 use task::TaskEvt;
@@ -74,7 +77,7 @@ impl AAH {
 
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
     /// 使用 ADB 控制器
-    /// 
+    ///
     /// - `serial`: 设备的序列号
     /// - `res_dir`: 资源目录的路径
     pub fn connect_with_adb_controller(
@@ -86,19 +89,18 @@ impl AAH {
         AAH::new(controller, resource)
     }
 
-
     fn new(
         controller: Box<dyn Controller + Sync + Send>,
         resource: Arc<Resource>,
     ) -> Result<Self, anyhow::Error> {
         let (task_evt_tx, task_evt_rx) = async_channel::unbounded();
         let ocr_engine = OcrEngine::new(OcrEngineParams {
-            detection_model: Some(
-                Model::load_file(resource.root.join("models/text-detection.rten"))?,
-            ),
-            recognition_model: Some(
-                Model::load_file(resource.root.join("models/text-recognition.rten"))?,
-            ),
+            detection_model: Some(Model::load_file(
+                resource.root.join("models/text-detection.rten"),
+            )?),
+            recognition_model: Some(Model::load_file(
+                resource.root.join("models/text-recognition.rten"),
+            )?),
             ..Default::default()
         })
         .unwrap();

@@ -9,7 +9,17 @@ use aah_resource::level::get_level;
 use color_print::{cformat, cprintln};
 use imageproc::template_matching::find_extremes;
 
-use crate::{ android::actions::ClickMatchTemplate, arknights::{actions::battle::{Deploy, Retreat, UseSkill}, analyzer::battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState}, Aah}, task::Runnable, utils::resource::get_template, vision::analyzer::Analyzer, CachedScreenCapper};
+use crate::{
+    android::actions::ClickMatchTemplate,
+    arknights::{
+        actions::battle::{Deploy, Retreat, UseSkill},
+        analyzer::battle::{BattleAnalyzer, BattleAnalyzerOutput, BattleState},
+        Aah,
+    },
+    utils::resource::get_template,
+    vision::analyzer::Analyzer,
+    CachedScreenCapper, TaskRecipe,
+};
 use std::fmt::{self, Display, Formatter};
 
 use serde::{Deserialize, Serialize};
@@ -93,14 +103,17 @@ pub enum CopilotAction {
     },
 }
 
-impl Runnable<Aah> for Copilot {
+impl TaskRecipe<Aah> for Copilot {
     type Res = ();
     fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
         let log_tag = cformat!("<strong>[CopilotTask {}]: </strong>", self.level_code);
         let copilot_task = aah
             .resource
             .get_copilot(&self.level_code)
-            .ok_or(anyhow::anyhow!("failed to get copilot task: {}", self.level_code))?;
+            .ok_or(anyhow::anyhow!(
+                "failed to get copilot task: {}",
+                self.level_code
+            ))?;
         let level = get_level(
             copilot_task.level_code.as_str(),
             aah.resource.root.join("levels.json"),

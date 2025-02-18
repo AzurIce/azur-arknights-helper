@@ -1,3 +1,3 @@
-pub mod levels;
-pub mod depot;
 pub mod battle;
+pub mod depot;
+pub mod levels;

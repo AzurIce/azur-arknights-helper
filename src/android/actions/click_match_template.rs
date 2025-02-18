@@ -5,9 +5,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     resource::ResRoot,
-    task::Runnable,
     vision::analyzer::{single_match::SingleMatchAnalyzer, Analyzer},
-    CachedScreenCapper,
+    Core, TaskRecipe,
 };
 
 use super::ActionSet;
@@ -32,19 +31,24 @@ impl ClickMatchTemplate {
 }
 
 // TODO: create a new trait like Controller
-impl<T: Controller + CachedScreenCapper + ResRoot> Runnable<T> for ClickMatchTemplate {
+impl<T, C, R> TaskRecipe<T> for ClickMatchTemplate
+where
+    C: Controller,
+    R: ResRoot,
+    T: Core<Controller = C, Resource = R>,
+{
     type Res = ();
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
-        let mut analyzer = SingleMatchAnalyzer::new(runner.res_root(), &self.template);
+    fn run(&self, aah: &T) -> anyhow::Result<Self::Res> {
+        let mut analyzer = SingleMatchAnalyzer::new(&aah.resource().res_root(), &self.template);
         let output = analyzer
-            .analyze(runner)
+            .analyze(aah)
             .map_err(|err| anyhow::anyhow!("failed to analyze: {err}"))?;
         let rect = output
             .res
             .rect
             .ok_or(anyhow::anyhow!("failed to match {}", self.template))?
             .into();
-        runner
+        aah.controller()
             .click_in_rect(rect)
             .map_err(|err| anyhow::anyhow!("controller error: {:?}", err))?;
         Ok(())

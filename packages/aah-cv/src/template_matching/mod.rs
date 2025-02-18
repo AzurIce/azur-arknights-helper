@@ -41,7 +41,6 @@ pub fn find_matches(
                     ((m.location.0 as i32 - x as i32).abs() as u32) < template_width
                         && ((m.location.1 as i32 - y as i32).abs() as u32) < template_height
                 }) {
-                    
                     if is_x_more_match_than_y(value, m.value, method) {
                         m.location = (x, y);
                         m.value = value;

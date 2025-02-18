@@ -3,15 +3,14 @@ use std::path::Path;
 use image::DynamicImage;
 
 use crate::{
-    task::Runnable,
-    utils::{resource::get_template, LazyImage},
+    utils::resource::get_template,
     vision::{
         matcher::single_matcher::{SingleMatcher, SingleMatcherResult},
         utils::{draw_box, Rect},
     },
-    CachedScreenCapper,
+    Core,
 };
-use aah_controller::DEFAULT_HEIGHT;
+use aah_controller::{Controller, DEFAULT_HEIGHT};
 
 use super::{matching::MatchOptions, Analyzer};
 
@@ -109,17 +108,21 @@ impl SingleMatchAnalyzer {
     }
 }
 
-impl<T: CachedScreenCapper> Analyzer<T> for SingleMatchAnalyzer {
+impl<T, C: Controller> Analyzer<T> for SingleMatchAnalyzer
+where
+    T: Core<Controller = C>,
+{
     type Res = SingleMatchAnalyzerOutput;
     fn analyze(&mut self, core: &T) -> anyhow::Result<Self::Res> {
         // Get image
-        let screen = if self.options.use_cache {
-            core.screen_cache_or_cap()?.clone()
-        } else {
-            core
-                .screen_cap_and_cache()
-                .map_err(|err| anyhow::anyhow!("{:?}", err))?
-        };
+        let screen = core.controller().screencap()?;
+        // TODO: where to imple cache thing?
+        // let screen = if self.options.use_cache {
+        //     core.screen_cache_or_cap()?.clone()
+        // } else {
+        //     core.screen_cap_and_cache()
+        //         .map_err(|err| anyhow::anyhow!("{:?}", err))?
+        // };
         self.analyze_image(&screen)
             .map_err(|err| anyhow::anyhow!("{:?}", err))
     }

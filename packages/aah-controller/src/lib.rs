@@ -145,6 +145,44 @@ pub trait Controller {
     fn press_esc(&self) -> anyhow::Result<()>;
 }
 
+impl<T: Controller + 'static + ?Sized> Controller for Box<T> {
+    fn screen_size(&self) -> (u32, u32) {
+        self.as_ref().screen_size()
+    }
+
+    fn click(&self, x: u32, y: u32) -> anyhow::Result<()> {
+        self.as_ref().click(x, y)
+    }
+
+    fn swipe(
+        &self,
+        start: (u32, u32),
+        end: (i32, i32),
+        duration: Duration,
+        slope_in: f32,
+        slope_out: f32,
+    ) -> anyhow::Result<()> {
+        self.as_ref()
+            .swipe(start, end, duration, slope_in, slope_out)
+    }
+
+    fn raw_screencap(&self) -> anyhow::Result<Vec<u8>> {
+        self.as_ref().raw_screencap()
+    }
+
+    fn screencap(&self) -> anyhow::Result<image::DynamicImage> {
+        self.as_ref().screencap()
+    }
+
+    fn press_home(&self) -> anyhow::Result<()> {
+        self.as_ref().press_home()
+    }
+
+    fn press_esc(&self) -> anyhow::Result<()> {
+        self.as_ref().press_esc()
+    }
+}
+
 /// A toucher contains [`Toucher::click`] and [`Toucher::swipe`]
 pub trait Toucher {
     fn click_in_rect(&mut self, rect: Rect) -> anyhow::Result<()> {

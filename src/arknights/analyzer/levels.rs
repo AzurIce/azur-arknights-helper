@@ -4,7 +4,6 @@ use regex::Regex;
 
 use crate::{
     arknights::Aah,
-    task::Runnable,
     vision::{
         analyzer::{matching::MatchOptions, multi_match::MultiMatchAnalyzer, Analyzer},
         utils::{draw_box, Rect},

@@ -38,7 +38,8 @@ impl Runnable for ClickMatchTemplate {
         let rect = output
             .res
             .rect
-            .ok_or(anyhow::anyhow!("failed to match {}", self.template))?.into();
+            .ok_or(anyhow::anyhow!("failed to match {}", self.template))?
+            .into();
         aah.controller
             .click_in_rect(rect)
             .map_err(|err| anyhow::anyhow!("controller error: {:?}", err))

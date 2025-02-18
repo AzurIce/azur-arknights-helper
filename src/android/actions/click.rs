@@ -1,7 +1,7 @@
 use aah_controller::Controller;
 use serde::{Deserialize, Serialize};
 
-use crate::task::Runnable;
+use crate::{Core, TaskRecipe};
 
 use super::ActionSet;
 
@@ -24,10 +24,15 @@ impl Click {
     }
 }
 
-impl<T: Controller> Runnable<T> for Click {
+impl<T, C> TaskRecipe<T> for Click
+where
+    C: Controller,
+    T: Core<Controller = C>,
+{
     type Res = ();
     fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
         runner
+            .controller()
             .click(self.x, self.y)
             .map_err(|err| anyhow::anyhow!("controller error: {:?}", err))
     }

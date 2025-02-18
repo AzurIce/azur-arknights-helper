@@ -3,13 +3,14 @@ use std::{thread, time::Duration};
 use aah_controller::Controller;
 use anyhow::Context;
 
+use crate::android::actions::ClickMatchTemplate;
 use crate::arknights::analyzer::levels::LevelAnalyzer;
 use crate::arknights::Aah;
 use crate::vision::analyzer::matching::MatchOptions;
 use crate::vision::analyzer::single_match::SingleMatchAnalyzer;
 use crate::vision::analyzer::Analyzer;
 use crate::vision::utils::Rect;
-use crate::{android::actions::ClickMatchTemplate, task::Runnable, CachedScreenCapper};
+use crate::{Core, TaskRecipe};
 
 use crate::android::actions::Click;
 
@@ -24,22 +25,18 @@ impl ChooseLevel {
     }
 }
 
-fn match_terminal_resource(
-    aah: &Aah,
-) -> Result<Rect, anyhow::Error> {
-    let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "terminal-resource.png").with_options(MatchOptions::default().with_roi((0.0, 0.875), (1.0, 1.0)));
-    let res = analyzer
-        .analyze(aah)
-        .context("match terminal-resource")?;
+fn match_terminal_resource(aah: &Aah) -> Result<Rect, anyhow::Error> {
+    let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "terminal-resource.png")
+        .with_options(MatchOptions::default().with_roi((0.0, 0.875), (1.0, 1.0)));
+    let res = analyzer.analyze(aah).context("match terminal-resource")?;
     res.res
         .rect
         .ok_or(anyhow::anyhow!("failed to match terminal-resource"))
 }
 
-fn match_levels_resources_lmb(
-    aah: &Aah,
-) -> Result<Rect, anyhow::Error> {
-    let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "levels-resources-lmb.png").with_options(MatchOptions::default().with_roi((0.0, 0.5), (1.0, 0.75)));
+fn match_levels_resources_lmb(aah: &Aah) -> Result<Rect, anyhow::Error> {
+    let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "levels-resources-lmb.png")
+        .with_options(MatchOptions::default().with_roi((0.0, 0.5), (1.0, 0.75)));
     let res = analyzer
         .analyze(aah)
         .map_err(|err| anyhow::anyhow!(err))
@@ -58,7 +55,7 @@ fn analyze_levels(aah: &Aah) -> Result<Vec<(String, Rect)>, anyhow::Error> {
     Ok(res.levels)
 }
 
-impl Runnable<Aah> for ChooseLevel {
+impl TaskRecipe<Aah> for ChooseLevel {
     type Res = ();
     fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
         // aah.emit_task_evt(super::TaskEvt::Log("entering terminal page".to_string()));
@@ -72,12 +69,12 @@ impl Runnable<Aah> for ChooseLevel {
             //     "entering terminal-resource page".to_string(),
             // ));
             let rect = match_terminal_resource(aah)?.into();
-            aah.click_in_rect(rect)?;
+            aah.controller().click_in_rect(rect)?;
             thread::sleep(Duration::from_millis(800));
 
             // aah.emit_task_evt(super::TaskEvt::Log("entering levels-lmb page".to_string()));
             let rect = match_levels_resources_lmb(aah)?.into();
-            aah.click_in_rect(rect)?;
+            aah.controller().click_in_rect(rect)?;
             thread::sleep(Duration::from_millis(800));
 
             let levels = analyze_levels(aah)?;
@@ -94,9 +91,6 @@ impl Runnable<Aah> for ChooseLevel {
 #[cfg(test)]
 mod test {
     use std::sync::Arc;
-
-    use crate::{
-    };
 
     use super::{match_levels_resources_lmb, ChooseLevel};
 

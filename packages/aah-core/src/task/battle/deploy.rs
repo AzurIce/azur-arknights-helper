@@ -3,7 +3,7 @@ use std::time::Duration;
 use aah_resource::level::Level;
 
 use crate::{
-    task::{action::Swipe, Task, TaskStep, copilot::Direction},
+    task::{action::Swipe, copilot::Direction, Task, TaskStep},
     vision::utils::Rect,
 };
 

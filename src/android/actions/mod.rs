@@ -12,7 +12,7 @@ pub use press::Press;
 use serde::{Deserialize, Serialize};
 pub use swipe::Swipe;
 
-use crate::{resource::ResRoot, task::Runnable, CachedScreenCapper};
+use crate::{resource::ResRoot, Core, TaskRecipe};
 
 /// Action are the tasks you can use in the configuration file
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -51,14 +51,19 @@ impl ActionSet {
     }
 }
 
-impl<T: Controller + CachedScreenCapper + ResRoot> Runnable<T> for ActionSet {
+impl<T, C, R> TaskRecipe<T> for ActionSet
+where
+    C: Controller,
+    R: ResRoot,
+    T: Core<Controller = C, Resource = R>,
+{
     type Res = ();
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
+    fn run(&self, aah: &T) -> anyhow::Result<Self::Res> {
         match self {
-            ActionSet::Press(action) => action.run(runner),
-            ActionSet::Click(action) => action.run(runner),
-            ActionSet::Swipe(action) => action.run(runner),
-            ActionSet::ClickMatchTemplate(action) => action.run(runner),
+            ActionSet::Press(action) => action.run(aah),
+            ActionSet::Click(action) => action.run(aah),
+            ActionSet::Swipe(action) => action.run(aah),
+            ActionSet::ClickMatchTemplate(action) => action.run(aah),
         }
     }
 }

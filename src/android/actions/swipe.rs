@@ -3,7 +3,7 @@ use std::time::Duration;
 use aah_controller::Controller;
 use serde::{Deserialize, Serialize};
 
-use crate::task::Runnable;
+use crate::{Core, TaskRecipe};
 
 use super::ActionSet;
 
@@ -59,10 +59,14 @@ impl Swipe {
     }
 }
 
-impl<T: Controller> Runnable<T> for Swipe {
+impl<T, C> TaskRecipe<T> for Swipe
+where
+    C: Controller,
+    T: Core<Controller = C>,
+{
     type Res = ();
-    fn run(&self, runner: &T) -> anyhow::Result<Self::Res> {
-        runner
+    fn run(&self, aah: &T) -> anyhow::Result<Self::Res> {
+        aah.controller()
             .swipe(
                 self.p1,
                 self.p2,

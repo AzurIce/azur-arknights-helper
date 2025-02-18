@@ -1,12 +1,13 @@
+use aah_controller::Controller;
 use serde::{Deserialize, Serialize};
 
-use crate::{android, task::Runnable};
+use crate::{android, Core, TaskRecipe};
 
 use super::Aah;
 
 pub mod battle;
-pub mod copilot;
 pub mod choose_level;
+pub mod copilot;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
@@ -26,7 +27,7 @@ impl From<android::actions::ActionSet> for ActionSet {
     }
 }
 
-impl Runnable<Aah> for ActionSet {
+impl TaskRecipe<Aah> for ActionSet {
     type Res = ();
     fn run(&self, runner: &Aah) -> anyhow::Result<Self::Res> {
         match self {
