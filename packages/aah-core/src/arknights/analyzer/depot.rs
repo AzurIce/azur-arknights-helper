@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use ndarray::{Array1, Array2, Axis};
 
-use crate::{arknights::Aah, vision::analyzer::Analyzer};
+use crate::{arknights::AahCore, vision::analyzer::Analyzer};
 
 #[cfg(test)]
 mod test {
@@ -27,10 +27,10 @@ impl DepotAnalyzer {
     }
 }
 
-impl Analyzer<Aah> for DepotAnalyzer {
+impl Analyzer<AahCore> for DepotAnalyzer {
     type Res = DepotAnalyzerOutput;
 
-    fn analyze(&mut self, aah: &Aah) -> anyhow::Result<Self::Res> {
+    fn analyze(&mut self, aah: &AahCore) -> anyhow::Result<Self::Res> {
         let crop_height = 128 + 30;
         let x_period = 312;
         let y_period = 380;

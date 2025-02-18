@@ -129,7 +129,7 @@ impl<T: Load> GitRepoResource<T> {
     pub async fn try_init(
         target_dir: impl AsRef<Path>,
         repo_url: impl AsRef<str>,
-    ) -> anyhow::Result<Self> {
+    ) -> anyhow::Result<()> {
         let repo_url = repo_url.as_ref().to_string();
         let target_dir = target_dir.as_ref();
 
@@ -191,14 +191,7 @@ impl<T: Load> GitRepoResource<T> {
                 }
             }
         }
-        let manifest = fs::read_to_string(target_dir.join("manifest.toml"))?;
-        let manifest = toml::from_str(&manifest)?;
-        T::load(target_dir).map(|resource| Self {
-            repo_url,
-            inner: resource,
-            manifest,
-            root: target_dir.to_path_buf(),
-        })
+        Ok(())
     }
 
     pub async fn try_load_or_init(
@@ -240,7 +233,7 @@ impl<T: Load> GitRepoResource<T> {
         }
 
         fs::remove_dir_all(&self.root)?;
-        Self::try_init(&self.root, self.repo_url).await
+        Self::try_load_or_init(&self.root, self.repo_url).await
     }
 }
 

@@ -22,13 +22,13 @@ pub use actions::ActionSet;
 /// 通用 Android AAH
 ///
 /// ActionSet: 见 [`actions::AndroidActionSet`]
-pub struct GeneralAndroidAah {
+pub struct GeneralAndroidCore {
     controller: Box<dyn Controller>,
     resource: Arc<GeneralAahResource<actions::ActionSet>>,
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
-impl Core for GeneralAndroidAah {
+impl Core for GeneralAndroidCore {
     type Controller = Box<dyn Controller>;
     type Resource = GeneralAahResource<actions::ActionSet>;
 
@@ -41,7 +41,7 @@ impl Core for GeneralAndroidAah {
     }
 }
 
-impl GeneralAndroidAah {
+impl GeneralAndroidCore {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
     ///
     /// - `serial`: 设备的序列号
@@ -122,7 +122,7 @@ impl GeneralAndroidAah {
     }
 }
 
-impl ResRoot for GeneralAndroidAah {
+impl ResRoot for GeneralAndroidCore {
     fn res_root(&self) -> &Path {
         self.resource.root.as_path()
     }
@@ -142,7 +142,7 @@ mod test {
         let root = Path::new(&root);
 
         let resource = GeneralAahResource::load(root.join("test/android_resources")).unwrap();
-        let aah = GeneralAndroidAah::connect("127.0.0.1:16384", resource).unwrap();
+        let aah = GeneralAndroidCore::connect("127.0.0.1:16384", resource).unwrap();
         aah.run_task("arknights_wakeup").unwrap();
     }
 }

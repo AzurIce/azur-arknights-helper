@@ -5,7 +5,7 @@ use anyhow::Context;
 
 use crate::android::actions::ClickMatchTemplate;
 use crate::arknights::analyzer::levels::LevelAnalyzer;
-use crate::arknights::Aah;
+use crate::arknights::AahCore;
 use crate::vision::analyzer::matching::MatchOptions;
 use crate::vision::analyzer::single_match::SingleMatchAnalyzer;
 use crate::vision::analyzer::Analyzer;
@@ -25,7 +25,7 @@ impl ChooseLevel {
     }
 }
 
-fn match_terminal_resource(aah: &Aah) -> Result<Rect, anyhow::Error> {
+fn match_terminal_resource(aah: &AahCore) -> Result<Rect, anyhow::Error> {
     let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "terminal-resource.png")
         .with_options(MatchOptions::default().with_roi((0.0, 0.875), (1.0, 1.0)));
     let res = analyzer.analyze(aah).context("match terminal-resource")?;
@@ -34,7 +34,7 @@ fn match_terminal_resource(aah: &Aah) -> Result<Rect, anyhow::Error> {
         .ok_or(anyhow::anyhow!("failed to match terminal-resource"))
 }
 
-fn match_levels_resources_lmb(aah: &Aah) -> Result<Rect, anyhow::Error> {
+fn match_levels_resources_lmb(aah: &AahCore) -> Result<Rect, anyhow::Error> {
     let mut analyzer = SingleMatchAnalyzer::new(&aah.resource.root, "levels-resources-lmb.png")
         .with_options(MatchOptions::default().with_roi((0.0, 0.5), (1.0, 0.75)));
     let res = analyzer
@@ -48,16 +48,16 @@ fn match_levels_resources_lmb(aah: &Aah) -> Result<Rect, anyhow::Error> {
         .ok_or(anyhow::anyhow!("failed to match levels-resources-lmb"))
 }
 
-fn analyze_levels(aah: &Aah) -> Result<Vec<(String, Rect)>, anyhow::Error> {
+fn analyze_levels(aah: &AahCore) -> Result<Vec<(String, Rect)>, anyhow::Error> {
     let mut analyzer = LevelAnalyzer::new();
     let res = analyzer.analyze(aah).map_err(|err| anyhow::anyhow!(err))?;
     println!("{:?}", res.levels);
     Ok(res.levels)
 }
 
-impl TaskRecipe<Aah> for ChooseLevel {
+impl TaskRecipe<AahCore> for ChooseLevel {
     type Res = ();
-    fn run(&self, aah: &Aah) -> anyhow::Result<Self::Res> {
+    fn run(&self, aah: &AahCore) -> anyhow::Result<Self::Res> {
         // aah.emit_task_evt(super::TaskEvt::Log("entering terminal page".to_string()));
         ClickMatchTemplate::new("main_terminal.png")
             .run(aah)

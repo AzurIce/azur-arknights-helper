@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{android, Core, TaskRecipe};
 
-use super::Aah;
+use super::AahCore;
 
 pub mod battle;
 pub mod choose_level;
@@ -27,9 +27,9 @@ impl From<android::actions::ActionSet> for ActionSet {
     }
 }
 
-impl TaskRecipe<Aah> for ActionSet {
+impl TaskRecipe<AahCore> for ActionSet {
     type Res = ();
-    fn run(&self, runner: &Aah) -> anyhow::Result<Self::Res> {
+    fn run(&self, runner: &AahCore) -> anyhow::Result<Self::Res> {
         match self {
             ActionSet::Genral(action) => action.run(runner),
             // ActionSet::Copilot(copilot) => copilot.run(runner),

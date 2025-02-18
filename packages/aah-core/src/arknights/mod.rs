@@ -17,7 +17,7 @@ use rten::Model;
 
 use crate::{resource::GetTask, CachedScreenCapper, Core, TaskRecipe};
 
-pub struct Aah {
+pub struct AahCore {
     pub controller: Box<dyn Controller>,
     pub resource: Arc<AahResource>,
 
@@ -26,7 +26,7 @@ pub struct Aah {
     screen_cache: Mutex<Option<image::DynamicImage>>,
 }
 
-impl Core for Aah {
+impl Core for AahCore {
     type Controller = Box<dyn Controller>;
     type Resource = AahResource;
     fn controller(&self) -> &Self::Controller {
@@ -37,7 +37,7 @@ impl Core for Aah {
     }
 }
 
-impl Aah {
+impl AahCore {
     /// 连接到 `serial` 指定的设备（`serial` 就是 `adb devices` 里的序列号）
     ///
     /// - `serial`: 设备的序列号
@@ -185,7 +185,7 @@ impl Aah {
     // }
 }
 
-impl CachedScreenCapper for Aah {
+impl CachedScreenCapper for AahCore {
     /// Get screen cache or capture one. This is for internal analyzer use
     fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
@@ -226,7 +226,7 @@ mod test {
     fn test_aah() {
         let resource = AahResource::load("aah-resources").unwrap();
         let resource = Arc::new(resource);
-        let aah = Aah::connect("127.0.0.1:16384", resource).unwrap();
+        let aah = AahCore::connect("127.0.0.1:16384", resource).unwrap();
         aah.run_task("award").unwrap()
     }
 }
