@@ -1,8 +1,3 @@
-[submodule "packages/auto-gakumasu"]
-	path = packages/auto-gakumasu
-	url = https://github.com/YXHXianYu/auto-gakumasu.git
-	branch = aah
-	shallow = true
 [submodule "aah-resources"]
 	path = aah-resources
 	url = https://github.com/AzurIce/aah-resources

@@ -7,7 +7,9 @@ use std::{
     thread,
 };
 
-use aah_core::{resource::Resource, task::TaskEvt, AAH};
+use aah_core::{
+    arknights::{AahCore, ActionSet, resource::AahResource}, resource::GitRepoResource, task::TaskEvt
+};
 use iced::{
     color,
     futures::SinkExt,
@@ -60,8 +62,8 @@ struct App {
     log_content: text_editor::Content,
 
     initializing_resource: bool,
-    resource: Option<Arc<Resource>>,
-    aah: Option<Arc<Mutex<AAH>>>,
+    resource: Option<Arc<AahResource>>,
+    aah: Option<Arc<Mutex<AahCore>>>,
     connecting: bool,
 
     annotated_imgs: Vec<Handle>,
@@ -125,10 +127,10 @@ enum Message {
     Empty,
     ToggleDebug(bool),
     InitResource,
-    InitResourceRes(Result<Arc<Resource>, String>),
+    InitResourceRes(Result<Arc<AahResource>, String>),
     CheckAndUpdateResource,
     Connect,
-    ConnectRes(Result<AAH, String>),
+    ConnectRes(Result<AahCore, String>),
     Disconnect,
 
     RunTask(String),
@@ -136,7 +138,7 @@ enum Message {
     SetTab(Tab),
 
     /// for task_evt_listener
-    TaskEvt(TaskEvt),
+    TaskEvt(TaskEvt<ActionSet>),
     TaskEvtListenerReady(iced::futures::channel::mpsc::UnboundedSender<sub::Input>),
     TaskEvtListenerListening,
 }
@@ -194,16 +196,19 @@ impl App {
                 self.log("Initializing Resource...");
                 return Task::perform(
                     async {
-                        Resource::try_init(".aah/resources")
-                            .await
-                            .map(|res| Arc::new(res))
-                            .map_err(|err| {
-                                format!(
-                                    "Failed to initialize resource: {}, Caused by: {}",
-                                    err,
-                                    err.root_cause()
-                                )
-                            })
+                        GitRepoResource::<AahResource>::try_load_or_init(
+                            "./.aah/resources",
+                            "https://github.com/AzurIce/aah-resources",
+                        )
+                        .await
+                        .map(|res| Arc::new(res.inner))
+                        .map_err(|err| {
+                            format!(
+                                "Failed to initialize resource: {}, Caused by: {}",
+                                err,
+                                err.root_cause()
+                            )
+                        })
                     },
                     Message::InitResourceRes,
                 );
@@ -225,7 +230,7 @@ impl App {
                 let resource = self.resource.clone().unwrap();
                 return Task::perform(
                     async move {
-                        AAH::connect("127.0.0.1:16384", resource).map_err(|err| {
+                        AahCore::connect("127.0.0.1:16384", resource).map_err(|err| {
                             format!(
                                 "Failed to connect: {}, Caused by: {}",
                                 err,

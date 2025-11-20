@@ -1,0 +1,163 @@
+use std::path::Path;
+
+use ap_cv::{
+    core::template_matching::Match,
+    matcher::{SingleMatcher, SingleMatcherResult},
+};
+use auto_play::actions::Runnable;
+use image::{math::Rect, DynamicImage};
+
+use crate::{utils::resource::get_template, vision::utils::draw_box, AahCore};
+use ap_controller::{Controller, DEFAULT_HEIGHT};
+
+use super::matching::MatchOptions;
+
+pub struct SingleMatchAnalyzerOutput {
+    pub screen: Box<DynamicImage>,
+    pub res: SingleMatcherResult,
+    pub template_size: (u32, u32),
+    pub annotated_screen: Box<DynamicImage>,
+}
+
+/// To find the best result where the template fits in the screen
+pub struct SingleMatchAnalyzer {
+    template: DynamicImage,
+    // res_dir: PathBuf,
+    options: MatchOptions,
+}
+
+impl SingleMatchAnalyzer {
+    pub fn new(res_dir: impl AsRef<Path>, template_path: impl AsRef<Path>) -> Self {
+        let template = get_template(template_path, res_dir).unwrap();
+        Self {
+            template,
+            // res_dir,
+            options: Default::default(),
+        }
+    }
+
+    pub fn with_options(mut self, options: MatchOptions) -> Self {
+        self.options = options;
+        self
+    }
+
+    pub fn analyze_image(&self, image: &DynamicImage) -> anyhow::Result<SingleMatchAnalyzerOutput> {
+        // let template = self.template.get_or_load()?;
+
+        // Scaling
+        let template = if image.height() != DEFAULT_HEIGHT {
+            let scale_factor = image.height() as f32 / DEFAULT_HEIGHT as f32;
+
+            let new_width = (self.template.width() as f32 * scale_factor) as u32;
+            let new_height = (self.template.height() as f32 * scale_factor) as u32;
+
+            DynamicImage::ImageRgba8(image::imageops::resize(
+                &self.template,
+                new_width,
+                new_height,
+                image::imageops::FilterType::Lanczos3,
+            ))
+        } else {
+            self.template.clone()
+        };
+
+        // Preprocess and match
+        let mut res = {
+            let (image, template) = self.options.preprocess(image, &template);
+            let image = image.to_luma32f();
+            let template = template.to_luma32f();
+            let options = self
+                .options
+                .method
+                .map(|m| {
+                    let options = ap_cv::matcher::MatcherOptions::method_default(m.into());
+                    if let Some(threshold) = self.options.threshold {
+                        options.with_threshold(threshold)
+                    } else {
+                        options
+                    }
+                })
+                .unwrap_or_default();
+            SingleMatcher::match_template(&image, &template, &options)
+        };
+
+        let [tl, _] = self.options.calc_roi(image);
+        res.result = res.result.map(|m| Match {
+            rect: Rect {
+                x: m.rect.x + tl.0,
+                y: m.rect.y + tl.1,
+                ..m.rect
+            },
+            ..m
+        });
+        // let res = SingleMatcherResult {
+        //     rect: res.rect.map(|rect| Rect {
+        //         x: rect.x + tl.0,
+        //         y: rect.y + tl.1,
+        //         ..rect
+        //     }),
+        //     ..res
+        // };
+
+        // Annotated
+        let mut annotated_screen = image.clone();
+        if let Some(m) = res.result.as_ref() {
+            draw_box(
+                &mut annotated_screen,
+                m.rect.x as i32,
+                m.rect.y as i32,
+                template.width(),
+                template.height(),
+                [255, 0, 0, 255],
+            );
+        }
+
+        // println!("cost: {:?}", t.elapsed());
+        let screen = Box::new(image.clone());
+        let annotated_screen = Box::new(annotated_screen);
+        Ok(SingleMatchAnalyzerOutput {
+            screen,
+            res,
+            template_size: (template.width(), template.height()),
+            annotated_screen,
+        })
+    }
+}
+
+impl Runnable<AahCore> for SingleMatchAnalyzer {
+    type Output = SingleMatchAnalyzerOutput;
+    fn execute(&self, executor: &AahCore) -> anyhow::Result<Self::Output> {
+        // Get image
+        let screen = executor.controller.screencap()?;
+        // TODO: where to imple cache thing?
+        // let screen = if self.options.use_cache {
+        //     core.screen_cache_or_cap()?.clone()
+        // } else {
+        //     core.screen_cap_and_cache()
+        //         .map_err(|err| anyhow::anyhow!("{:?}", err))?
+        // };
+        self.analyze_image(&screen)
+            .map_err(|err| anyhow::anyhow!("{:?}", err))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::env;
+
+    use super::*;
+
+    #[test]
+    fn test_single_match_analyzer() {
+        let root = env::var("CARGO_MANIFEST_DIR").unwrap();
+        let root = Path::new(&root);
+
+        let image =
+            image::open(root.join("aah-resources/templates/MUMU-1920x1080/start.png")).unwrap();
+
+        let mut analyzer = SingleMatchAnalyzer::new(root.join("aah-resources"), "start_start.png")
+            .with_options(MatchOptions::default().with_roi((0.3, 0.75), (0.6, 1.0)));
+        let output = analyzer.analyze_image(&image).unwrap();
+        println!("{:?}", output.res.result);
+    }
+}
