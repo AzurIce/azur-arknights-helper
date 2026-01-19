@@ -1,533 +1,273 @@
-mod sub;
-mod widgets;
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{
-    fmt::{self, Debug, Display},
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
-use aah::{
-    arknights::{AahCore, ActionSet, resource::AahResource}, resource::GitRepoResource, task::TaskEvt
-};
-use iced::{
-    color,
-    futures::SinkExt,
-    widget::{
-        button, column, container, horizontal_rule, horizontal_space, image::Handle, row, text,
-        text_editor, toggler,
-    },
-    Alignment, Element, Length, Subscription, Task,
-};
-use tracing::error;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use aah::{AahCore, resource::{AahResource, Load}};
+use eframe::egui;
+use tokio::runtime::Runtime;
 
-#[derive(Debug, Clone, Eq, PartialEq)]
-enum Tab {
-    Main,
-    Tasks,
+enum GuiMessage {
+    Log(String),
+    Connected(Arc<AahCore>),
+    ConnectionError(String),
+    TaskStarted(String),
+    TaskFinished(String, Result<(), String>),
+    ResourceLoaded(Arc<AahResource>),
+    ResourceError(String),
 }
 
-impl Tab {
-    const ALL: [Tab; 2] = [Tab::Main, Tab::Tasks];
-
-    fn tab_bar(cur_tab: &Tab) -> iced::Element<Message> {
-        row(Tab::ALL.iter().map(|tab| {
-            let tab_str = tab.to_string();
-
-            if cur_tab == tab {
-                Element::from(button(text(tab_str)))
-            } else {
-                Element::from(button(text(tab_str)).on_press(CloneMessage::SetTab(tab.clone())))
-            }
-            .map(Message::CloneMessage)
-            .into()
-        }))
-        .spacing(2)
-        .padding(2)
-        .width(Length::Fill)
-        .into()
-    }
-}
-
-impl Display for Tab {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-struct App {
-    debug: bool,
-    tab: Tab,
-    log_content: text_editor::Content,
-
-    initializing_resource: bool,
+struct AahGui {
+    serial: String,
+    resource_path: String,
+    selected_task: Option<String>,
+    selected_copilot: Option<String>,
+    
+    runtime: Runtime,
+    rx: mpsc::Receiver<GuiMessage>,
+    tx: mpsc::Sender<GuiMessage>,
+    
+    aah: Option<Arc<AahCore>>,
     resource: Option<Arc<AahResource>>,
-    aah: Option<Arc<Mutex<AahCore>>>,
-    connecting: bool,
-
-    annotated_imgs: Vec<Handle>,
-    img_idx: usize,
-    executing_task: Option<String>,
-    task_evt_listener_tx: Option<iced::futures::channel::mpsc::UnboundedSender<sub::Input>>,
+    logs: Vec<String>,
+    is_connecting: bool,
+    is_running_task: bool,
 }
 
-impl Default for App {
-    fn default() -> Self {
-        Self {
-            debug: false,
-            tab: Tab::Main,
-            log_content: text_editor::Content::new(),
-            initializing_resource: true,
-            resource: None,
+impl AahGui {
+    fn new(_cc: &eframe::CreationContext<'_>) -> Self {
+        let (tx, rx) = mpsc::channel();
+        let runtime = Runtime::new().expect("Failed to create Tokio runtime");
+
+        let app = Self {
+            serial: "127.0.0.1:16384".to_owned(),
+            resource_path: "aah-resources".to_owned(),
+            selected_task: None,
+            selected_copilot: None,
+            runtime,
+            rx,
+            tx: tx.clone(),
             aah: None,
-            connecting: false,
-            annotated_imgs: vec![],
-            img_idx: 0,
-            executing_task: None,
-            task_evt_listener_tx: None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum CloneMessage {
-    InitResource,
-    RunTask(String),
-    Connect,
-    Disconnect,
-    PrevImg,
-    NextImg,
-    SetTab(Tab),
-    LogEdit(text_editor::Action),
-}
-
-impl From<CloneMessage> for Message {
-    fn from(msg: CloneMessage) -> Self {
-        match msg {
-            CloneMessage::InitResource => Message::InitResource,
-            CloneMessage::RunTask(task_name) => Message::RunTask(task_name),
-            CloneMessage::Connect => Message::Connect,
-            CloneMessage::Disconnect => Message::Disconnect,
-            CloneMessage::PrevImg => Message::PrevImg,
-            CloneMessage::NextImg => Message::NextImg,
-            CloneMessage::SetTab(tab) => Message::SetTab(tab),
-            CloneMessage::LogEdit(action) => Message::LogEdit(action),
-        }
-    }
-}
-
-#[derive(Debug)]
-enum Message {
-    CloneMessage(CloneMessage),
-    LogEdit(text_editor::Action),
-
-    PrevImg,
-    NextImg,
-    Empty,
-    ToggleDebug(bool),
-    InitResource,
-    InitResourceRes(Result<Arc<AahResource>, String>),
-    CheckAndUpdateResource,
-    Connect,
-    ConnectRes(Result<AahCore, String>),
-    Disconnect,
-
-    RunTask(String),
-
-    SetTab(Tab),
-
-    /// for task_evt_listener
-    TaskEvt(TaskEvt<ActionSet>),
-    TaskEvtListenerReady(iced::futures::channel::mpsc::UnboundedSender<sub::Input>),
-    TaskEvtListenerListening,
-}
-
-impl App {
-    fn prev_img(&mut self) {
-        if self.img_idx > 0 {
-            self.img_idx -= 1;
-        }
-    }
-
-    fn next_img(&mut self) {
-        if self.img_idx < self.annotated_imgs.len() - 1 {
-            self.img_idx += 1;
-        }
-    }
-
-    fn toggle_debug(&mut self, debug: bool) {
-        self.debug = debug;
-    }
-
-    fn log(&mut self, s: impl AsRef<str>) {
-        let s = s.as_ref().to_string();
-        self.log_content
-            .perform(text_editor::Action::Move(text_editor::Motion::DocumentEnd));
-        self.log_content
-            .perform(text_editor::Action::Edit(text_editor::Edit::Paste(
-                Arc::new(format!("{}\n", s)),
-            )));
-    }
-
-    fn update(&mut self, message: Message) -> Task<Message> {
-        let message = match message {
-            Message::CloneMessage(msg) => msg.into(),
-            _ => message,
+            resource: None,
+            logs: vec![],
+            is_connecting: false,
+            is_running_task: false,
         };
-        // info!("app update message: {:?}", message);
-        match message {
-            Message::ToggleDebug(debug) => self.toggle_debug(debug),
-            Message::PrevImg => self.prev_img(),
-            Message::NextImg => self.next_img(),
-            Message::LogEdit(action) => {
-                if !action.is_edit() {
-                    self.log_content.perform(action);
-                }
-            }
-            // Message::CheckAndUpdateResource => {
-            //     self.checking_resource_update = true;
-            //     Task::perform(async {
-
-            //     }, f)
-            // }
-            Message::InitResource => {
-                self.initializing_resource = true;
-                self.log("Initializing Resource...");
-                return Task::perform(
-                    async {
-                        GitRepoResource::<AahResource>::try_load_or_init(
-                            "./.aah/resources",
-                            "https://github.com/AzurIce/aah-resources",
-                        )
-                        .await
-                        .map(|res| Arc::new(res.inner))
-                        .map_err(|err| {
-                            format!(
-                                "Failed to initialize resource: {}, Caused by: {}",
-                                err,
-                                err.root_cause()
-                            )
-                        })
-                    },
-                    Message::InitResourceRes,
-                );
-            }
-            Message::InitResourceRes(res) => {
-                self.initializing_resource = false;
-                match res {
-                    Ok(resource) => {
-                        self.resource = Some(resource);
-                        self.log("Resource Initialized");
-                    }
-                    Err(err) => {
-                        self.log(format!("Failed to initialize resource: {}", err));
-                    }
-                }
-            }
-            Message::Connect => {
-                self.connecting = true;
-                let resource = self.resource.clone().unwrap();
-                return Task::perform(
-                    async move {
-                        AahCore::connect("127.0.0.1:16384", resource).map_err(|err| {
-                            format!(
-                                "Failed to connect: {}, Caused by: {}",
-                                err,
-                                err.root_cause()
-                            )
-                        })
-                    },
-                    Message::ConnectRes,
-                );
-            }
-            Message::ConnectRes(res) => {
-                match res {
-                    Ok(aah) => {
-                        self.aah = Some(Arc::new(Mutex::new(aah)));
-                        self.log("connected to 127.0.0.1:16384");
-                    }
-                    Err(err) => self.log(err),
-                }
-                self.connecting = false;
-            }
-            Message::Disconnect => {
-                self.aah = None;
-                self.log("disconnected");
-            }
-            Message::SetTab(tab) => {
-                self.tab = tab;
-            }
-            // task_evt_listener stuff
-            Message::TaskEvtListenerReady(tx) => {
-                self.log("task_evt_listener ready, starting listener");
-                self.task_evt_listener_tx = Some(tx);
-
-                if let Some(aah) = &self.aah {
-                    let mut tx = self.task_evt_listener_tx.as_ref().unwrap().clone();
-                    let rx = aah.lock().unwrap().task_evt_rx.clone();
-                    return Task::perform(
-                        async move { tx.send(sub::Input::StartListenToTaskEvt(rx)).await },
-                        |_| Message::Empty,
-                    );
-                }
-            }
-            Message::TaskEvtListenerListening => {
-                self.log("task_evt_listener listening");
-            }
-            Message::TaskEvt(evt) => match evt {
-                TaskEvt::AnnotatedImg(img) => {
-                    let handle = Handle::from_rgba(img.width(), img.height(), img.into_bytes());
-                    self.annotated_imgs.push(handle);
-                    self.img_idx = self.annotated_imgs.len() - 1;
-                }
-                TaskEvt::ExecStat { step, cur, total } => {
-                    self.log(format!(
-                        "executing {}: {}/{} ({:?})",
-                        self.executing_task.as_ref().unwrap_or(&"".to_string()),
-                        cur,
-                        total,
-                        step
-                    ));
-                }
-                TaskEvt::Log(s) => {
-                    self.log(s);
-                }
-                _ => {}
-            },
-
-            Message::RunTask(task_name) => {
-                if let Some(aah) = self.aah.clone() {
-                    self.annotated_imgs.clear();
-                    self.img_idx = 0;
-                    thread::spawn(move || {
-                        let res = aah.lock().unwrap().run_task(&task_name);
-                        if let Err(err) = res {
-                            error!("Failed to run task {}: {}", task_name, err);
-                            // error!("Failed to run task {}: {}, Caused by: {}", task_name, err, err.root_cause());
-                        }
-                    });
-                }
-            }
-            _ => {}
-        }
-        Task::none()
+        
+        app.load_resources();
+        
+        app
     }
 
-    fn view(&self) -> iced::Element<Message> {
-        let main = match self.tab {
-            Tab::Main => {
-                let tasks = match &self.aah {
-                    Some(aah) => {
-                        column![
-                            Element::from(
-                                button("start_up")
-                                    .on_press(CloneMessage::RunTask("start_up".to_string()))
-                            )
-                            .map(Message::CloneMessage),
-                            Element::from(
-                                button("award")
-                                    .on_press(CloneMessage::RunTask("award".to_string()))
-                            )
-                            .map(Message::CloneMessage),
-                        ]
-                    }
-                    None => column![text!("No connection")],
+    fn load_resources(&self) {
+        let tx = self.tx.clone();
+        let path = self.resource_path.clone();
+        self.runtime.spawn(async move {
+            match AahResource::load(&path) {
+                Ok(res) => {
+                    tx.send(GuiMessage::Log(format!("Loaded resources from {}", path))).ok();
+                    tx.send(GuiMessage::ResourceLoaded(Arc::new(res))).ok();
                 }
-                .spacing(2);
-
-                let view = column![tasks].align_x(Alignment::Center).spacing(4);
-                container(view)
-            }
-            Tab::Tasks => {
-                if let Some(resource) = &self.resource {
-                    let tasks = column(resource.get_tasks().into_iter().map(|task_name| {
-                        row![
-                            text(task_name.clone()),
-                            horizontal_space(),
-                            if self.aah.is_none() {
-                                Element::from(button("No Connection"))
-                            } else if self.executing_task.as_ref() == Some(&task_name) {
-                                Element::from(button("Running..."))
-                            } else {
-                                Element::from(
-                                    button("Run")
-                                        .on_press(CloneMessage::RunTask(task_name.clone())),
-                                )
-                            }
-                            .map(Message::CloneMessage)
-                        ]
-                        .align_y(Alignment::Center)
-                        .spacing(2)
-                        .into()
-                    }))
-                    .spacing(2);
-
-                    let annotated_img = if let Some(img) = self.annotated_imgs.get(self.img_idx) {
-                        container(
-                            iced::widget::image(img)
-                                .width(Length::Fill)
-                                .height(Length::Fill),
-                        )
-                    } else {
-                        container(text("No annotated image"))
-                    }
-                    .center(Length::Fill);
-
-                    let annotated_img_viewer = column![
-                        annotated_img,
-                        row![
-                            if self.img_idx > 0 {
-                                Element::from(button("Prev").on_press(CloneMessage::PrevImg))
-                            } else {
-                                Element::from(button("Prev"))
-                            }
-                            .map(Message::CloneMessage),
-                            horizontal_space(),
-                            text(format!(
-                                "{} / {}",
-                                if self.annotated_imgs.is_empty() {
-                                    0
-                                } else {
-                                    self.img_idx + 1
-                                },
-                                self.annotated_imgs.len()
-                            )),
-                            horizontal_space(),
-                            if self.img_idx + 1 < self.annotated_imgs.len() {
-                                Element::from(button("Next").on_press(CloneMessage::NextImg))
-                            } else {
-                                Element::from(button("Next"))
-                            }
-                            .map(Message::CloneMessage)
-                        ]
-                        .spacing(4)
-                        .align_y(Alignment::Center)
-                    ]
-                    .spacing(2)
-                    .align_x(Alignment::Center);
-
-                    container(
-                        row![
-                            tasks.width(Length::FillPortion(1)),
-                            annotated_img_viewer.width(Length::FillPortion(3))
-                        ]
-                        .padding(2)
-                        .spacing(2),
-                    )
-                } else {
-                    container(text("No Resource"))
+                Err(e) => {
+                    tx.send(GuiMessage::ResourceError(e.to_string())).ok();
                 }
             }
-        }
-        .height(Length::Fill);
-
-        let resource_status = if let Some(resource) = &self.resource {
-            row![
-                text("Resource Initialized: "),
-                text(resource.manifest.last_updated.to_string()),
-            ]
-            // if self.checking_resource_update {
-            //     resource_status = resource_status.push(button("Checking Update..."));
-            // } else {
-            //     resource_status = resource_status.push(button("Check Update").on_press(Message::CheckAndUpdateResource));
-            // }
-        } else {
-            row![
-                text("Resource Not Initialized: "),
-                if self.initializing_resource {
-                    Element::from(button("Initializing Resource..."))
-                } else {
-                    Element::from(
-                        button("Initialize Resource").on_press(CloneMessage::InitResource),
-                    )
-                }
-                .map(Message::CloneMessage)
-            ]
-        };
-
-        let mut top_bar = row![].align_y(Alignment::Center).spacing(2).padding(2);
-        if self.resource.is_some() {
-            top_bar = top_bar.push(
-                if self.aah.is_none() {
-                    if self.connecting {
-                        Element::from(button("Connecting..."))
-                    } else {
-                        Element::from(button("Connect").on_press(CloneMessage::Connect))
-                    }
-                } else {
-                    Element::from(button("Disconnect").on_press(CloneMessage::Disconnect))
-                }
-                .map(Message::CloneMessage),
-            );
-        }
-
-        top_bar = top_bar.push(resource_status);
-        top_bar = top_bar.push(horizontal_space());
-        top_bar = top_bar.push(toggler(self.debug).on_toggle(Message::ToggleDebug));
-
-        // let logs = column(self.log.iter().map(|log| text(log).into()));
-
-        let view: Element<Message> = column![
-            top_bar,
-            horizontal_rule(1),
-            Tab::tab_bar(&self.tab),
-            main,
-            Element::from(
-                text_editor(&self.log_content)
-                    .on_action(CloneMessage::LogEdit)
-                    .height(Length::Fixed(200.0))
-            )
-            .map(Message::CloneMessage)
-        ]
-        .padding(2)
-        .into();
-        if self.debug {
-            view.explain(color!(0xf06090))
-        } else {
-            view
-        }
+        });
     }
 
-    fn subscription(&self) -> Subscription<Message> {
-        if self.aah.is_some() {
-            return Subscription::run(sub::task_evt_listener).map(|msg| match msg {
-                sub::Event::Ready(tx) => Message::TaskEvtListenerReady(tx),
-                sub::Event::ListeningToTaskEvt => Message::TaskEvtListenerListening,
-                sub::Event::TaskEvt(evt) => Message::TaskEvt(evt),
+    fn connect(&mut self) {
+        if self.resource.is_none() {
+            self.log("Cannot connect: Resources not loaded");
+            return;
+        }
+        
+        self.is_connecting = true;
+        let serial = self.serial.clone();
+        let resource = self.resource.clone().unwrap();
+        let tx = self.tx.clone();
+        
+        self.runtime.spawn(async move {
+            tx.send(GuiMessage::Log(format!("Connecting to {}...", serial))).ok();
+            match AahCore::connect(&serial, resource) {
+                Ok(core) => {
+                    tx.send(GuiMessage::Connected(Arc::new(core))).ok();
+                }
+                Err(e) => {
+                    tx.send(GuiMessage::ConnectionError(e.to_string())).ok();
+                }
+            }
+        });
+    }
+
+    fn run_task(&mut self, task_name: String) {
+        if let Some(core) = &self.aah {
+            self.is_running_task = true;
+            let core = core.clone();
+            let tx = self.tx.clone();
+            let name = task_name.clone();
+            
+            self.runtime.spawn(async move {
+                tx.send(GuiMessage::TaskStarted(name.clone())).ok();
+                match core.run_task(&name) {
+                    Ok(_) => tx.send(GuiMessage::TaskFinished(name, Ok(()))).ok(),
+                    Err(e) => tx.send(GuiMessage::TaskFinished(name, Err(e.to_string()))).ok(),
+                }
             });
         }
-        Subscription::none()
+    }
+
+    fn run_copilot(&mut self, copilot_name: String) {
+        if let Some(core) = &self.aah {
+            self.is_running_task = true;
+            let core = core.clone();
+            let tx = self.tx.clone();
+            let name = copilot_name.clone();
+            
+            self.runtime.spawn(async move {
+                tx.send(GuiMessage::TaskStarted(name.clone())).ok();
+                match core.run_copilot(&name) {
+                    Ok(_) => tx.send(GuiMessage::TaskFinished(name, Ok(()))).ok(),
+                    Err(e) => tx.send(GuiMessage::TaskFinished(name, Err(e.to_string()))).ok(),
+                }
+            });
+        }
+    }
+
+    fn log(&mut self, msg: impl Into<String>) {
+        let msg = msg.into();
+        println!("{}", msg);
+        self.logs.push(format!("[{}] {}", chrono::Local::now().format("%H:%M:%S"), msg));
     }
 }
 
-// fn task(task: String, resource: Arc<Resource>) -> Element<Message> {
-//     resource.
-// }
+impl eframe::App for AahGui {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        while let Ok(msg) = self.rx.try_recv() {
+            match msg {
+                GuiMessage::Log(msg) => self.log(msg),
+                GuiMessage::Connected(core) => {
+                    self.is_connecting = false;
+                    self.aah = Some(core);
+                    self.log("Device connected successfully.");
+                },
+                GuiMessage::ConnectionError(err) => {
+                    self.is_connecting = false;
+                    self.log(format!("Connection failed: {}", err));
+                },
+                GuiMessage::ResourceLoaded(res) => {
+                    self.resource = Some(res);
+                    self.log("Resources loaded.");
+                },
+                GuiMessage::ResourceError(err) => {
+                    self.log(format!("Failed to load resources: {}", err));
+                },
+                GuiMessage::TaskStarted(name) => {
+                    self.log(format!("Started task: {}", name));
+                },
+                GuiMessage::TaskFinished(name, result) => {
+                    self.is_running_task = false;
+                    match result {
+                        Ok(_) => self.log(format!("Task '{}' completed successfully.", name)),
+                        Err(e) => self.log(format!("Task '{}' failed: {}", name, e)),
+                    }
+                }
+            }
+        }
 
-fn main() -> iced::Result {
-    init_logger();
+        egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Serial:");
+                ui.text_edit_singleline(&mut self.serial);
+                
+                if ui.add_enabled(!self.is_connecting && self.aah.is_none(), egui::Button::new("Connect")).clicked() {
+                    self.connect();
+                }
+                
+                if self.is_connecting {
+                    ui.spinner();
+                }
+                
+                if self.aah.is_some() {
+                    ui.label("✅ Connected");
+                }
+                
+                ui.separator();
+                
+                ui.label("Res Path:");
+                ui.text_edit_singleline(&mut self.resource_path);
+                if ui.button("Reload").clicked() {
+                    self.load_resources();
+                }
+            });
+        });
 
-    iced::application("azur-arknights-helper", App::update, App::view)
-        .subscription(App::subscription)
-        .run_with(|| (App::default(), Task::done(Message::InitResource)))
+        egui::CentralPanel::default().show(ctx, |ui| {
+            ui.columns(2, |columns| {
+                columns[0].vertical(|ui| {
+                    ui.heading("Tasks / Copilots");
+                    
+                    if let Some(res) = &self.resource {
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.label("Tasks:");
+                            for task_name in res.inner.tasks.keys() {
+                                if ui.selectable_label(self.selected_task.as_ref() == Some(task_name), task_name).clicked() {
+                                    self.selected_task = Some(task_name.clone());
+                                    self.selected_copilot = None;
+                                }
+                            }
+                            
+                            ui.separator();
+                            ui.label("Copilots:");
+                            for copilot_name in res.copilot_config.keys() {
+                                if ui.selectable_label(self.selected_copilot.as_ref() == Some(copilot_name), copilot_name).clicked() {
+                                    self.selected_copilot = Some(copilot_name.clone());
+                                    self.selected_task = None;
+                                }
+                            }
+                        });
+                    } else {
+                        ui.label("No resources loaded.");
+                    }
+                    
+                    ui.separator();
+                    
+                    ui.horizontal(|ui| {
+                        if let Some(task) = &self.selected_task {
+                            if ui.add_enabled(!self.is_running_task && self.aah.is_some(), egui::Button::new("Run Task")).clicked() {
+                                self.run_task(task.clone());
+                            }
+                        }
+                        if let Some(copilot) = &self.selected_copilot {
+                            if ui.add_enabled(!self.is_running_task && self.aah.is_some(), egui::Button::new("Run Copilot")).clicked() {
+                                self.run_copilot(copilot.clone());
+                            }
+                        }
+                    });
+                });
+
+                columns[1].vertical(|ui| {
+                    ui.heading("Logs");
+                    egui::ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
+                        for log in &self.logs {
+                            ui.label(log);
+                        }
+                    });
+                });
+            });
+        });
+        
+        ctx.request_repaint_after(Duration::from_millis(100));
+    }
 }
 
-fn init_logger() {
-    // let indicatif_layer = IndicatifLayer::new();
-
-    let filter_layer = EnvFilter::try_from_default_env()
-        .or_else(|_| EnvFilter::try_new("aah=info"))
-        .unwrap();
-
-    tracing_subscriber::registry()
-        .with(filter_layer)
-        .with(
-            tracing_subscriber::fmt::layer(), // .with_level(false)
-                                              // .with_target(false)
-                                              // .without_time()
-                                              // .with_writer(indicatif_layer.get_stderr_writer()),
-        )
-        // .with(indicatif_layer)
-        .init();
+fn main() -> eframe::Result<()> {
+    let options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
+        ..Default::default()
+    };
+    eframe::run_native(
+        "AAH GUI",
+        options,
+        Box::new(|cc| Ok(Box::new(AahGui::new(cc)))),
+    )
 }

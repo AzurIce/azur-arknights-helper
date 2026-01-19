@@ -51,7 +51,7 @@ where A: serde::de::DeserializeOwned
 
 pub struct AahResource {
     pub inner: Resource<Action>,
-    copilot_config: CopilotConfig,
+    pub copilot_config: CopilotConfig,
 }
 
 impl Debug for AahResource {

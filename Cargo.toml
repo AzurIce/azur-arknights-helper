@@ -31,7 +31,9 @@ tracing.workspace = true
 tracing-subscriber.workspace = true
 rust-embed = "8.11.0"
 tokio-stream = "0.1.18"
-iced = { version = "0.13.1", features = ["tokio", "image"] }
+eframe = "0.33.3"
+egui = "0.33.3"
+egui_extras = { version = "0.33.3", features = ["all_loaders"] }
 clap = { version = "4.5.54", features = ["derive"] }
 reqwest = { version = "0.13.1", features = ["blocking", "json"] }
 tokio = { version = "1.49.0", features = ["full"] }
