@@ -1,5 +1,5 @@
 {
-  description = "demo-iced";
+  description = "dev env";
 
   nixConfig = {
     extra-substituters = [
@@ -10,42 +10,42 @@
     ];
   };
 
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    rust-overlay.url = "github:oxalica/rust-overlay";
+    crane.url = "github:ipetkov/crane";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     flake-utils.url = "github:numtide/flake-utils";
-    nur.url = "github:nix-community/NUR";
   };
 
-  outputs = { self, nur, nixpkgs, rust-overlay, flake-utils, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      nixpkgs,
+      rust-overlay,
+      flake-utils,
+      crane,
+      ...
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
-        overlays = [ (import rust-overlay) (nur.overlay) ];
+        overlays = [ (import rust-overlay) ];
         pkgs = import nixpkgs {
           inherit system overlays;
         };
-        rust-tools = pkgs.rust-bin.nightly.latest.default.override {
-          extensions = [ "rust-src" ];
-        };
+        craneLib = (crane.mkLib pkgs).overrideToolchain (
+          p:
+          p.rust-bin.nightly.latest.default.override {
+            extensions = [ "rust-src" ];
+          }
+        );
       in
       {
-        devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            clang
-            llvmPackages_16.bintools
-            openssl
-            pkg-config
-          ] ++ [
-            rust-tools
-          ] ++ (with pkgs.darwin.apple_sdk.frameworks; pkgs.lib.optionals pkgs.stdenv.isDarwin [
-            System
-            IOKit
-            Security
-            CoreFoundation
-            AppKit
-            WebKit
-          ]);
+        devShells.default = craneLib.devShell {
+          buildInputs = [ ];
+          packages = [ ];
         };
       }
     );
