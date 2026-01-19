@@ -6,7 +6,7 @@ use std::{
 };
 
 use aah_resource::level::get_level;
-use ap_cv::core::template_matching::{match_template, MatchTemplateMethod};
+use auto_play::cv::core::template_matching::{match_template, MatchTemplateMethod};
 use color_print::{cformat, cprintln};
 use imageproc::template_matching::find_extremes;
 use serde::{Deserialize, Serialize};
@@ -17,7 +17,7 @@ use crate::{
     utils::resource::get_template,
     AahCore,
 };
-use auto_play::actions::{ClickMatchTemplate, Runnable};
+use crate::actions::{ClickMatchTemplate, Runnable};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Copilot {

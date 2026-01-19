@@ -1,6 +1,6 @@
 use crate::{actions::copilot::Direction, Action};
 use aah_resource::level::Level;
-use auto_play::task::{Task, TaskStep};
+use crate::actions::{Task, TaskStep};
 
 pub struct Retreat;
 

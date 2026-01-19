@@ -7,7 +7,7 @@ use std::{
     time::Instant,
 };
 
-use auto_play::actions::Runnable;
+use crate::Runnable;
 use color_print::{cformat, cprintln};
 use deploy::{DeployAnalyzer, DeployCard};
 use image::DynamicImage;

@@ -1,10 +1,7 @@
 use std::{thread, time::Duration};
 
 use anyhow::Context;
-use auto_play::{
-    actions::{Click, ClickMatchTemplate, Runnable},
-    HasController,
-};
+use crate::actions::{Click, ClickMatchTemplate, Runnable};
 use image::math::Rect;
 use image::DynamicImage;
 

@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-zip = "2.2.2"
+zip = "7.1.0"
 walkdir = "2.5.0"
-anyhow = "1.0.89"
+anyhow = "1.0.100"

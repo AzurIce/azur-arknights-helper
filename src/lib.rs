@@ -1,8 +1,5 @@
-use ap_controller::Controller;
-use auto_play::actions::Runnable;
-use auto_play::resource::GetTemplate;
-use auto_play::task::{GetTask, Task};
-use auto_play::HasController;
+use auto_play::Controller;
+use auto_play::AutoPlay;
 
 pub mod utils;
 pub mod vision;
@@ -19,38 +16,28 @@ pub mod actions;
 pub mod analyzer;
 pub mod resource;
 
-pub use actions::Action;
+pub use actions::{Action, Runnable, Task};
 use anyhow::Context;
 use anyhow::Result;
 use ocrs::{OcrEngine, OcrEngineParams};
 use resource::AahResource;
 use rten::Model;
 
+#[derive(Debug, Clone)]
+pub enum TaskEvt {
+    Log(String),
+    Error(String),
+    // Add other events as needed by GUI
+}
+
 pub struct AahCore {
-    pub controller: Controller,
+    pub ap: AutoPlay,
     pub resource: Arc<AahResource>,
 
     ocr_engine: OcrEngine,
 
     screen_cache: Mutex<Option<image::DynamicImage>>,
-}
-
-impl HasController for AahCore {
-    fn controller(&self) -> &Controller {
-        &self.controller
-    }
-}
-
-impl GetTask<Action> for AahCore {
-    fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<Action>> {
-        self.resource.get_task(name)
-    }
-}
-
-impl GetTemplate for AahCore {
-    fn get_template(&self, path: impl AsRef<std::path::Path>) -> anyhow::Result<image::DynamicImage> {
-        self.resource.get_template(path)
-    }
+    // task_evt_tx: Sender<TaskEvt>, // If we want to support events
 }
 
 impl Debug for AahCore {
@@ -68,14 +55,12 @@ impl AahCore {
         serial: impl AsRef<str>,
         resource: Arc<AahResource>,
     ) -> Result<Self, anyhow::Error> {
-        let device = ap_adb::connect(serial)?;
-        let controller =
-            Controller::from_device(device).context("failed to connect AahController")?;
+        let ap = AutoPlay::connect(serial)?;
 
-        Self::new(controller, resource)
+        Self::new(ap, resource)
     }
 
-    fn new(controller: Controller, resource: Arc<AahResource>) -> Result<Self, anyhow::Error> {
+    fn new(ap: AutoPlay, resource: Arc<AahResource>) -> Result<Self, anyhow::Error> {
         let ocr_engine = OcrEngine::new(OcrEngineParams {
             detection_model: Some(
                 Model::load_file(resource.root.join("models/text-detection.rten"))
@@ -91,10 +76,26 @@ impl AahCore {
         Ok(Self {
             resource,
             ocr_engine,
-            controller,
+            ap,
             screen_cache: Mutex::new(None),
         })
     }
+
+    pub fn controller(&self) -> &Controller {
+        self.ap.controller()
+    }
+
+    pub fn get_task(&self, name: impl AsRef<str>) -> Option<&Task<Action>> {
+        self.resource.get_task(name.as_ref())
+    }
+
+    pub fn get_template(
+        &self,
+        path: impl AsRef<std::path::Path>,
+    ) -> anyhow::Result<image::DynamicImage> {
+        self.resource.get_template(path)
+    }
+
     /// 运行名为 `name` 的任务
     ///
     /// - `name`: 任务名称
@@ -126,78 +127,12 @@ impl AahCore {
         Ok(())
     }
 
-    // pub fn register_task_evt_handler<F: Fn(TaskEvt) + Send + Sync + 'static>(
-    //     &mut self,
-    //     handler: F,
-    // ) {
-    //     self.task_evt_handler.push(Box::new(handler));
-    // }
-
-    // /// Capture a screen, and return decoded image
-    // pub fn get_screen(&mut self) -> Result<image::DynamicImage, String> {
-    //     self.controller.screencap().map_err(|err| format!("{err}"))
-    // }
-
-    // /// Capture a screen, and return raw data in Png format
-    // pub fn get_raw_screen(&mut self) -> Result<Vec<u8>, String> {
-    //     self.controller
-    //         .raw_screencap()
-    //         .map_err(|err| format!("{err}"))
-    // }
-
-    // /// 重新加载 resources 中的配置
-    // pub fn reload_resources(&mut self) -> Result<(), String> {
-    //     let task_config = TaskConfig::load(&self.res_dir)
-    //         .map_err(|err| format!("task config not found: {err}"))?;
-    //     let navigate_config = NavigateConfig::load(&self.res_dir)
-    //         .map_err(|err| format!("navigate config not found: {err}"))?;
-    //     self.task_config = task_config;
-    //     self.navigate_config = navigate_config;
-    //     Ok(())
-    // }
-
-    // /// 截取当前帧的屏幕内容，分析部署卡片，返回 [`DeployAnalyzerOutput`]
-    // ///
-    // /// 通过该函数进行的分析只包含 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
-    // pub fn analyze_deploy(&self) -> Result<DeployAnalyzerOutput, String> {
-    //     // self.default_oper_list.clone() cost 52s
-    //     let mut analyzer = DeployAnalyzer::new(&self.resource.root, EXAMPLE_DEPLOY_OPERS.to_vec());
-    //     analyzer.analyze(self)
-    // }
-
-    // /// 发起事件
-    // pub(crate) fn emit_task_evt(&self, evt: TaskEvt) {
-    //     self.runtime.block_on(async {
-    //         self.task_evt_tx.send(evt.clone()).await.unwrap();
-    //     });
-    //     // self.task_evt_tx.send(evt.clone()).unwrap();
-    //     for handler in self.task_evt_handler.iter() {
-    //         (handler)(evt.clone());
-    //     }
-    // }
-
-    // /// 启动战斗分析器，直到战斗结束
-    // ///
-    // /// 分析信息会通过 [`TaskEvt::BattleAnalyzerRes`] 事件返回，
-    // ///
-    // /// 出于性能考虑，目前待部署区只设置了识别 [`EXAMPLE_DEPLOY_OPERS`] 中的干员
-    // /// TODO: self.default_oper_list.clone() cost 52s
-    // pub fn start_battle_analyzer(&self) {
-    //     let mut analyzer = BattleAnalyzer::new(&self.resource.root, EXAMPLE_DEPLOY_OPERS.to_vec());
-    //     while analyzer.battle_state != BattleState::Completed {
-    //         let output = analyzer.analyze(self).unwrap();
-    //         self.emit_task_evt(TaskEvt::BattleAnalyzerRes(output));
-    //     }
-    // }
-// }
-
-// impl CachedScreenCapper for AahCore {
     /// Get screen cache or capture one. This is for internal analyzer use
     pub fn screen_cache_or_cap(&self) -> anyhow::Result<image::DynamicImage> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
         if screen_cache.is_none() {
             let screen = self
-                .controller
+                .ap
                 .screencap()
                 .map_err(|err| anyhow::anyhow!("{err}"))?;
             *screen_cache = Some(screen.clone());
@@ -211,7 +146,7 @@ impl AahCore {
     pub fn screen_cap_and_cache(&self) -> anyhow::Result<image::DynamicImage> {
         let mut screen_cache = self.screen_cache.lock().unwrap();
         let screen = self
-            .controller
+            .ap
             .screencap()
             .map_err(|err| anyhow::anyhow!("{err}"))?;
         *screen_cache = Some(screen);
@@ -219,20 +154,5 @@ impl AahCore {
             .as_ref()
             .map(|i| i.clone())
             .ok_or(anyhow::anyhow!("screen cache is empty"))
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use auto_play::resource::Load;
-
-    use super::*;
-
-    #[test]
-    fn test_aah() {
-        let resource = AahResource::load("aah-resources").unwrap();
-        let resource = Arc::new(resource);
-        let aah = AahCore::connect("127.0.0.1:16384", resource).unwrap();
-        aah.run_task("award").unwrap()
     }
 }

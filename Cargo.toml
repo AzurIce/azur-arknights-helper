@@ -8,10 +8,8 @@ default-run = "aah"
 members = ["packages/*", "xtasks/*"]
 
 [workspace.dependencies]
-auto-play = { git = "https://github.com/AzurIce/auto-play" }
-ap-adb = { git = "https://github.com/AzurIce/auto-play" }
-ap-cv = { git = "https://github.com/AzurIce/auto-play" }
-ap-controller = { git = "https://github.com/AzurIce/auto-play" }
+auto-play = { path = "../auto-play" }
+# auto-play = { git = "https://github.com/AzurIce/auto-play" }
 aah-resource = { path = "packages/aah-resource" }
 image = { version = "0.25.9", features = ["serde"] }
 imageproc = "0.25.0"
@@ -31,33 +29,29 @@ anyhow.workspace = true
 async-channel.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
-rust-embed = "8.9.0"
-tokio-stream = "0.1.17"
+rust-embed = "8.11.0"
+tokio-stream = "0.1.18"
 iced = { version = "0.13.1", features = ["tokio", "image"] }
-clap = { version = "4.5.52", features = ["derive"] }
-reqwest = { version = "0.12.12", features = ["blocking", "json"] }
-tokio = { version = "1.40.0", features = ["full"] }
+clap = { version = "4.5.54", features = ["derive"] }
+reqwest = { version = "0.13.1", features = ["blocking", "json"] }
+tokio = { version = "1.49.0", features = ["full"] }
 env_logger = "0.11.8"
 serde = { workspace = true, features = ["derive"] }
 toml = "0.9.8"
 color-print = "0.3.7"
-serde_with = { version = "3.16.0", features = ["macros"] }
-log = "0.4.28"
+serde_with = { version = "3.16.1", features = ["macros"] }
+log = "0.4.29"
 bytes = "1.11.0"
-serde_json = "1.0.145"
-chrono = "0.4.42"
-time = { version = "0.3.44", features = ["serde", "parsing", "macros"] }
-zip = "6.0.0"
+serde_json = "1.0.149"
+chrono = "0.4.43"
+time = { version = "0.3.45", features = ["serde", "parsing", "macros"] }
+zip = "7.1.0"
 imageproc.workspace = true
 # ocrs = "0.11.0"
 ocrs = { git = "https://github.com/robertknight/ocrs" }
 
-ap-adb.workspace = true
-ap-controller.workspace = true
-ap-cv.workspace = true
-
 rand = "0.9.2"
 futures = { version = "0.3.30", optional = true }
-rten = "0.23.0"
+rten = "0.24.0"
 regex = "1.10.5"
-ndarray = "0.17.1"
+ndarray = "0.17.2"

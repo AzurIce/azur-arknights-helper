@@ -44,7 +44,10 @@
       in
       {
         devShells.default = craneLib.devShell {
-          buildInputs = [ ];
+          buildInputs = with pkgs; [
+            openssl
+            pkg-config
+          ];
           packages = [ ];
         };
       }

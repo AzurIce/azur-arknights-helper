@@ -1,5 +1,5 @@
-use ap_cv::core::template_matching::Match;
-use auto_play::actions::Runnable;
+use auto_play::cv::core::template_matching::Match;
+use crate::Runnable;
 use image::{math::Rect, DynamicImage, GenericImageView};
 use ocrs::ImageSource;
 use regex::Regex;

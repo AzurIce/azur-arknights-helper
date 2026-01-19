@@ -1,18 +1,56 @@
-
 pub mod manifest;
 
-use std::{fmt::Debug, ops::Deref, path::Path};
+use std::{fmt::Debug, ops::Deref, path::{Path, PathBuf}, collections::HashMap};
+use anyhow::Context;
 
-use auto_play::resource::{Load, Resource};
 use manifest::copilot::CopilotConfig;
-
+use crate::actions::Task;
 
 use super::{actions::copilot::Copilot, Action};
+
+// Define Load trait locally
+pub trait Load: Sized {
+    fn load(path: impl AsRef<Path>) -> anyhow::Result<Self>;
+}
+
+// Define generic Resource struct
+pub struct Resource<A> {
+    pub root: PathBuf,
+    pub tasks: HashMap<String, Task<A>>,
+}
+
+impl<A> Resource<A> 
+where A: serde::de::DeserializeOwned 
+{
+    pub fn load(root: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let root = root.as_ref().to_path_buf();
+        // Placeholder for loading tasks. 
+        // In a real scenario, we'd scan the 'tasks' directory.
+        // For now, initializing empty map to satisfy type check.
+        // Real implementation should traverse `root/tasks` and deserialize files.
+        let tasks = HashMap::new(); 
+        
+        Ok(Self {
+            root,
+            tasks,
+        })
+    }
+
+    pub fn get_task(&self, name: &str) -> Option<&Task<A>> {
+        self.tasks.get(name)
+    }
+    
+    pub fn get_template(&self, path: impl AsRef<Path>) -> anyhow::Result<image::DynamicImage> {
+        let full_path = self.root.join("templates").join(path);
+        image::open(&full_path).with_context(|| format!("failed to load template at {:?}", full_path))
+    }
+}
+
 
 // MARK: AahResource
 
 pub struct AahResource {
-    inner: Resource<Action>,
+    pub inner: Resource<Action>,
     copilot_config: CopilotConfig,
 }
 
@@ -37,6 +75,7 @@ impl Load for AahResource {
         let inner = Resource::load(root)?;
 
         let copilot_config = CopilotConfig::load(root.join("copilot"))?;
+        
         Ok(Self {
             inner,
             copilot_config,

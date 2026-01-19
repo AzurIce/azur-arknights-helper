@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use aah_resource::level::Level;
-use auto_play::task::{Task, TaskStep};
+use crate::actions::{Task, TaskStep};
 use image::math::Rect;
 
 use crate::{actions::copilot::Direction, Action};

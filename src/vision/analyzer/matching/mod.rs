@@ -1,6 +1,6 @@
 use std::ops::RangeInclusive;
 
-use ap_cv::core::template_matching::MatchTemplateMethod;
+use auto_play::cv::core::template_matching::MatchTemplateMethod;
 use image::DynamicImage;
 use serde::{Deserialize, Serialize};
 use serde_with::skip_serializing_none;

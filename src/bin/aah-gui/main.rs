@@ -7,7 +7,7 @@ use std::{
     thread,
 };
 
-use aah_core::{
+use aah::{
     arknights::{AahCore, ActionSet, resource::AahResource}, resource::GitRepoResource, task::TaskEvt
 };
 use iced::{

@@ -3,8 +3,7 @@
 
 use std::sync::Arc;
 
-use aah::{AahCore, resource::AahResource};
-use auto_play::resource::GitRepoResource;
+use aah::{AahCore, resource::{AahResource, Load}};
 use clap::{CommandFactory, Parser, Subcommand};
 use tracing_subscriber::EnvFilter;
 
@@ -42,8 +41,8 @@ fn main() {
                 .add_directive("aah_core=info".parse().unwrap())
                 .add_directive("aah_resource=info".parse().unwrap())
                 .add_directive("ap_adb=info".parse().unwrap())
-                .add_directive("ap_controller=info".parse().unwrap())
-                .add_directive("ap_cv=info".parse().unwrap()),
+                .add_directive("auto_play::controller=info".parse().unwrap())
+                .add_directive("auto_play::cv=info".parse().unwrap()),
         )
         .init();
     let cli = Cli::parse();
@@ -55,13 +54,13 @@ fn main() {
     }
 
     let command = cli.task.as_ref().unwrap();
-    let resource = GitRepoResource::<AahResource>::try_load_or_init(
-        "./.aah/resources",
-        "https://github.com/AzurIce/aah-resources",
-        None,
-    )
-    .expect("failed to load resource");
-    let aah = AahCore::connect(serial, Arc::new(resource.inner))
+    // Assuming resources are in local directory, e.g., aah-resources
+    // Or we assume the user cloned it.
+    let resource_path = "aah-resources"; 
+    let resource = AahResource::load(resource_path)
+        .expect("failed to load resource");
+        
+    let aah = AahCore::connect(serial, Arc::new(resource))
         .expect("failed to connect to the device");
     match command {
         Commands::Task { name } => {

@@ -1,14 +1,14 @@
 use std::path::Path;
 
-use ap_cv::{
+use auto_play::cv::{
     core::template_matching::Match,
     matcher::{SingleMatcher, SingleMatcherResult},
 };
-use auto_play::actions::Runnable;
-use image::{math::Rect, DynamicImage};
+use crate::Runnable;
+use image::{DynamicImage, math::Rect};
 
-use crate::{utils::resource::get_template, vision::utils::draw_box, AahCore};
-use ap_controller::{Controller, DEFAULT_HEIGHT};
+use crate::{AahCore, utils::resource::get_template, vision::utils::draw_box};
+use auto_play::controller::{Controller, DEFAULT_HEIGHT};
 
 use super::matching::MatchOptions;
 
@@ -70,7 +70,7 @@ impl SingleMatchAnalyzer {
                 .options
                 .method
                 .map(|m| {
-                    let options = ap_cv::matcher::MatcherOptions::method_default(m.into());
+                    let options = auto_play::cv::matcher::MatcherOptions::method_default(m.into());
                     if let Some(threshold) = self.options.threshold {
                         options.with_threshold(threshold)
                     } else {
@@ -128,7 +128,7 @@ impl Runnable<AahCore> for SingleMatchAnalyzer {
     type Output = SingleMatchAnalyzerOutput;
     fn execute(&self, executor: &AahCore) -> anyhow::Result<Self::Output> {
         // Get image
-        let screen = executor.controller.screencap()?;
+        let screen = executor.controller().screencap()?;
         // TODO: where to imple cache thing?
         // let screen = if self.options.use_cache {
         //     core.screen_cache_or_cap()?.clone()

@@ -3,7 +3,7 @@ use std::{
     time::Instant,
 };
 
-use auto_play::actions::Runnable;
+use crate::Runnable;
 use color_print::{cformat, cprintln};
 use image::{math::Rect, DynamicImage, ImageBuffer, Luma};
 use serde::Serialize;
@@ -16,7 +16,7 @@ use crate::{
         utils::{average_hsv_v, draw_box},
     },
 };
-use ap_cv::{
+use auto_play::cv::{
     core::template_matching::Match,
     matcher::{BestMatcher, BestMatcherResult, MatcherOptions},
 };
@@ -110,7 +110,7 @@ impl DeployAnalyzer {
                 &MatcherOptions::default(),
             );
             if let Some((idx, m)) = result {
-                let oper_name = self.oper_names.get(idx).unwrap().to_string();
+                let oper_name: String = self.oper_names.get(idx).unwrap().to_string();
                 deploy_cards.push(DeployCard {
                     oper_name,
                     rect: m.rect,

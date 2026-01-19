@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use auto_play::actions::Runnable;
+use crate::Runnable;
 use ndarray::{Array1, Array2, Axis};
 
 use crate::AahCore;
@@ -37,7 +37,7 @@ impl Runnable<AahCore> for DepotAnalyzer {
         let y_period = 380;
 
         let mut screen = executor
-            .controller
+            .controller()
             .screencap_scaled()
             .map_err(|err| anyhow::anyhow!("{:?}", err))?;
 
