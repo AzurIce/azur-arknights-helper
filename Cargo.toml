@@ -57,3 +57,5 @@ futures = { version = "0.3.30", optional = true }
 rten = "0.24.0"
 regex = "1.10.5"
 ndarray = "0.17.2"
+rhai = "1.24.0"
+egui-graph-edit = "0.7.1"

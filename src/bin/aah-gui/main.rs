@@ -209,7 +209,7 @@ impl eframe::App for AahGui {
                     if let Some(res) = &self.resource {
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             ui.label("Tasks:");
-                            for task_name in res.inner.tasks.keys() {
+                            for task_name in res.tasks.keys() {
                                 if ui.selectable_label(self.selected_task.as_ref() == Some(task_name), task_name).clicked() {
                                     self.selected_task = Some(task_name.clone());
                                     self.selected_copilot = None;
