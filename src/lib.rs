@@ -16,7 +16,7 @@ pub mod actions;
 pub mod analyzer;
 pub mod resource;
 
-pub use actions::{Action, Runnable, Task};
+pub use actions::{Action, ActionOptions, Runnable, Task, TaskStep};
 use anyhow::Context;
 use anyhow::Result;
 use ocrs::{OcrEngine, OcrEngineParams};
@@ -154,5 +154,75 @@ impl AahCore {
             .as_ref()
             .map(|i| i.clone())
             .ok_or(anyhow::anyhow!("screen cache is empty"))
+    }
+
+    /// Execute a single Action with optional execution control options.
+    ///
+    /// # Arguments
+    /// - `action`: The action to execute
+    /// - `options`: Execution options (retry, skip_if_failed, delay_after)
+    ///
+    /// # Examples
+    /// ```ignore
+    /// // Execute without options (no retry, no delay)
+    /// let action = Action::click(100, 200);
+    /// core.exec_action(&action, &ActionOptions::default())?;
+    ///
+    /// // Execute with retry
+    /// let options = ActionOptions::new().with_retry(3).with_skip_if_failed(true);
+    /// core.exec_action(&action, &options)?;
+    ///
+    /// // Execute with delay
+    /// let options = ActionOptions::new().with_delay(0.5);
+    /// core.exec_action(&action, &options)?;
+    ///
+    /// // Execute a TaskStep
+    /// let step = TaskStep::from_action(Action::click(100, 200))
+    ///     .with_retry(3)
+    ///     .with_delay(0.5);
+    /// core.exec_action(&step.action, &step.options)?;
+    /// ```
+    pub fn exec_action(&self, action: &Action, options: &ActionOptions) -> anyhow::Result<()> {
+        let mut attempts = 0;
+        let max_attempts = if options.retry < 0 {
+            i32::MAX
+        } else {
+            options.retry + 1
+        };
+
+        let mut last_error = None;
+
+        while attempts < max_attempts {
+            match action.execute(self) {
+                Ok(_) => break,
+                Err(e) => {
+                    last_error = Some(e);
+                    attempts += 1;
+
+                    if attempts >= max_attempts {
+                        if options.skip_if_failed {
+                            eprintln!(
+                                "Action failed after {} attempts, skipping: {:?}",
+                                attempts, last_error
+                            );
+                            break;
+                        } else {
+                            return Err(last_error.unwrap());
+                        }
+                    }
+
+                    if attempts < max_attempts {
+                        std::thread::sleep(std::time::Duration::from_millis(100));
+                    }
+                }
+            }
+        }
+
+        // Execute delay after action
+        if let Some(delay) = options.delay_after {
+            std::thread::sleep(delay);
+        }
+
+        Ok(())
     }
 }

@@ -4,6 +4,7 @@ use std::{collections::HashMap, fmt::Debug, path::{Path, PathBuf}};
 use anyhow::Context;
 
 use manifest::copilot::CopilotConfig;
+use manifest::task::TaskConfig;
 use crate::actions::{Action, Task};
 
 use super::actions::copilot::Copilot;
@@ -32,13 +33,13 @@ impl Debug for AahResource {
 impl Load for AahResource {
     fn load(root: impl AsRef<Path>) -> anyhow::Result<Self> {
         let root = root.as_ref().to_path_buf();
-        
-        // Placeholder for loading tasks. 
-        // In a real scenario, we'd scan the 'tasks' directory.
-        let tasks = HashMap::new(); 
 
-        let copilot_config = CopilotConfig::load(root.join("copilot"))?;
-        
+        // Load tasks from tasks directory
+        let task_config = TaskConfig::load(root.join("tasks"))?;
+        let tasks = task_config.0; // Unwrap the HashMap
+
+        let copilot_config = CopilotConfig::load(root.join("copilots"))?;
+
         Ok(Self {
             root,
             tasks,
